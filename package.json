@@ -1,0 +1,111 @@
+{
+  "name": "@dely0/dsh-personal-workbench",
+  "version": "1.17.0",
+  "description": "DSH 个人工作台：日历 + 层级任务 + AI 澄清/拆解/执行/复盘 + AI 智能排序/日报周报 + 桌面提醒",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dely0/dsh-personal-workbench.git"
+  },
+  "homepage": "https://github.com/Dely0/dsh-personal-workbench#readme",
+  "bugs": {
+    "url": "https://github.com/Dely0/dsh-personal-workbench/issues"
+  },
+  "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "assets/personas",
+    "assets/expert-generation",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "LICENSE-novotnyllc-dotnet-artisan",
+    "LICENSE-K-Dense-scientific-agents",
+    "THIRD_PARTY_NOTICES.md",
+    "screenshot"
+  ],
+  "license": "MIT",
+  "private": false,
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-commands": "^0.1.5-rc.1 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-host-webserver": "^0.1.0-rc.6 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-scope": "^0.1.0-rc.1 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.6 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6 || ^0.2.0-rc.1"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-scope": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4",
+    "@deepseek-ai/cordis-plugin-timer": "1.1.6",
+    "@deepseek-ai/dsh-commands": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
+    "@types/node": "^24.13.3",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsdown": "0.22.2",
+    "typescript": "~5.7.2"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "pnpm": ">=11.7.0 <12"
+  },
+  "scripts": {
+    "link:dsh": "bash scripts/link-dsh-dev.sh",
+    "repair": "node scripts/repair-parent-completion.mjs",
+    "build": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\" && node scripts/build-info.mjs && tsc -p tsconfig.build.json && tsdown",
+    "typecheck": "tsc --noEmit",
+    "dev:install": "node scripts/dev-install.mjs",
+    "check": "tsc --noEmit && node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\" && node scripts/build-info.mjs && tsc -p tsconfig.build.json && tsdown",
+    "test": "pnpm build && node --test --test-concurrency=1 test/*.test.mjs",
+    "test:local": "node --test test/panelState.test.mjs test/capabilities.test.mjs test/clientInvariants.test.mjs",
+    "prepare": "pnpm build"
+  },
+  "dependencies": {
+    
+    "react": "^18.3.1",
+    "xlsx": "^0.18.5",
+    "yaml": "2.9.1"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "workbench",
+    "task-management",
+    "calendar",
+    "ai-agent",
+    "plugin"
+  ],
+  "author": "Du Penglai"
+}

@@ -1,0 +1,166 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  EMPTY_TASK_FILTER,
+  buildTaskTree,
+  compareTasks,
+  countTaskTreeBy,
+  createTaskSorter,
+  filterTaskTree,
+  isTaskDueOnDay,
+  isTaskFilterEmpty,
+  matchesTaskFilter,
+} from '../lib/client/taskFilterSort.js'
+
+const task = (id, overrides = {}) => ({
+  id,
+  parentId: null,
+  title: '',
+  description: '',
+  statusCode: 'todo',
+  priorityCode: 'p2',
+  typeCode: 'feature_opt',
+  dueAt: null,
+  completedAt: null,
+  createdAt: '2024-01-01T00:00:00.000Z',
+  ...overrides,
+})
+
+test('task filter: keyword matches title/description and conditions combine', () => {
+  const a = task('a', { title: '修复登录闪退', description: '复现步骤见附件' })
+  const b = task('b', { title: '无关任务', description: '里面提到了 闪退 关键词' })
+  const c = task('c', { title: '登录页样式', statusCode: 'doing', priorityCode: 'p1', typeCode: 'code_impl' })
+
+  assert.equal(matchesTaskFilter(a, { ...EMPTY_TASK_FILTER, keyword: '登录' }), true)
+  assert.equal(matchesTaskFilter(b, { ...EMPTY_TASK_FILTER, keyword: '闪退' }), true)
+  assert.equal(matchesTaskFilter(a, { ...EMPTY_TASK_FILTER, keyword: '不存在的词' }), false)
+  assert.equal(matchesTaskFilter(c, { ...EMPTY_TASK_FILTER, statusCodes: ['doing'], priorityCodes: ['p1'], typeCodes: ['code_impl'] }), true)
+  assert.equal(matchesTaskFilter(c, { ...EMPTY_TASK_FILTER, statusCodes: ['doing'], priorityCodes: ['p2'] }), false)
+  assert.equal(matchesTaskFilter(c, { ...EMPTY_TASK_FILTER, statusCodes: ['todo', 'doing'] }), true)
+  assert.equal(isTaskFilterEmpty(EMPTY_TASK_FILTER), true)
+  assert.equal(isTaskFilterEmpty({ ...EMPTY_TASK_FILTER, keyword: '  ' }), true)
+  assert.equal(isTaskFilterEmpty({ ...EMPTY_TASK_FILTER, statusCodes: ['todo'] }), false)
+})
+
+test('task tree filter keeps parent chain when a descendant matches', () => {
+  const parent = task('p', { title: '父任务' })
+  const hitChild = task('c1', { parentId: 'p', title: '包含 特殊词 的子任务' })
+  const missChild = task('c2', { parentId: 'p', title: '不匹配的子任务' })
+  const otherRoot = task('r', { title: '另一个根任务' })
+
+  const tree = buildTaskTree([parent, hitChild, missChild, otherRoot])
+  const filtered = filterTaskTree(tree, (t) => matchesTaskFilter(t, { ...EMPTY_TASK_FILTER, keyword: '特殊词' }))
+
+  assert.equal(filtered.length, 1)
+  assert.equal(filtered[0].task.id, 'p')
+  assert.equal(filtered[0].children.length, 1)
+  assert.equal(filtered[0].children[0].task.id, 'c1')
+})
+
+test('task tree filter drops non-matching children under a matching parent', () => {
+  const parent = task('p', { title: '匹配的父任务' })
+  const child = task('c1', { parentId: 'p', title: '子任务' })
+
+  const tree = buildTaskTree([parent, child])
+  const filtered = filterTaskTree(tree, (t) => matchesTaskFilter(t, { ...EMPTY_TASK_FILTER, keyword: '父任务' }))
+
+  assert.equal(filtered.length, 1)
+  assert.equal(filtered[0].task.id, 'p')
+  assert.equal(filtered[0].children.length, 0)
+})
+
+test('countTaskTreeBy only counts nodes matching keep, not parent context', () => {
+  const grand = task('g', { title: '祖父' })
+  const parent = task('p', { parentId: 'g', title: '父任务' })
+  const doneChild = task('c1', { parentId: 'p', title: '已完成子任务', statusCode: 'done', completedAt: '2024-01-01T00:00:00.000Z' })
+  const todoChild = task('c2', { parentId: 'p', title: '未完成子任务' })
+
+  const tree = buildTaskTree([grand, parent, doneChild, todoChild])
+  const keep = (t) => t.statusCode === 'done'
+
+  // 过滤后保留父链：祖父/父任务作为上下文出现
+  const filtered = filterTaskTree(tree, keep)
+  assert.deepEqual(filtered.map((n) => n.task.id), ['g'])
+  assert.deepEqual(filtered[0].children.map((n) => n.task.id), ['p'])
+  assert.deepEqual(filtered[0].children[0].children.map((n) => n.task.id), ['c1'])
+
+  // 计数只算真正完成的任务
+  assert.equal(countTaskTreeBy(filtered, keep), 1)
+})
+
+test('isTaskDueOnDay excludes cancelled tasks from calendar markers', () => {
+  /**
+   * `isTaskDueOnDay` 比的是**本地日历日**（`toDateString()`，见 src/client/taskFilterSort.ts），
+   * 所以"哪一天"与"截止时刻"都必须按本地时刻构造：原先用 UTC 字符串，
+   * 在美洲时区会算成前一天而假红（CI 跑 UTC 才没暴露）。
+   */
+  const day = new Date(2024, 0, 1)
+  const dueLocal = new Date(2024, 0, 1, 10, 0, 0).toISOString()
+  const due = task('a', { effectiveDueAt: dueLocal })
+  const cancelled = task('b', { effectiveDueAt: dueLocal, statusCode: 'cancelled' })
+  const done = task('c', { effectiveDueAt: dueLocal, statusCode: 'done' })
+  const otherDay = task('d', { effectiveDueAt: new Date(2024, 0, 2, 10, 0, 0).toISOString() })
+  const noDue = task('e', { effectiveDueAt: null })
+
+  assert.equal(isTaskDueOnDay(due, day), true)
+  assert.equal(isTaskDueOnDay(cancelled, day), false)
+  assert.equal(isTaskDueOnDay(done, day), true)
+  assert.equal(isTaskDueOnDay(otherDay, day), false)
+  assert.equal(isTaskDueOnDay(noDue, day), false)
+})
+
+test('task sorter: dueAt asc/desc uses dueAt, then completedAt for done tasks, nulls last', () => {
+  const early = task('a', { dueAt: '2024-01-01T00:00:00.000Z' })
+  const late = task('b', { dueAt: '2024-06-01T00:00:00.000Z' })
+  const none = task('c', { dueAt: null })
+  const doneNoDue = task('d', { dueAt: null, statusCode: 'done', completedAt: '2024-02-01T00:00:00.000Z' })
+
+  assert.deepEqual([late, none, early, doneNoDue].sort(createTaskSorter('dueAt', 'asc')).map((t) => t.id), ['a', 'd', 'b', 'c'])
+  assert.deepEqual([early, none, late, doneNoDue].sort(createTaskSorter('dueAt', 'desc')).map((t) => t.id), ['b', 'd', 'a', 'c'])
+})
+
+test('task sorter: dueAt uses effectiveDueAt when own dueAt is null', () => {
+  const inheritedEarly = task('a', { dueAt: null, effectiveDueAt: '2024-01-01T00:00:00.000Z' })
+  const ownLate = task('b', { dueAt: '2024-06-01T00:00:00.000Z' })
+  const inheritedLater = task('c', { dueAt: null, effectiveDueAt: '2024-07-01T00:00:00.000Z' })
+
+  assert.deepEqual([inheritedLater, ownLate, inheritedEarly].sort(createTaskSorter('dueAt', 'asc')).map((t) => t.id), ['a', 'b', 'c'])
+  assert.deepEqual([inheritedEarly, inheritedLater, ownLate].sort(createTaskSorter('dueAt', 'desc')).map((t) => t.id), ['c', 'b', 'a'])
+})
+
+test('task sorter: priority asc means high priority first, desc means low priority first', () => {
+  const weights = new Map([['p0', 0], ['p1', 1], ['p2', 2], ['p3', 3]])
+  const p0 = task('a', { priorityCode: 'p0' })
+  const p2 = task('b', { priorityCode: 'p2' })
+  const p3 = task('c', { priorityCode: 'p3' })
+
+  assert.deepEqual([p2, p0, p3].sort(createTaskSorter('priority', 'asc', weights)).map((t) => t.id), ['a', 'b', 'c'])
+  assert.deepEqual([p2, p0, p3].sort(createTaskSorter('priority', 'desc', weights)).map((t) => t.id), ['c', 'b', 'a'])
+})
+
+test('task sorter: createdAt and title', () => {
+  const older = task('a', { createdAt: '2024-01-01T00:00:00.000Z', title: 'Alpha' })
+  const newer = task('b', { createdAt: '2024-02-01T00:00:00.000Z', title: 'Beta' })
+
+  assert.deepEqual([newer, older].sort(createTaskSorter('createdAt', 'asc')).map((t) => t.id), ['a', 'b'])
+  assert.deepEqual([older, newer].sort(createTaskSorter('createdAt', 'desc')).map((t) => t.id), ['b', 'a'])
+  assert.deepEqual([older, newer].sort(createTaskSorter('title', 'asc')).map((t) => t.id), ['a', 'b'])
+  assert.deepEqual([older, newer].sort(createTaskSorter('title', 'desc')).map((t) => t.id), ['b', 'a'])
+})
+
+test('buildTaskTree with sorter only reorders siblings, not across levels', () => {
+  const rootA = task('ra', { title: '根B' })
+  const rootB = task('rb', { title: '根A' })
+  const childA = task('ca', { parentId: 'ra', title: '子B' })
+  const childB = task('cb', { parentId: 'ra', title: '子A' })
+
+  const tree = buildTaskTree([rootA, rootB, childA, childB], undefined, createTaskSorter('title', 'asc'))
+  assert.deepEqual(tree.map((n) => n.task.id), ['rb', 'ra'])
+  assert.deepEqual(tree[1].children.map((n) => n.task.id), ['cb', 'ca'])
+})
+
+test('compareTasks returns deterministic tie-breaker', () => {
+  const a = task('a', { createdAt: '2024-01-01T00:00:00.000Z' })
+  const b = task('b', { createdAt: '2024-01-01T00:00:00.000Z' })
+  assert.equal(compareTasks(a, b, 'title', 'asc'), a.id.localeCompare(b.id))
+})

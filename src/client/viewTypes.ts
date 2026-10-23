@@ -1,0 +1,284 @@
+/**
+ * 工作台客户端的视图模型类型（从 index.tsx 抽出，行为不变）。
+ * 前后端 HTTP 契约在 src/shared/contracts.ts；这里只放客户端渲染用的行数据形状。
+ */
+import type { PromptContentPart } from './quickAttachments.js'
+
+export type { PromptContentPart }
+
+
+export interface Dict { kind: string; code: string; name: string; config: Record<string, unknown>; builtin?: number; active?: number; sortOrder?: number; createdAt?: string; updatedAt?: string }
+export interface Task {
+  id: string
+  parentId: string | null
+  title: string
+  description: string
+  typeCode: string
+  statusCode: string
+  priorityCode: string
+  aiPolicyCode: string
+  dueAt: string | null
+  effectiveDueAt: string | null
+  allDay: boolean
+  estimatedMinutes: number | null
+  source: string
+  workspacePath: string | null
+  effectiveWorkspacePath: string | null
+  /** 显式进度 0–99（`100` 不落库，见 `shared/taskProgress.ts`）。旧服务端不下发时为 undefined。 */
+  progressPercent?: number
+  archived: boolean
+  extra: Record<string, unknown>
+  recurrenceCode: string | null
+  recurrenceRule: Record<string, unknown>
+  recurrenceMasterId: string | null
+  recurrenceLastGenerated: string | null
+  createdAt: string
+  updatedAt: string
+  completedAt: string | null
+  cancelledAt: string | null
+}
+/**
+ * 计划项（视图侧）。
+ *
+ * `minutes` / `effortDone` 是迁移 19 起回填、T2 接线的字段：旧服务端不下发时是 `undefined`，
+ * 界面按"该服务端没有这个能力"处理（不显示、不猜 0）。
+ *
+ * `taskStatusCode` 由服务端给出（`missing` = 任务已删除）——计划行照旧保留，
+ * 界面据此标注并禁用会操作任务的按钮（T2/D07）。
+ */
+export interface DailyPlanItemView { taskId: string; order: number; title: string; note: string; minutes?: number; effortDone?: boolean; taskStatusCode?: string }
+/**
+ * 一份每日计划。`readable=false` 表示 `items_json` 整体无法解析：
+ * 容量必须显示"不可计算"而不是 0，界面也不得假装这份计划可用（requirements §4.2/§5.2）。
+ */
+export interface DailyPlanView {
+  id: string
+  planDate: string
+  summary: string
+  items: DailyPlanItemView[]
+  sourceCode: string
+  sessionId: string | null
+  createdAt: string
+  updatedAt: string
+  readable?: boolean
+  diagnostics?: string[]
+}
+export interface TaskReportView { id: string; periodCode: 'day' | 'week'; periodStart: string; title: string; summaryMd: string; stats: Record<string, unknown>; sessionId: string | null; createdAt: string; updatedAt: string }
+
+// 提醒相关类型来自共享契约（前后端单一事实来源），此处不再重复定义。
+export interface KnowledgeEntry { id: string; kindCode: string; title: string; contentMd: string; tags: string[]; sourceTaskId: string | null; sourceSessionId: string | null; sourceReviewId: string | null; fileLink: string | null; createdAt: string; updatedAt: string }
+export interface Idea { id: string; title: string; contentMd: string; kindCode: string; tags: string[]; sourceSessionId: string | null; createdAt: string; updatedAt: string }
+export interface IdeaClusterView { id: string; title: string; summaryMd: string; tags: string[]; ideas: Idea[]; createdAt: string; updatedAt: string }
+export interface Bootstrap {
+  dictionaries: Dict[]
+  stats: { overdue: number; todayDue: number; doing: number; total: number }
+  todayPlan?: DailyPlanView | null
+  /**
+   * 团队记忆是否可用（v1.14.58）。
+   *
+   * 团队记忆是**公司内部系统**、不会开源，开源用户拿不到 `dsh-team-memory` 与内网服务。
+   * 所以复盘弹框里的「🧠 同步到团队记忆库」**拿得到才渲染** ——
+   * 否则开源用户会看到一个永远用不了的勾选框（它引用的服务在那边根本不存在）。
+   *
+   * `undefined`（旧服务端 / bootstrap 还没回来）= **按不可用处理**，宁可不显示。
+   */
+  memoryAvailable?: boolean
+}
+export interface TaskDetail { task: Task; children: Task[]; sessions: Array<Record<string, unknown>>; reminders: Array<{ id: string; taskId: string; offsetMinutes: number; methodCode: string; firedAt: string | null; skippedAt?: string | null; acknowledgedAt?: string | null }>; events: Array<Record<string, unknown>>; reviews: Array<Record<string, unknown>>;
+  /**
+   * 待验收投影（T1/D04）：`GET /tasks/:id` 在该任务有 pending completion 草稿时带上。
+   * `undefined` = 没有待验收草稿（旧服务端同样不带这个字段，两者都按"没有"处理即可，
+   * 因为列表侧的"服务端不支持"是由整体投影 `available=false` 表达的）。
+   */
+  pendingCompletion?: { deferred: boolean } }
+
+export interface SessionDriver {
+  sessionId: string
+  /**
+   * 发送一轮用户消息。
+   *
+   * v1.15.1 起内容不再只有文本：图片附件走宿主**原生多模态管线**的
+   * `{type:'image', mediaType, data, name?}` 片段（不依赖任何视觉插件）。
+   */
+  prompt(content: PromptContentPart[], mode: 'queue'): Promise<{ ok?: boolean; error?: unknown }>
+  rename(title: string): Promise<unknown>
+}
+
+/** 模型选择（宿主 `ModelSelection` 的本地形状）。 */
+export interface ModelSelection {
+  readonly provider: string
+  readonly model: string
+  readonly reasoningEffort?: string
+}
+
+/** 用户在工作台里显式选中的模型（含给界面看的可读标签）。 */
+export interface QuickModelSelection extends ModelSelection {
+  readonly label: string
+  readonly effortLabel?: string
+}
+
+export interface ModelCatalogModel {
+  readonly id: string
+  readonly name: string
+  readonly description?: string
+  readonly reasoning?: { readonly efforts: ReadonlyArray<{ id: string; name: string }>; readonly defaultEffort?: string }
+}
+
+export interface ModelProviderGroup {
+  readonly id: string
+  readonly name: string
+  readonly models: readonly ModelCatalogModel[]
+}
+
+/**
+ * 会话级模型目录快照（宿主 `dsh-client-ui-model-selection` 的 `ModelDirectoryState` 子集）。
+ *
+ * ⚠️ `current` 是**宿主的持久投影**（下一次请求会用哪个模型），本插件只读不算 ——
+ * 判定与展示都走它，"用户选的"与"聊天里显示的"才是同一个事实。
+ */
+export interface ModelDirectoryState {
+  readonly current: ModelSelection | null
+  readonly routable?: boolean | null
+  readonly groups: readonly ModelProviderGroup[]
+  readonly failures: ReadonlyArray<{ id: string; name: string; message: string }>
+  readonly status: 'idle' | 'loading' | 'ready' | 'selecting' | 'error'
+  readonly error: string | null
+}
+
+export interface ModelDirectoryRuntime {
+  readonly store: {
+    getSnapshot(): ModelDirectoryState
+    subscribe(listener: () => void): () => void
+  }
+  load(): Promise<ModelDirectoryState>
+  select(selection: ModelSelection): Promise<void>
+}
+export interface DshSessionSummary {
+  id: string
+  title?: string
+  displayTitle: string
+  cwd?: string
+  running?: boolean
+  blank?: boolean
+  updatedAt?: number
+}
+export interface DshSessionListState {
+  ids: string[]
+  byId: Record<string, DshSessionSummary>
+  current?: string
+  /**
+   * 宿主会话列表的**就绪相位**（`pending` / `ready`）。
+   *
+   * `pending` 期间 `ids` 还是空的——这时的"查不到会话"**不能**当成"会话没了"，
+   * 否则启动瞬间会凭空多开一个重复会话。旧宿主没有这个字段（`undefined`），
+   * 判据按"不下结论"处理（同 `pending`）。
+   */
+  phase?: string
+}
+/** 宿主 `sessions.binding(id)` 的返回值（稳定引用；绑定里的会话就是驱动本体）。 */
+export interface DshSessionBinding {
+  sessionId?: string
+  session: SessionDriver
+}
+/**
+ * 宿主 `sessions.retain(id, {source})` 的返回值（DSH 0.1.7-rc.2 起是**唯一**能拿到绑定的入口）。
+ *
+ * ⚠️ 契约要点（0.1.7-rc.2 实测 + 官方类型定义）：
+ * - `binding` 是 getter，**引用被 release 之后再读会抛**；所以要用的东西提前取出来，
+ *   不要把它存进引用、更不要在 release 之后碰它；
+ * - `ready` 会等宿主的 open 完成（等到那时 `binding` 才可用），失败会 reject；
+ * - `release()` 必须与 `retain()` 一一配对，否则会话的 scope 永不回收。
+ */
+export interface DshSessionReference {
+  sessionId?: string
+  readonly ready?: Promise<unknown>
+  readonly binding: DshSessionBinding
+  release(): void
+}
+export interface WorkbenchRuntime {
+  sessions: {
+    list: { getSnapshot(): DshSessionListState }
+    binding(id: string): DshSessionBinding | undefined
+    /**
+     * 新建一个**独立会话**，返回**新会话的 id**（P8 生成入口的入口能力）。
+     *
+     * 形状逐字来自真实宿主注入面（DSH 0.2.0-rc.2，
+     * `@deepseek-ai/dsh-api-session-controller` 的 `ISessions.create` 与 `ClientSessions.create`）：
+     * `create(opts?: { workspaceId?: WorkspaceId; cwd?: string; sessionId?: SessionId }): Promise<SessionId>`
+     * —— 返回的是 **session id**（不是对象、不是 `{ ok, value }`）；
+     * 失败**抛** `SessionCreateError`（`name === 'SessionCreateError'`，带 `rpcError` 与 `requestedSessionId`）。
+     *
+     * ⚠️ 生成入口**只传 `{ workspaceId }`**：不传 `sessionId`（那是"复用既有会话 id"的口子，
+     * 传了就不是新身份了），也不读会话列表猜"当前/最后一条" —— AX-E52 防的正是这件事。
+     * 旧宿主没有这个方法时，生成入口报 `create-unavailable`（缺能力明说），
+     * **不降级成"复用当前会话"**（那会让用户以为生成了一个独立会话）。
+     */
+    create?(input?: { workspaceId?: string; cwd?: string; sessionId?: string }): Promise<string>
+    /**
+     * 0.1.7-rc.2 起 `binding()` **只对"已被 retain 的会话"**返回绑定
+     * （旧版是按"在列表里/是当前会话"推导）。用 `create()` 新建出来的会话
+     * 谁都没 retain → `binding()` 恒为 undefined → 旧写法直接报「会话绑定未就绪」。
+     * 旧宿主没有这个方法，`acquireSession` 会退到 `binding()`。
+     */
+    retain?(id: string, options: { source: string }): DshSessionReference
+    open(id: string): void
+  }
+  workspaces: {
+    /**
+     * `archivedSessionIds` 是宿主的**归档集**：「归档会话」只把 id 收进这个集合、
+     * **不删文件**，所以归档过的会话仍然出现在 `sessions.list` 里——只查会话列表
+     * 查不出"已归档"。旧宿主没有这个字段（`undefined`），判据退化为原行为。
+     */
+    list: { getSnapshot(): { items: readonly { workspaceId: string; path?: string }[]; archivedSessionIds?: readonly string[] } }
+    /**
+     * 建/取一个工作区。宿主服务面（`ctx.workspaces.create()`）返回的是**拆过包的**
+     * `WorkspaceView`（顶层就有 `workspaceId`），失败时**抛** `WorkspaceCreateError`；
+     * `{ ok, value: { workspace } }` 是未经服务面的 Remote 原始形状。
+     * 两种形态的读取见 `intakeWorkspace.ts#readCreatedWorkspaceId`（唯一读取处，有单测）。
+     */
+    create?(input: { path: string }): Promise<{
+      ok?: boolean
+      value?: { workspace?: { workspaceId?: string } }
+      workspaceId?: string
+    }>
+    /**
+     * ⚠️ **0.1.5 与 0.1.7-rc.2 都没有这个方法**（2026-09-26 逐个包搜过）：
+     * `connectWorkspace()` 里那条兜底腿实际上是死路，能用的只有
+     * `uiWorkspace.connectWorkspace`。保留声明只为"万一将来宿主补上"，判据里已有
+     * `typeof openPath === 'function'` 守卫，所以不会误用。
+     */
+    openPath?(path: string): Promise<void>
+  }
+  uiWorkspace: {
+    connectWorkspace(workspaceId: string): Promise<string>
+  }
+  /**
+   * 会话级模型目录（宿主 `dsh-client-ui-model-selection` 提供）。
+   *
+   * ## 为什么这里是**可选**、而不是写进客户端 `inject`
+   *
+   * 两条规则在这里冲突（调研文档 3.3 点名的那个决策）：
+   *
+   * - 本项目规范："前置条件进 `inject`、可选增强软探测"；
+   * - 同一份规范又说："未声明 `inject` 的服务用 `ctx.get` 也拿不到（恒 undefined）"。
+   *
+   * 第二条在本宿主上**不成立**：cordis 4.0.1 的 `Registry.get(name, strict)` 文档原话是
+   * "Read a service from the store **without the inject requirement**"，
+   * 只要求提供方 fiber 处于活动态；抛 `cannot get property "…" without inject` 的是
+   * **代理属性访问**（`ctx.modelDirectories`）那条路 —— 而我们一律走
+   * `optionalService(ctx, name)`（= `ctx.get`），`slots`/`layout`/`uiWorkspace` 都是这么拿的。
+   *
+   * 所以决策是：**软探测，不进 `inject`**。理由是不可逆的成本不对称 ——
+   * `dsh-client-ui-model-selection` 是**另一个客户端插件**，用户可以在 profile 里不装它；
+   * 写进 `inject` 会让那种机器上**整个工作台面板 pending**（丢整块面板换一个下拉框）。
+   * 未声明 `inject` 的判定由 `test/injectPolicy.test.mjs` 钉住。
+   */
+  modelDirectories?: {
+    directoryFor(sessionId: string): ModelDirectoryRuntime
+  }
+  connection?: {
+    generation: {
+      getSnapshot(): { host: { home: string } } | undefined
+    }
+  }
+}

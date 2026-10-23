@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务页筛选/排序 DEMO v3</title>
+<style>
+  :root {
+    --bg: #111114;
+    --panel: #18181c;
+    --border: rgba(255,255,255,.14);
+    --text: #eee;
+    --muted: #9aa3ad;
+    --accent: #4f8ef7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .page { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin: 0 0 18px; }
+  .toolbar {
+    position: relative;
+    z-index: 25;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .toolbar input, .toolbar select {
+    background: #101014;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 13px;
+    min-width: 0;
+  }
+  .toolbar input { flex: 1; min-width: 160px; }
+  .toolbar button, .sortbar button {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .toolbar button:hover, .sortbar button:hover { background: rgba(255,255,255,.06); }
+  .toolbar button:disabled { opacity: .4; cursor: default; }
+  .spacer { flex: 1; }
+  .sortbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .dropdown { position: relative; }
+  .dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-width: 118px;
+    max-width: 180px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .dropdown-trigger .selected-tags {
+    display: inline-flex;
+    gap: 4px;
+    overflow: hidden;
+    flex-wrap: nowrap;
+  }
+  .dropdown-selected {
+    padding: 6px 8px 8px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    margin-bottom: 6px;
+  }
+  .dropdown-selected-title {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .dropdown-selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .dropdown-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 30;
+    min-width: 220px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #1c1c1f;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.45);
+  }
+  .dropdown-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .dropdown-option.checked {
+    border-color: var(--opt-color, #8a9aa8);
+    background: color-mix(in srgb, var(--opt-color, #8a9aa8) 12%, transparent);
+  }
+  .list {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    cursor: pointer;
+  }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: rgba(255,255,255,.04); }
+  .toggle {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+  .toggle:hover { background: rgba(255,255,255,.08); color: var(--text); }
+  .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 14px; }
+  .meta { display: flex; gap: 6px; flex: none; align-items: center; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-size: 11px;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .due { color: var(--muted); font-size: 12px; min-width: 92px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty { padding: 24px; text-align: center; color: var(--muted); }
+  .archived .row .title { color: #b8c0c8; }
+  .archived .row { opacity: .92; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>任务页筛选 / 排序 DEMO v3</h1>
+  <p class="sub">下拉多选 + 彩色标签 + 有效截止时间排序（已完成无截止按完成时间参与排序）。</p>
+
+  <div class="toolbar">
+    <input id="keyword" type="search" placeholder="搜索标题 / 描述">
+    <div class="dropdown" id="statusDropdown">
+      <button class="dropdown-trigger" id="statusTrigger">状态 <span class="selected-tags"></span> <span class="arrow">▼</span></button>
+      <div class="dropdown-panel" id="statusPanel" style="display:none"></div>
+    </div>
+    <div class="dropdown" id="priorityDropdown">
+      <button class="dropdown-trigger" id="priorityTrigger">优先级 <span class="selected-tags"></span> <span class="arrow">▼</span></button>
+      <div class="dropdown-panel" id="priorityPanel" style="display:none"></div>
+    </div>
+    <div class="dropdown" id="typeDropdown">
+      <button class="dropdown-trigger" id="typeTrigger">类型 <span class="selected-tags"></span> <span class="arrow">▼</span></button>
+      <div class="dropdown-panel" id="typePanel" style="display:none; right:0; left:auto"></div>
+    </div>
+  </div>
+
+  <div class="sortbar">
+    <span>排序</span>
+    <select id="sortKey">
+      <option value="dueAt">截止时间</option>
+      <option value="priority">优先级</option>
+      <option value="createdAt">创建时间</option>
+      <option value="title">标题</option>
+    </select>
+    <button id="sortDir">↑ 升序</button>
+    <span id="count"></span>
+    <span class="spacer"></span>
+    <button id="clear" disabled>清空</button>
+    <button id="archiveToggle">查看归档</button>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<script>
+  const DICTS = {
+    status: [
+      { code: 'backlog', name: '待规划', color: '#95A5A6' },
+      { code: 'todo', name: '待办', color: '#3498DB' },
+      { code: 'doing', name: '进行中', color: '#F39C12' },
+      { code: 'blocked', name: '被阻塞', color: '#E74C3C' },
+      { code: 'done', name: '已完成', color: '#2E9B7B' },
+      { code: 'cancelled', name: '已取消', color: '#7F8C8D' },
+    ],
+    priority: [
+      { code: 'p0', name: '紧急', color: '#E74C3C', weight: 0 },
+      { code: 'p1', name: '高', color: '#F39C12', weight: 1 },
+      { code: 'p2', name: '普通', color: '#3498DB', weight: 2 },
+      { code: 'p3', name: '低', color: '#95A5A6', weight: 3 },
+    ],
+    type: [
+      { code: 'client_meeting', name: '客户交流', color: '#4F86F7' },
+      { code: 'code_impl', name: '代码实现', color: '#2E9B7B' },
+      { code: 'feature_opt', name: '功能优化', color: '#6C5CE7' },
+      { code: 'solution_design', name: '方案设计', color: '#F39C12' },
+      { code: 'personal', name: '个人生活', color: '#95A5A6' },
+    ],
+  }
+
+  const TASKS = [
+    { id: 't1', parentId: null, title: '完成任务页筛选功能', description: '关键词、状态、优先级、类型可组合', typeCode: 'feature_opt', statusCode: 'doing', priorityCode: 'p0', dueAt: '2025-01-10T18:00:00', completedAt: null, createdAt: '2025-01-01T09:00:00', archived: false },
+    { id: 't1-1', parentId: 't1', title: '静态 DEMO 页面', description: '纯 HTML/CSS/假数据', typeCode: 'feature_opt', statusCode: 'done', priorityCode: 'p1', dueAt: null, completedAt: '2025-01-03T18:00:00', createdAt: '2025-01-01T09:30:00', archived: false },
+    { id: 't1-2', parentId: 't1', title: '真实实现筛选排序', description: '树形保留父链，同级排序', typeCode: 'code_impl', statusCode: 'todo', priorityCode: 'p0', dueAt: '2025-01-08T18:00:00', completedAt: null, createdAt: '2025-01-01T10:00:00', archived: false },
+    { id: 't1-3', parentId: 't1', title: '回归测试', description: 'pnpm check + test 通过', typeCode: 'code_impl', statusCode: 'todo', priorityCode: 'p2', dueAt: null, completedAt: null, createdAt: '2025-01-02T08:00:00', archived: false },
+    { id: 't2', parentId: null, title: 'dsh-personal-workbench插件优化', description: '已完成无截止，按完成时间 8/18 参与排序', typeCode: 'feature_opt', statusCode: 'done', priorityCode: 'p2', dueAt: null, completedAt: '2025-08-18T00:00:00', createdAt: '2025-01-02T14:00:00', archived: false },
+    { id: 't3', parentId: null, title: '学习 TypeScript 高级类型', description: '整理笔记', typeCode: 'personal', statusCode: 'backlog', priorityCode: 'p3', dueAt: null, completedAt: null, createdAt: '2025-01-03T20:00:00', archived: false },
+    { id: 'a1', parentId: null, title: '旧版报表导出', description: '已完成归档', typeCode: 'code_impl', statusCode: 'done', priorityCode: 'p2', dueAt: null, completedAt: '2024-12-20T18:00:00', createdAt: '2024-12-10T09:00:00', archived: true },
+    { id: 'a1-1', parentId: 'a1', title: '导出 CSV 编码修复', description: '子任务', typeCode: 'code_impl', statusCode: 'done', priorityCode: 'p1', dueAt: null, completedAt: '2024-12-18T18:00:00', createdAt: '2024-12-11T09:00:00', archived: true },
+    { id: 'a2', parentId: null, title: '旧版日历面板优化', description: '已完成归档', typeCode: 'feature_opt', statusCode: 'done', priorityCode: 'p3', dueAt: '2024-12-25T18:00:00', completedAt: '2024-12-24T18:00:00', createdAt: '2024-12-15T09:00:00', archived: true },
+  ]
+
+  const state = {
+    keyword: '',
+    statuses: new Set(),
+    priorities: new Set(),
+    types: new Set(),
+    sortKey: 'dueAt',
+    sortDir: 'asc',
+    archived: false,
+    openMenu: null,
+    expanded: new Set(),
+    expandedInitialized: false,
+  }
+
+  const $ = (id) => document.getElementById(id)
+  const weightOf = (code) => DICTS.priority.find((d) => d.code === code)?.weight ?? 99
+  const colorOf = (kind, code) => DICTS[kind].find((d) => d.code === code)?.color ?? '#8a9aa8'
+
+  function populateDropdowns() {
+    for (const [kind, panelId] of [['status', 'statusPanel'], ['priority', 'priorityPanel'], ['type', 'typePanel']]) {
+      const panel = $(panelId)
+      panel.innerHTML = ''
+      const selected = document.createElement('div')
+      selected.className = 'dropdown-selected'
+      selected.id = `${kind}Selected`
+      selected.style.display = 'none'
+      panel.appendChild(selected)
+      for (const d of DICTS[kind]) {
+        const label = document.createElement('label')
+        label.className = 'dropdown-option'
+        label.dataset.kind = kind
+        label.dataset.code = d.code
+        label.style.setProperty('--opt-color', d.color)
+        label.innerHTML = `<input type="checkbox" value="${d.code}"><span style="color:${d.color}">${d.name}</span>`
+        panel.appendChild(label)
+      }
+    }
+  }
+
+  function effectiveTime(task) {
+    if (task.dueAt) {
+      const n = Date.parse(task.dueAt)
+      if (!Number.isNaN(n)) return n
+    }
+    if (task.statusCode === 'done' && task.completedAt) {
+      const n = Date.parse(task.completedAt)
+      if (!Number.isNaN(n)) return n
+    }
+    return null
+  }
+
+  function matches(task) {
+    const kw = state.keyword.trim().toLowerCase()
+    if (kw && !`${task.title}\n${task.description}`.toLowerCase().includes(kw)) return false
+    if (state.statuses.size > 0 && !state.statuses.has(task.statusCode)) return false
+    if (state.priorities.size > 0 && !state.priorities.has(task.priorityCode)) return false
+    if (state.types.size > 0 && !state.types.has(task.typeCode)) return false
+    return true
+  }
+
+  function compare(a, b) {
+    const factor = state.sortDir === 'asc' ? 1 : -1
+    let diff = 0
+    if (state.sortKey === 'dueAt') {
+      const av = effectiveTime(a)
+      const bv = effectiveTime(b)
+      if (av === null && bv === null) diff = 0
+      else if (av === null) diff = 1
+      else if (bv === null) diff = -1
+      else diff = (av - bv) * factor
+    } else if (state.sortKey === 'priority') {
+      diff = (weightOf(a.priorityCode) - weightOf(b.priorityCode)) * factor
+    } else if (state.sortKey === 'createdAt') {
+      diff = a.createdAt.localeCompare(b.createdAt) * factor
+    } else if (state.sortKey === 'title') {
+      diff = a.title.localeCompare(b.title, 'zh-Hans-CN') * factor
+    }
+    return diff || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
+  }
+
+  function buildTree(tasks) {
+    const byParent = new Map()
+    for (const t of tasks) {
+      const list = byParent.get(t.parentId) ?? []
+      list.push(t)
+      byParent.set(t.parentId, list)
+    }
+    const walk = (parentId) => {
+      const list = (byParent.get(parentId) ?? []).slice().sort(compare)
+      return list.map((task) => ({ task, children: walk(task.id) }))
+    }
+    return walk(null)
+  }
+
+  function filterTree(nodes, keep) {
+    const out = []
+    for (const node of nodes) {
+      const children = filterTree(node.children, keep)
+      if (keep(node.task) || children.length > 0) out.push({ task: node.task, children })
+    }
+    return out
+  }
+
+  function countTree(nodes) {
+    return nodes.reduce((sum, n) => sum + 1 + countTree(n.children), 0)
+  }
+
+  function badge(kind, code) {
+    const d = DICTS[kind].find((x) => x.code === code)
+    const color = d?.color ?? '#8a9aa8'
+    return `<span class="chip" style="background:${color}22;color:${color};border:1px solid ${color}66">${d?.name ?? code}</span>`
+  }
+
+  function dueText(task) {
+    const t = effectiveTime(task)
+    if (t === null) return '无截止'
+    const d = new Date(t)
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  function renderTrigger(kind, set, triggerId) {
+    const trigger = $(triggerId)
+    const tags = trigger.querySelector('.selected-tags')
+    const arrow = trigger.querySelector('.arrow')
+    if (set.size === 0) {
+      tags.innerHTML = '<span style="color:var(--muted)">全部</span>'
+    } else {
+      tags.innerHTML = `<span style="color:var(--muted)">已选 ${set.size} 项</span>`
+    }
+    arrow.textContent = state.openMenu === kind ? '▲' : '▼'
+  }
+
+  function renderPanels() {
+    for (const [kind, panelId] of [['status', 'statusPanel'], ['priority', 'priorityPanel'], ['type', 'typePanel']]) {
+      const panel = $(panelId)
+      const set = kind === 'status' ? state.statuses : kind === 'priority' ? state.priorities : state.types
+      panel.style.display = state.openMenu === kind ? 'block' : 'none'
+      const selectedEl = panel.querySelector('.dropdown-selected')
+      if (set.size === 0) {
+        selectedEl.style.display = 'none'
+        selectedEl.innerHTML = ''
+      } else {
+        selectedEl.style.display = 'block'
+        selectedEl.innerHTML = `<div class="dropdown-selected-title">已选（${set.size}）</div><div class="dropdown-selected-tags">${[...set].map((code) => badge(kind, code)).join('')}</div>`
+      }
+      for (const opt of panel.querySelectorAll('.dropdown-option')) {
+        const code = opt.dataset.code
+        const checked = set.has(code)
+        opt.classList.toggle('checked', checked)
+        opt.querySelector('input').checked = checked
+      }
+    }
+  }
+
+  function render() {
+    const source = state.archived ? TASKS.filter((t) => t.archived) : TASKS.filter((t) => !t.archived)
+    const tree = filterTree(buildTree(source), matches)
+    if (!state.expandedInitialized) {
+      const collect = (nodes) => {
+        for (const n of nodes) {
+          if (n.children.length > 0) {
+            state.expanded.add(n.task.id)
+            collect(n.children)
+          }
+        }
+      }
+      collect(tree)
+      state.expandedInitialized = true
+    }
+    let html = ''
+    const walk = (nodes, depth) => {
+      for (const node of nodes) {
+        const hasKids = node.children.length > 0
+        const open = state.expanded.has(node.task.id)
+        html += `<div class="row" style="padding-left:${12 + depth * 18}px">`
+        html += `<button class="toggle" data-id="${node.task.id}">${hasKids ? (open ? '▼' : '▶') : '·'}</button>`
+        html += `<span class="title">${node.task.title}</span>`
+        html += `<span class="meta">${badge('type', node.task.typeCode)}${badge('priority', node.task.priorityCode)}${badge('status', node.task.statusCode)}</span>`
+        html += `<span class="due">${dueText(node.task)}</span>`
+        html += `</div>`
+        if (hasKids && open) walk(node.children, depth + 1)
+      }
+    }
+    walk(tree, 0)
+    if (tree.length === 0) html = '<div class="empty">没有符合条件的任务，点“清空”恢复完整列表</div>'
+
+    $('list').innerHTML = html
+    $('count').textContent = `共 ${countTree(tree)} 条`
+    $('clear').disabled = !(state.keyword.trim() || state.statuses.size > 0 || state.priorities.size > 0 || state.types.size > 0)
+    $('archiveToggle').textContent = state.archived ? '返回任务' : '查看归档'
+    $('list').classList.toggle('archived', state.archived)
+    $('sortDir').textContent = state.sortDir === 'asc' ? '↑ 升序' : '↓ 降序'
+    renderTrigger('status', state.statuses, 'statusTrigger')
+    renderTrigger('priority', state.priorities, 'priorityTrigger')
+    renderTrigger('type', state.types, 'typeTrigger')
+    renderPanels()
+
+    for (const btn of document.querySelectorAll('.toggle')) {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id
+        if (btn.textContent === '▼') state.expanded.delete(id)
+        else state.expanded.add(id)
+        render()
+      })
+    }
+  }
+
+  function closeMenus() {
+    state.openMenu = null
+    render()
+  }
+
+  $('keyword').addEventListener('input', (e) => { state.keyword = e.target.value; render() })
+  $('clear').addEventListener('click', () => {
+    state.keyword = ''; state.statuses.clear(); state.priorities.clear(); state.types.clear()
+    $('keyword').value = ''
+    render()
+  })
+  $('sortKey').addEventListener('change', (e) => { state.sortKey = e.target.value; render() })
+  $('sortDir').addEventListener('click', () => { state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; render() })
+  $('archiveToggle').addEventListener('click', () => {
+    state.archived = !state.archived
+    state.expanded = new Set()
+    state.expandedInitialized = false
+    render()
+  })
+
+  for (const [kind, triggerId, panelId] of [['status', 'statusTrigger', 'statusPanel'], ['priority', 'priorityTrigger', 'priorityPanel'], ['type', 'typeTrigger', 'typePanel']]) {
+    $(triggerId).addEventListener('click', (e) => {
+      e.stopPropagation()
+      state.openMenu = state.openMenu === kind ? null : kind
+      render()
+    })
+    $(panelId).addEventListener('click', (e) => e.stopPropagation())
+    $(panelId).addEventListener('change', (e) => {
+      const code = e.target.closest('.dropdown-option').dataset.code
+      const set = kind === 'status' ? state.statuses : kind === 'priority' ? state.priorities : state.types
+      if (e.target.checked) set.add(code)
+      else set.delete(code)
+      render()
+    })
+  }
+
+  document.addEventListener('click', closeMenus)
+
+  populateDropdowns()
+  render()
+</script>
+</body>
+</html>

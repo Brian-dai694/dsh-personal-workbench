@@ -1,0 +1,187 @@
+/**
+ * 防「装盘版本与声明版本不一致」门禁。
+ *
+ * 2026-09-12 真实事故：`dsh plugin add` 是 pnpm 转发器，会按 pnpm-lock.yaml
+ * 对齐**整个** profile —— 装一个无关插件时把工作台从 1.13.3 回退成 1.12.1。
+ * 而库已被 1.13.3 迁到 schema 15，1.12.1 只支持到 14 → migrate() 抛错 →
+ * 整个 DSH 拒绝启动。
+ *
+ * 这道门禁只能在**装插件之后、重启之前**跑，作用是在重启前抓住"装盘版本
+ * 落后于 profile 声明的版本 / 落后于数据库 schema"这类不一致。
+ *
+ * 跑法（在 profile 目录下即可）：
+ *   node D:/Code/my-repo/scripts/check-installed-version.mjs
+ *
+ * 退出码：0 = 一致；1 = 发现不一致或有风险。
+ */
+
+import { readFileSync, existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
+
+const PLUGIN = '@dely0/dsh-personal-workbench'
+
+function readJson(path) {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'))
+  } catch {
+    return undefined
+  }
+}
+
+/** "1.13.3" / "^1.13.3" / "1.13.3" → 数值数组，便于比较。 */
+function parseVersion(raw) {
+  const match = String(raw ?? '').match(/(\d+)\.(\d+)\.(\d+)/)
+  if (match === null) return undefined
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+function compare(left, right) {
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] !== right[index]) return left[index] < right[index] ? -1 : 1
+  }
+  return 0
+}
+
+/**
+ * 目标 profile 目录的解析（2026-10-01 补，plan.md V03）。
+ *
+ * 原来只认环境变量 `WORKBENCH_PROFILE_DIR`，默认 `~/.dsh/profiles/web`。
+ * 从桌面端会话里跑时，环境里那个变量可能指向 desktop —— 于是"装 web、核对 desktop"。
+ * 现在 `--profile-dir` 显式优先；调用方（scripts/dev-install.mjs / dev-verify.mjs）
+ * 一律显式传它，环境变量只作为人工直接调用时的兜底。
+ */
+function argValue(flag) {
+  const index = process.argv.indexOf(flag)
+  return index === -1 ? undefined : process.argv[index + 1]
+}
+
+const profileDir = argValue('--profile-dir')
+  ?? process.env.WORKBENCH_PROFILE_DIR
+  ?? join(homedir(), '.dsh', 'profiles', 'web')
+
+/**
+ * 被核对的工作台数据库。
+ *
+ * `--db-path` 到位之前这里**永远**只看默认共享库 `~/.dsh/workbench/workbench.db`：
+ * 在独立测试 DB 的隔离 profile 上，这就等于核对错了库（真正的库是隔离的那个）。
+ */
+const dbPath = argValue('--db-path') ?? join(homedir(), '.dsh', 'workbench', 'workbench.db')
+
+const problems = []
+const notes = []
+
+// 0) 核对目标（装盘目录与数据库必须**显式**，避免"装 A、核对 B"）
+notes.push(`目标 profile  : ${profileDir}`)
+notes.push(`核对的数据库  : ${dbPath}`)
+
+// 1) 装盘版本
+const installedPath = join(profileDir, 'node_modules', ...PLUGIN.split('/'), 'package.json')
+const installedPkg = readJson(installedPath)
+if (installedPkg === undefined) {
+  problems.push(`装盘找不到 ${PLUGIN}：${installedPath}`)
+} else {
+  notes.push(`装盘版本      : ${installedPkg.version}`)
+}
+
+// 2) profile 声明版本
+const profilePkg = readJson(join(profileDir, 'package.json'))
+const declared = profilePkg?.dependencies?.[PLUGIN]
+if (declared === undefined) {
+  problems.push(`profile ${join(profileDir, 'package.json')} 未声明 ${PLUGIN}`)
+} else {
+  notes.push(`profile 声明  : ${declared}`)
+}
+
+// 3) 锁文件里的版本（pnpm 实际会对齐到它）
+const lockPath = join(profileDir, 'pnpm-lock.yaml')
+
+/**
+ * 从锁文件里取出本插件的解析版本。
+ *
+ * 两种键形态，**都要认**（2026-09-15 补）：
+ * - 注册表来源：`'@scope/name@1.2.3':` → 版本直接写在键里；
+ * - 本地来源：`'@scope/name@file:...':` → 键里是**路径**，版本在同一块内的 `version: x.y.z` 行。
+ *
+ * 旧实现只有前一条正则，于是走 `file:...tgz` 装盘时（本项目开发机的常态）
+ * `locked` 恒为 undefined，第 5 步那条"装盘 vs 锁文件"一致性检查**一直在空转** ——
+ * 静默失效比误报更危险，所以这里显式返回 undefined 时第 5 步要能说出来。
+ */
+function lockedVersionOf(lockText, plugin) {
+  const escaped = plugin.replace('/', '\\/')
+  const keyMatch = lockText.match(new RegExp(`'?${escaped}@(\\d+\\.\\d+\\.\\d+)'?:`))
+  if (keyMatch !== null) return { version: keyMatch[1], form: 'registry' }
+  const lines = lockText.split(/\r?\n/)
+  const keyRe = new RegExp(`^\\s*'?${escaped}@(?:file|link):`)
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!keyRe.test(lines[index])) continue
+    for (let inner = index + 1; inner < Math.min(index + 25, lines.length); inner += 1) {
+      const versionMatch = /^\s+version:\s*(\d+\.\d+\.\d+)\s*$/.exec(lines[inner])
+      if (versionMatch !== null) return { version: versionMatch[1], form: 'local' }
+      if (/^\S/.test(lines[inner])) break // 出了这个条目
+    }
+  }
+  return undefined
+}
+
+let locked
+let lockedForm = '未知'
+if (existsSync(lockPath)) {
+  const resolved = lockedVersionOf(readFileSync(lockPath, 'utf8'), PLUGIN)
+  locked = resolved?.version
+  lockedForm = resolved?.form ?? '未匹配到任何键形态'
+  notes.push(`锁文件解析为  : ${locked ?? '(未找到)'}${locked === undefined ? `（${lockedForm}）` : ''}`)
+}
+
+// 4) 数据库 schema 与插件支持的 schema
+let dbVersion
+if (existsSync(dbPath)) {
+  try {
+    const db = new DatabaseSync(dbPath, { readOnly: true })
+    const row = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get()
+    dbVersion = row === undefined ? 0 : Number(row.value)
+    db.close()
+    notes.push(`数据库 schema : ${dbVersion}`)
+  } catch (error) {
+    problems.push(`读取数据库失败：${String(error)}`)
+  }
+} else {
+  notes.push('数据库        : (不存在，首次启动会新建)')
+}
+
+const installedSchemaPath = join(profileDir, 'node_modules', ...PLUGIN.split('/'), 'lib', 'db', 'schema.js')
+if (existsSync(installedSchemaPath)) {
+  const match = readFileSync(installedSchemaPath, 'utf8').match(/SCHEMA_VERSION\s*=\s*(\d+)/)
+  const installedSchema = match === undefined ? undefined : Number(match[1])
+  notes.push(`插件支持 schema: ${installedSchema ?? '(未找到)'}`)
+
+  // 核心判定：数据库比装盘插件新 → 下一次重启必然启动失败。
+  if (dbVersion !== undefined && installedSchema !== undefined && dbVersion > installedSchema) {
+    problems.push(
+      `数据库 schema ${dbVersion} 比装盘插件支持的 ${installedSchema} 新 —— 重启会直接启动失败（宿主拒绝启动）。`
+      + ` 修复：dsh plugin --profile web add ${PLUGIN}@<与 schema ${dbVersion} 匹配的版本>`,
+    )
+  }
+} else {
+  problems.push(`装盘缺少 ${installedSchemaPath}`)
+}
+
+// 5) 装盘 / 声明 / 锁文件三者一致性（回退的典型指纹）
+const installedVersion = parseVersion(installedPkg?.version)
+const lockedVersion = parseVersion(locked)
+if (installedVersion !== undefined && lockedVersion !== undefined && compare(installedVersion, lockedVersion) !== 0) {
+  problems.push(`装盘版本 ${installedPkg.version} 与锁文件 ${locked} 不一致 —— 下次装任何插件都会被拉回锁文件版本。`)
+}
+
+console.log('=== 工作台版本一致性检查 ===')
+for (const note of notes) console.log(`  ${note}`)
+
+if (problems.length === 0) {
+  console.log('  ✅ 一致，可以安全重启')
+  process.exit(0)
+}
+
+console.log('')
+for (const problem of problems) console.log(`  ✖ ${problem}`)
+process.exit(1)

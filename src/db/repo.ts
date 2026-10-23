@@ -1,0 +1,269 @@
+/**
+ * 仓储层：任务 / 草稿 / 会话关联 / 提醒 / 事件。
+ * 所有写操作都记 task_events；字典 code 在服务层进一步校验。
+ */
+import { randomUUID } from 'node:crypto'
+import type { DatabaseSync } from 'node:sqlite'
+import { nowIso, getDraft, setDraftStatus, withDraftConfirm, parseDraft, type DraftRow, type RawDraftRow } from './repo/shared.js'
+export { nowIso, getDraft, setDraftStatus, withDraftConfirm } from './repo/shared.js'
+export type { DraftRow } from './repo/shared.js'
+import { effectiveDueAtForTask, effectiveWorkspacePathForTask, parseTask, appendEvent, collectArchivedDescendants, isDescendantOf, type RawTaskRow } from './repo/task-primitives.js'
+export { effectiveDueAtForTask, effectiveWorkspacePathForTask, parseTask, appendEvent, isDescendantOf } from './repo/task-primitives.js'
+export type { RawTaskRow } from './repo/task-primitives.js'
+
+
+/** 服务器本地时区的 YYYY-MM-DD；每日计划按本地“天”划分。 */
+export function localDateString(date = new Date()): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export interface DictionaryEntry {
+  kind: string
+  code: string
+  name: string
+  config: Record<string, unknown>
+  builtin: number
+  active: number
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TaskInput {
+  /**
+   * 由调用方**预先分配**的任务 id（v1.15.1）。
+   *
+   * 为什么要留这个口：澄清阶段需要先把"任务资料夹"建出来并写进提示词，
+   * 而旧做法是拿**用户打的那句自然语言**当目录名（`folderForText(text)`）——
+   * 等于把一句话当路径，还会因为改标题变成孤儿。现在客户端先 `randomUUID()` 预留 id、
+   * 用它建资料夹，确认草稿时复用同一个 id（`confirmTaskDraft` 读 `payload.id`）。
+   *
+   * 缺省仍由仓储层 `randomUUID()`：老调用点行为不变。
+   */
+  id?: string
+  title: string
+  description?: string
+  typeCode: string
+  statusCode?: string
+  priorityCode: string
+  aiPolicyCode?: string
+  dueAt?: string | null
+  allDay?: boolean
+  estimatedMinutes?: number | null
+  source?: string
+  parentId?: string | null
+  workspacePath?: string | null
+  /**
+   * 显式进度（0–99）。**只由 `repo/progress.ts#setTaskProgress` 写** ——
+   * 这里留给"建任务时就带进度"的极少数场景（迁移/导入），常规入口一律默认 0。
+   */
+  progressPercent?: number
+  extra?: Record<string, unknown>
+  children?: Array<Partial<TaskInput>>
+  recurrenceCode?: string | null
+  recurrenceRule?: Record<string, unknown>
+  recurrenceMasterId?: string | null
+}
+
+export interface TaskPatch {
+  title?: string
+  description?: string
+  typeCode?: string
+  statusCode?: string
+  priorityCode?: string
+  aiPolicyCode?: string
+  dueAt?: string | null
+  allDay?: boolean
+  estimatedMinutes?: number | null
+  archived?: boolean
+  workspacePath?: string | null
+  /**
+   * 显式进度（0–99）。
+   *
+   * ⚠️ 不在这里做范围/幂等判断：唯一权威入口是
+   * `repo/progress.ts#setTaskProgress`（同值不写事件、越界拒绝）。`updateTask` 只负责落库，
+   * 给它传 100 会被 DDL 的 CHECK 挡下来（那是"绕过守卫"的响铃）。
+   */
+  progressPercent?: number
+  /** 改父任务：undefined = 不变；null = 移到顶层；字符串 = 挂到该父任务下（仓储层会做存在/归档/防环校验）。 */
+  parentId?: string | null
+  extra?: Record<string, unknown>
+  recurrenceCode?: string | null
+  recurrenceRule?: Record<string, unknown>
+}
+
+export interface TaskRow {
+  id: string
+  parentId: string | null
+  title: string
+  description: string
+  typeCode: string
+  statusCode: string
+  priorityCode: string
+  aiPolicyCode: string
+  dueAt: string | null
+  /** 动态有效截止时间：优先自身 dueAt，未设置时向上继承最近一个有截止时间的祖先。 */
+  effectiveDueAt: string | null
+  allDay: number
+  estimatedMinutes: number | null
+  source: string
+  workspacePath: string | null
+  /** 动态有效工作区：优先自身 workspacePath，未设置时向上继承最近一个已设工作区的祖先。 */
+  effectiveWorkspacePath: string | null
+  /** 显式进度 0–99（写入口只有 `repo/progress.ts`；DRL 的 CHECK 是最后防线）。 */
+  progressPercent: number
+  archived: number
+  extra: Record<string, unknown>
+  recurrenceCode: string | null
+  recurrenceRule: Record<string, unknown>
+  recurrenceMasterId: string | null
+  recurrenceLastGenerated: string | null
+  createdAt: string
+  updatedAt: string
+  completedAt: string | null
+  cancelledAt: string | null
+}
+
+export interface DraftInput {
+  kindCode?: 'task' | 'subtask_plan' | string
+  sessionId?: string | null
+  payload: Record<string, unknown>
+}
+
+export interface TaskSessionLinkInput {
+  taskId: string
+  sessionId: string
+  roleCode: string
+  workspace?: string
+  note?: string
+}
+
+
+// 字典域已抽到 repo/dictionaries.ts
+import { listDictionaries, getDictionary, dictionaryUsageCount } from './repo/dictionaries.js'
+export {
+  listDictionaries, getDictionary, createDictionaryEntry, updateDictionaryEntry, deleteDictionaryEntry, dictionaryUsageCount,
+  listActiveDictionaryCodes,
+} from './repo/dictionaries.js'
+
+// 任务域已抽到 repo/tasks.ts
+import { createTask, getTask, listTasks, listChildren, updateTask } from './repo/tasks.js'
+export { createTask, getTask, listTasks, listChildren, updateTask, taskIdProblem } from './repo/tasks.js'
+
+// 状态聚合与级联已抽到 repo/status.ts
+import {
+  completeTaskCascade, updateTaskWithCompletion, repairParentCompletion,
+  archiveTask, restoreTask, listArchivedTasks, listTaskEvents, createTaskReview, listTaskReviews,
+} from './repo/status.js'
+export {
+  completeTaskCascade, updateTaskWithCompletion, repairParentCompletion,
+  archiveTask, restoreTask, listArchivedTasks, listTaskEvents, createTaskReview, listTaskReviews,
+} from './repo/status.js'
+export type { TaskReviewInput } from './repo/status.js'
+
+// 草稿域已抽到 repo/drafts.ts
+export {
+  createDraft, updateDraft, getDraftBySession, confirmTaskDraft, confirmSubtaskPlanDraft,
+  getLatestPendingDraft, getPendingDraftForTask, abandonDraft, toTaskInputFromDraftItem,
+  getLatestActiveDraft, listDeferredDrafts, getDeferredDraftForTask, deferDraft, resumeDraft,
+  isDeferrableDraftKind, DEFERRABLE_DRAFT_KINDS, NON_DEFERRABLE_DRAFT_KINDS, validateDraftTaskItem,
+} from './repo/drafts.js'
+export type {
+  DraftTaskItem, DraftItemProblem, ConfirmTaskDraftResult, ConfirmSubtaskPlanResult,
+} from './repo/drafts.js'
+
+
+// 任务会话关联已抽到 repo/task-sessions.ts
+import { linkTaskSession } from './repo/task-sessions.js'
+export { linkTaskSession, listTaskSessions } from './repo/task-sessions.js'
+
+
+// 任务共享记忆已抽到 repo/task-memory.ts
+export { getTaskRootId, getTaskMemory, listTaskMemories, addTaskMemory, getTaskMemoryContext } from './repo/task-memory.js'
+export type { TaskMemoryRow } from './repo/task-memory.js'
+
+// 提醒域已抽到 repo/reminders.ts
+import { addReminder } from './repo/reminders.js'
+export {
+  listDueReminders, skipStaleReminders, listReminders,
+  fireReminder, acknowledgeReminder, resetReminder, skipReminder, addReminder,
+} from './repo/reminders.js'
+export type { DueReminder, TaskReminderRow } from './repo/reminders.js'
+
+// meta 已抽到 repo/meta.ts
+export { readMeta, writeMeta } from './repo/meta.js'
+
+
+// 提醒队列已抽到 repo/reminder-queue.ts
+export {
+  REMINDER_QUEUE_LIMIT, enqueueReminder, listDueQueue, listQueue, countQueue, removeQueueEntry, markQueueAttempt, countFiredRemindersSince, listDueRemindersInWindow, getTaskRootIdOrSelf,
+} from './repo/reminder-queue.js'
+export type { ReminderQueueRow, ReminderQueueInput } from './repo/reminder-queue.js'
+
+// 进度 / 完成验收域已抽到 repo/progress.ts（显式进度唯一写入口 + 验收草稿唯一提交实现）
+export {
+  setTaskProgress, submitCompletionDraft, listPendingCompletions, getTaskPendingCompletion, readDraft,
+} from './repo/progress.js'
+export type { SetProgressResult, SubmitCompletionResult, SubmitCompletionOutcome } from './repo/progress.js'
+
+// 每日计划域已抽到 repo/plans.ts（T2/D05–D06：minutes 快照 + effortDone + 原子追加/项级更新）
+export {
+  getDailyPlan, saveDailyPlan, updateDailyPlan, deleteDailyPlan, confirmDailyPlanDraft, getPendingDailyPlanDraft,
+  addDailyPlanItem, updateDailyPlanItem,
+} from './repo/plans.js'
+export type {
+  DailyPlanItem, DailyPlanRow, DailyPlanInput, ManualPlanItemInput, PlanTaskView, AddPlanItemResult, UpdatePlanItemResult,
+} from './repo/plans.js'
+
+// 日报 / 周报域已抽到 repo/reports.ts
+export {
+  saveTaskReport, getTaskReport, listTaskReports, deleteTaskReport, confirmReportDraft, getPendingReportDraft,
+} from './repo/reports.js'
+export type { ReportPeriodCode, TaskReportInput, TaskReportRow } from './repo/reports.js'
+
+// AI 会话注册表已抽到 repo/ai-sessions.ts
+export { getAiSession, registerAiSession } from './repo/ai-sessions.js'
+export type { AiSessionRegistryRow } from './repo/ai-sessions.js'
+
+// 重复任务域已抽到 repo/recurring.ts
+export { ensureRecurringInstances, RECURRENCE_BACKFILL_LIMIT } from './repo/recurring.js'
+
+// 知识库域已抽到 repo/knowledge.ts；此处再导出保持对外 API 不变
+export {
+  normalizeFileLink, assertValidFileLink, createKnowledge, getKnowledge, listKnowledge,
+  updateKnowledge, deleteKnowledge, deleteKnowledgeWithRefs, confirmKnowledgeDraft, getPendingKnowledgeDraft,
+} from './repo/knowledge.js'
+export type { KnowledgeInput, KnowledgeRow } from './repo/knowledge.js'
+
+// 点子 / 点子王域已抽到 repo/ideas.ts；此处再导出保持对外 API 不变
+export {
+  createIdea, getIdea, listIdeas, updateIdea, deleteIdea,
+  createIdeaCluster, getIdeaCluster, listIdeaClusters, deleteIdeaCluster, listIdeaClustersForIdea,
+  updateIdeaCluster, addIdeaToCluster, removeIdeaFromCluster, listUnfiledIdeas, mergeIdeaClusters,
+  confirmIdeaClusterDraft, confirmIdeaTaskDraft, getPendingDraftForSession,
+} from './repo/ideas.js'
+export type { IdeaInput, IdeaRow, IdeaClusterInput, IdeaClusterRow } from './repo/ideas.js'
+
+// 专家域已抽到 repo/experts.ts（P1：只做设置开关 + expert 草稿的筛选/CAS，
+// 装文件、解析人格、校验来源分别属于 experts/*、personas/parse.ts、experts/provenance.ts）
+export {
+  readExpertSettings, writeExpertSettings,
+  getExpertDraft, getPendingExpertDraftForSession, createExpertDraft, updateExpertDraftCas,
+  defaultExpertId, ExpertRepoError,
+} from './repo/experts.js'
+export type {
+  CreateExpertDraftInput, CreateExpertDraftResult, ExpertDraftPatch, UpdateExpertDraftCasResult,
+  ExpertDraftStatus,
+} from './repo/experts.js'
+
+// Amazon 报表数据集域（v1.18）：搜索词报表的导入 / 读取 / AI 建议写回
+export {
+  AMAZON_DATASET_KINDS, createAmazonDataset, getAmazonDataset, getLatestAmazonDataset,
+  listAmazonDatasets, saveSearchTermReview, deleteAmazonDataset,
+} from './repo/amazonDatasets.js'
+export type {
+  AmazonDatasetKind, AmazonDatasetRow, AmazonDatasetSummary, CreateAmazonDatasetInput, SearchTermReviewInput,
+} from './repo/amazonDatasets.js'

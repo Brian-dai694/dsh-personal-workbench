@@ -1,0 +1,421 @@
+/**
+ * 前后端共享的 API 契约。
+ *
+ * 为什么需要：client 与 host 曾各自定义 Task/TaskRow 两套形状，36 处 API 调用全是内联泛型。
+ * 后端改字段时前端不会编译报错，只会在运行时变成 undefined。这里把"HTTP 返回什么"
+ * 收敛成单一事实来源，两侧共用。
+ *
+ * 约定：本文件只放类型与纯常量，不 import 任何运行时依赖（client bundle 会打到浏览器）。
+ */
+
+// ---------------------------------------------------------------------------
+// 字典
+// ---------------------------------------------------------------------------
+
+export interface DictionaryEntry {
+  id: string
+  kind: string
+  code: string
+  name: string
+  config: Record<string, unknown>
+  builtin: number
+  active: number
+  sortOrder: number
+}
+
+// ---------------------------------------------------------------------------
+// 任务
+// ---------------------------------------------------------------------------
+
+/** 任务在 HTTP 层的形状：与 repo 的 TaskRow 一致，但 allDay 是布尔。 */
+export interface PublicTask {
+  id: string
+  parentId: string | null
+  title: string
+  description: string
+  typeCode: string
+  statusCode: string
+  priorityCode: string
+  aiPolicyCode: string
+  dueAt: string | null
+  /** 动态有效截止时间（自身为空时继承最近祖先） */
+  effectiveDueAt: string | null
+  allDay: boolean
+  estimatedMinutes: number | null
+  source: string
+  workspacePath: string | null
+  /** 动态有效工作区（自身为空时继承最近祖先） */
+  effectiveWorkspacePath: string | null
+  /**
+   * 显式进度百分比，**只存 0–99**（ADR 0003/0004）。
+   *
+   * `100` 不是可存储的值：它表示「提交完成验收申请」，由 `tasks.status_code = done` 表达。
+   * 旧客户端不认识这个字段时不传也不影响读写（遗漏字段仍可操作）。
+   */
+  progressPercent: number
+  archived: number
+  extra: Record<string, unknown>
+  recurrenceCode: string | null
+  recurrenceRule: Record<string, unknown>
+  recurrenceMasterId: string | null
+  recurrenceLastGenerated: string | null
+  createdAt: string
+  updatedAt: string
+  completedAt: string | null
+  cancelledAt: string | null
+}
+
+export interface TaskReminderView {
+  id: string
+  taskId: string
+  offsetMinutes: number
+  methodCode: string
+  firedAt: string | null
+}
+
+export interface TaskDetailView {
+  task: PublicTask
+  children: PublicTask[]
+  sessions: Array<Record<string, unknown>>
+  reminders: TaskReminderView[]
+  events: Array<Record<string, unknown>>
+}
+
+/**
+ * 「待验收」投影（requirements §3.2）。
+ *
+ * 唯一权威源是 **completion 草稿的 pending 状态**（含暂存：`deferredAt` 非空仍是待验收）。
+ * 列表刷新时**一次性**取这份投影再分发到各行，绝不逐行发请求查草稿。
+ *
+ * `available: false` = 服务端拿不到这份投影（更旧的服务端）→ 界面**不推测、不显示徽标**，
+ * 而不是把所有任务当成"没有待验收"。
+ */
+export interface PendingCompletionView {
+  available: boolean
+  items: Array<{ taskId: string; draftId: string; deferred: boolean; summary: string; updatedAt: string }>
+}
+
+export interface PendingCompletionsResponse { ok: true; pending: PendingCompletionView }
+
+export interface TaskSessionView {
+  taskId: string
+  sessionId: string
+  roleCode: string
+  workspace: string | null
+  note: string | null
+  createdAt: string
+  lastActivityAt: string | null
+}
+
+// ---------------------------------------------------------------------------
+// 草稿
+// ---------------------------------------------------------------------------
+
+export type DraftKind = 'task' | 'subtask_plan' | 'daily_plan' | 'report' | 'knowledge' | 'idea_cluster' | 'idea_tasks' | 'completion' | 'expert'
+
+export interface DraftView {
+  id: string
+  kindCode: DraftKind | string
+  sessionId: string | null
+  payload: Record<string, unknown>
+  statusCode: string
+  /** 非空表示已「暂存」：仍是待确认，但不再自动弹窗 */
+  deferredAt: string | null
+  /** 累计暂存次数 */
+  deferCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * 确认草稿时「本该创建、但没创建」的条目。
+ *
+ * 契约意义：确认接口**不允许**静默丢件。任何一项没建出来都必须出现在 `problems` 里，
+ * 界面负责标黄列出（2026-09-12 事故：5 个子任务里 2 个因为 type_code 非法
+ * 被静默过滤，接口却返回成功）。
+ */
+export interface DraftConfirmProblemView {
+  /** 没建出来的那条的标题。 */
+  title: string
+  /** 非法字段。 */
+  field: 'typeCode' | 'priorityCode'
+  /** 调用方实际传入的值。 */
+  code: string
+  /** 给人看的中文原因。 */
+  reason: string
+}
+
+/** 确认草稿的响应：`problems` 非空时界面必须显式告警。 */
+export interface DraftConfirmResponse {
+  ok: true
+  task?: PublicTask
+  tasks?: PublicTask[]
+  /** 实际创建/入册的节点数（父任务草稿含父任务自身）。 */
+  created?: number
+  problems?: DraftConfirmProblemView[]
+  reviewId?: string
+  /** 复盘确认时写入团队记忆的结果（v1.14.0）。 */
+  memory?: ReviewMemoryResultView
+}
+
+/** 复盘 → 团队记忆库的写入结果（v1.14.0）。 */
+export interface ReviewMemoryResultView {
+  /** 用户是否选择了写入（未选则不写，且不是错误）。 */
+  enabled: boolean
+  /** 生效的可见性。 */
+  scope: 'private' | 'team'
+  /** 真正新写入的条数（幂等：重复确认时为 0）。 */
+  written: number
+  /** 因幂等被跳过的条数。 */
+  skipped: number
+  /** 记忆库不可达等降级原因；非空表示"本地已留档、等补传"或"只落了本地"。 */
+  degradedReason?: string
+  /** 落地的本地 Markdown 文件名（便于用户核对）。 */
+  files?: string[]
+}
+
+// ---------------------------------------------------------------------------
+// 提醒
+// ---------------------------------------------------------------------------
+
+export interface ReminderPolicyView {
+  enabled: boolean
+  immediatePriorities: string[]
+  digestPriorities: string[]
+  digestAt: string
+  quietHours: { start: string; end: string } | null
+  quietHoursBypassPriorities: string[]
+  hourlyLimit: number
+  dailyLimit: number
+  catchupWindowHours: number
+  catchupMaxItems: number
+  breakerCooldownMinutes: number
+  channel: 'auto' | 'wechat' | 'browser'
+  /** 草稿通知：哪些草稿类型推送到微信（空数组 = 全部不推） */
+  draftNotifyKinds: string[]
+}
+
+export interface ReminderChannelStatus {
+  installed: boolean
+  configured: boolean
+  botId: string | null
+  targetId: string | null
+  botLabel: string | null
+  circuitOpen: boolean
+  circuitUntil: string | null
+  queued: number
+}
+
+export interface ReminderTargetOption {
+  targetId: string
+  label: string
+  kind: string
+}
+
+export interface ReminderBotOption {
+  botId: string
+  label: string
+  targets: ReminderTargetOption[]
+}
+
+export interface ReminderOptionsView {
+  installed: boolean
+  bots: ReminderBotOption[]
+}
+
+export interface DueReminderView {
+  reminderId: string
+  taskId: string
+  title: string
+  dueAt: string
+  offsetMinutes: number
+  methodCode: string
+}
+
+export interface ReminderQueueEntry {
+  id: string
+  reminderId: string | null
+  rootTaskId: string
+  taskId: string
+  title: string
+  body: string
+  priorityCode: string
+  dueAt: string | null
+  attempts: number
+  nextAttemptAt: string
+  lastError: string | null
+  createdAt: string
+}
+
+// ---------------------------------------------------------------------------
+// 设置
+// ---------------------------------------------------------------------------
+
+export interface WorkbenchSettings {
+  defaultWorkspace: string
+  autoCreateTypeFolders: boolean
+  desktopNotify: boolean
+  /** 每天可投入时长（分钟），用于「今日容量」对比；缺省 390（6.5 小时） */
+  dailyCapacityMinutes: number
+  /**
+   * 快速录入（澄清）里「最近用过的工作区」路径，最新的在前（最多 5 条）。
+   *
+   * 为什么放在设置里而不是 localStorage：工作区路径是**任务数据的属性**
+   * （任务详情、AI 会话目录都与它一致），换台机器/换个浏览器打开工作台时
+   * 仍然应该看到同一批候选；localStorage 会随浏览器消失。
+   */
+  quickWorkspaceRecent: string[]
+  /**
+   * 知识库自动召回（v1.15.3）：会话里是否自动检索并注入相关知识。
+   *
+   * 为什么要有这个开关：自动召回的代价是**提示词长度**与**噪声**。
+   * 用户嫌吵时必须能一键关掉（关掉后仍可用 `workbench_search_knowledge` 主动查）。
+   * 会话级开关另有出口（`/api/workbench/knowledge-recall/session` + 工具 turn_off）。
+   */
+  autoKnowledgeRecall: boolean
+  /**
+   * 任务没填「预计耗时」时按多少分钟计入今日容量（缺省 30，夹 5–1440）。
+   *
+   * 为什么做成偏好而不是常量：容量读数直接受它影响，用户必须能看见并调整
+   * "系统凭什么替我估 30 分钟"；写死在代码里就变成了又一个不可解释的数字。
+   */
+  defaultEstimateMinutes: number
+  /**
+   * 「逾期的未完成任务」是否计入今日容量（缺省**关**）。
+   *
+   * 为什么默认关：逾期是历史欠账，混进"今天要做的事"会让读数失去意义。
+   * 但用户可能就是想看清"债主上门"的总量，所以给开关而不是写死。
+   * 开关状态与规则文案一起呈现（见 `CapacityRulePanel`），避免"数字变了但不知道谁改的"。
+   */
+  dailyCapacityIncludeOverdue: boolean
+  /**
+   * 外部角色目录（D11/§6.3）：可配置的一等角色来源，如 `（外部角色目录）`。
+   *
+   * 为什么是**字符串路径**而不是布尔开关：来源本身由用户决定放哪（不同机器克隆位置不同），
+   * 工作台只读它、不复制不派生（权威源留在原处）。空串 = 未配置。
+   */
+  personaExternalDir: string
+  /**
+   * 收藏的角色 ID（逻辑路径，见 `shared/persona.ts`）；缺省 `[]`。
+   *
+   * ID 而不是显示名：**同显示名不同路径是两个角色**，用名字当键必然把两个合并成一个。
+   */
+  personaFavorites: string[]
+  /** 被禁用的角色 ID；缺省 `[]`（内置/用户/外部的合法角色**默认启用**）。 */
+  personaDisabledIds: string[]
+  /**
+   * 是否允许 AI **自主**召唤专家（缺省 `false`，meta 键 `expert_auto_summon`）。
+   *
+   * 为什么默认关：自动召唤会在用户没点过任何按钮的情况下启动一个**会读文件、
+   * 会跑子代理**的后台任务，还可能把外部来源的内容装进技能目录。这种"花钱又动盘"
+   * 的动作必须由用户先明确授权；关着的时候手动召唤不受影响。
+   */
+  autoSummonExperts: boolean
+  /**
+   * 工作台界面语言（issue #12）：`auto` = 跟随浏览器语言，其余是显式选择。
+   *
+   * 这是**客户端显示偏好**，不影响服务端产出的任务/草稿内容；服务端只负责持久化。
+   * 缺省 `auto`：中文用户保持旧界面，非中文浏览器首次打开就能看到英文 chrome。
+   */
+  uiLocale: 'auto' | 'zh-CN' | 'en-US'
+}
+
+// ---------------------------------------------------------------------------
+// 点子 / 知识
+// ---------------------------------------------------------------------------
+
+export interface IdeaView {
+  id: string
+  title: string
+  contentMd: string
+  kindCode: string
+  tags: string[]
+  sourceSessionId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface IdeaClusterView {
+  id: string
+  title: string
+  summary: string
+  ideaIds: string[]
+  notes: Record<string, unknown>
+  createdAt: string
+}
+
+export interface KnowledgeView {
+  id: string
+  title: string
+  contentMd: string
+  kindCode: string
+  tags: string[]
+  sourceTaskId: string | null
+  sourceReviewId: string | null
+  fileLink: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+// ---------------------------------------------------------------------------
+// 技能目录（AI 会话前的 Skill 选择器）
+// ---------------------------------------------------------------------------
+
+/** 技能摘要：不含正文（正文由模型侧 skill 工具按需加载）。 */
+export interface SkillSummary {
+  name: string
+  description: string
+  whenToUse?: string
+  provider: string
+  source: string
+  userInvocable: boolean
+  modelInvocable: boolean
+}
+
+/**
+ * available=false 表示宿主未注册 skills 服务（或技能发现失败），
+ * 此时 skills 为空数组，前端隐藏选择器、保持既有行为。
+ */
+export interface SkillsResponse { ok: true; available: boolean; skills: SkillSummary[]; error?: string }
+
+// ---------------------------------------------------------------------------
+// 响应封装
+// ---------------------------------------------------------------------------
+
+/** 所有成功响应都带 ok: true；失败响应形状见 ApiError。 */
+export interface ApiError {
+  ok?: false
+  error: string
+}
+
+export interface TasksResponse { ok: true; tasks: PublicTask[]; archivedOnly: boolean }
+export interface TaskResponse { ok: true; task: PublicTask; cascade?: boolean }
+export type TaskDetailResponse = { ok: true } & TaskDetailView
+export interface SettingsResponse { ok: true; settings: WorkbenchSettings }
+export interface ReminderPolicyResponse { ok: true; policy: ReminderPolicyView }
+export interface ReminderChannelResponse { ok: true; status: ReminderChannelStatus; options: ReminderOptionsView; queue: ReminderQueueEntry[] }
+export interface ReminderChannelSaveResponse { ok: true; status: ReminderChannelStatus }
+export interface ReminderTestResponse { ok: boolean; reason?: string }
+export interface DueRemindersResponse { ok: true; reminders: DueReminderView[] }
+export interface DraftResponse { ok: true; draft: DraftView | null; /** 仅无 session_id 的列表查询返回 */ deferredDrafts?: DraftView[] }
+export interface DraftsResponse { ok: true; drafts: DraftView[] }
+export interface IdeasResponse { ok: true; ideas: IdeaView[] }
+export interface KnowledgeResponse { ok: true; entries: KnowledgeView[] }
+export interface IdeaClustersResponse { ok: true; clusters: IdeaClusterView[] }
+export interface DeletedResponse { ok: true; deleted: boolean }
+
+/**
+ * `GET /api/workbench/health` 的形状（plan.md V04-B）。
+ *
+ * `buildId` 是**本次构建**的内容哈希（`lib/build-info.json`），不是公开版本号：
+ * 本地装盘迭代刻意不改版本号，只比版本号会把"旧包还在跑"判成通过。
+ * 浏览器侧的对应值是客户端 bundle 内联的 `globalThis.__WORKBENCH_BUILD_ID__`
+ * （渲染在 `.wb-panel-host` 的 `data-workbench-build-id` 上），验收链三者一起比。
+ */
+export interface WorkbenchHealthResponse {
+  ok: true
+  name: string
+  version: string
+  buildId: string
+  db: { schemaVersion: string; taskCount: number; dictionaryCount: number }
+}
