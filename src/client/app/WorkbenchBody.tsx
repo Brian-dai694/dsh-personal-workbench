@@ -44,8 +44,28 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
   const { notifyPerm, reminderBusy, reminderChannel, reminderOptions, reminderPolicy } = props.remindersApi
   const { addTaskReminder, loadReminderChannel, resetReminderState, saveReminderPolicy, saveReminderTarget, sendReminderTest, setNotifyPerm, setReminderChannel, setReminderPolicy } = props.remindersApi.actions
   const { aiSessionUsable, dayPanelProps, detail, forms, ideas, knowledge, linkExistingSession, linkedSessionIds, now, openQuickEntry, openTask, openTaskById, runtime, saveDailyCapacity, sessionCandidates, sessionListSnapshot, taskList } = props
+  /**
+   * 右侧详情区什么时候展开（第五轮收尾）。
+   *
+   * 第三轮只写了 `view === 'list' && selected === null`，结果**非任务视图全落到 `open`**：
+   * 测算 / 关键词 没有自己的详情组件，会走 `TaskDetailPane` 的分支，于是右半屏挂着
+   * 「从左侧选择一个任务查看详情」——当前页明明是 Amazon 测算。
+   *
+   * 现在的判定按"这个视图到底有没有详情内容"来分：
+   * - 任务、今日：有选中任务才展开（今日的任务选中来自日期面板）；
+   * - 知识库 / 点子：各自有选中项才展开（收起时它们的详情就点不到了，属于功能回归）；
+   * - 流量分析：右侧是分析结果区，空态本身有引导文案，保持常显；
+   * - 测算 / 关键词：**没有详情内容**，一律收起 —— 这两个正是这轮要修的。
+   */
+  const detailOpen = ((): boolean => {
+    if (view === 'list' || view === 'today') return selected !== null
+    if (view === 'knowledge') return knowledge.selected !== null
+    if (view === 'ideas') return ideas.selectedIdea !== null || ideas.selectedCluster !== null
+    if (view === 'traffic') return true
+    return false // amazon / keywords：没有详情内容
+  })()
   return (
-    <div className="wb-body" data-detail={view === 'list' && selected === null ? 'collapsed' : 'open'}>
+    <div className="wb-body" data-detail={detailOpen ? 'open' : 'collapsed'}>
         {draftProblems.length > 0 && (
           <div className="wb-draft-problems" role="alert">
             <h5>⚠️ 有 {draftProblems.length} 项没能创建（其余已正常入册）</h5>
