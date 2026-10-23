@@ -45,7 +45,7 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
   const { addTaskReminder, loadReminderChannel, resetReminderState, saveReminderPolicy, saveReminderTarget, sendReminderTest, setNotifyPerm, setReminderChannel, setReminderPolicy } = props.remindersApi.actions
   const { aiSessionUsable, dayPanelProps, detail, forms, ideas, knowledge, linkExistingSession, linkedSessionIds, now, openQuickEntry, openTask, openTaskById, runtime, saveDailyCapacity, sessionCandidates, sessionListSnapshot, taskList } = props
   return (
-    <div className="wb-body">
+    <div className="wb-body" data-detail={view === 'list' && selected === null ? 'collapsed' : 'open'}>
         {draftProblems.length > 0 && (
           <div className="wb-draft-problems" role="alert">
             <h5>⚠️ 有 {draftProblems.length} 项没能创建（其余已正常入册）</h5>

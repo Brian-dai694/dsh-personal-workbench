@@ -101,12 +101,29 @@ export function compareTasks<T extends TaskLike>(
   return a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
 }
 
+/**
+ * 已完成/已取消的**沉底**（第三轮，视图层默认）。
+ *
+ * 只影响"按哪个排序键排"的**分段先后**：先按 open/closed 分两段，段内仍按用户选的
+ * 排序键与方向。不改数据、不改接口语义、不改 `compareTasks` 的单键判据
+ *（`compareTasks` 有自己的判据盯着，这里只是在外面包一层）。
+ *
+ * 为什么要它：默认「截止时间 ↑」会把最早的已完成任务顶到首屏最上面，
+ * 打开任务页第一屏看到的是历史，而不是"接下来要做什么"。
+ */
+const CLOSED_STATUS = new Set(['done', 'cancelled'])
+
 export function createTaskSorter<T extends TaskLike>(
   key: TaskSortKey,
   dir: TaskSortDir,
   priorityWeight?: Map<string, number>,
 ): (a: T, b: T) => number {
-  return (a, b) => compareTasks(a, b, key, dir, priorityWeight)
+  return (a, b) => {
+    const aClosed = CLOSED_STATUS.has(a.statusCode) ? 1 : 0
+    const bClosed = CLOSED_STATUS.has(b.statusCode) ? 1 : 0
+    if (aClosed !== bClosed) return aClosed - bClosed
+    return compareTasks(a, b, key, dir, priorityWeight)
+  }
 }
 
 export function buildTaskTree<T extends TaskLike>(

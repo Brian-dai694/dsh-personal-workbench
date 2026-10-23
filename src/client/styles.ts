@@ -96,6 +96,10 @@ ${panelContainerCss({ view: VIEW_ATTR, official: OFFICIAL_ATTR, active: ACTIVE_A
 .wb-nav { flex:0 0 min(56%, 880px); min-width:420px; overflow:auto; padding: 0 var(--wb-sp-6) var(--wb-sp-6); box-sizing:border-box; border-right:1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.14)); }
 .wb-nav > :first-child:not(.wb-stats-sticky) { margin-top: var(--wb-sp-6); }
 .wb-detail { flex:1; min-width:0; overflow:auto; padding: var(--wb-sp-6) var(--wb-sp-6); box-sizing:border-box; }
+/* 第三轮：任务页没选中任务时详情区收起，列表吃满整行；选中后回到两栏（列表 56%）。
+   只按 data-detail 切，不动组件结构：DOM 仍在、只是不显示，选中回来不用重建。 */
+.wb-body[data-detail='collapsed'] .wb-detail { display:none; }
+.wb-body[data-detail='collapsed'] .wb-nav { flex:1 1 auto; min-width:0; border-right:0; }
 .wb-stats { display:grid; grid-template-columns:repeat(4,1fr); gap: var(--wb-sp-3); margin-bottom: var(--wb-sp-5); }
 .wb-stat { border:1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.20)); background:var(--dsw-alias-bg-layer-1, rgba(255,255,255,.03)); border-radius: var(--wb-r-4); padding: var(--wb-sp-5) var(--wb-sp-5); box-shadow:0 2px 8px rgba(0,0,0,.06); }
 .wb-stat b { font-size: var(--wb-fs-5); }
@@ -320,6 +324,9 @@ ${panelContainerCss({ view: VIEW_ATTR, official: OFFICIAL_ATTR, active: ACTIVE_A
 .wb-row-meta .wb-chip { display:inline-flex; align-items:center; justify-content:center; width:100%; padding-left: 0; padding-right: 0; text-align:center; }
 .wb-due { text-align:right; color:var(--dsw-alias-label-secondary); font-size: var(--wb-fs-1); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .wb-chip { display:inline-flex; align-items:center; justify-content:center; border-radius: var(--wb-r-1); padding: var(--wb-sp-1) var(--wb-sp-2); font-size: var(--wb-fs-1); white-space:nowrap; }
+/* 第三轮：色彩只留给「优先级高的」和「状态异常」。其余 chip 一律中性灰，
+   一屏颜色从 7 种收到 2–3 种（红=紧急、橙=高，其余全是中性）。 */
+.wb-chip.is-neutral { background: color-mix(in srgb, var(--wb-label-secondary, #8a9aa8) 10%, transparent); color: var(--wb-label-secondary, #8a9aa8); border: 1px solid var(--wb-line-soft, rgba(127,127,127,.22)); font-weight: 500; }
 
 /* ---- 任务进度（S4）：列表行的紧凑条 + 详情页的完整卡片 ---- */
 /* 行内形态：**在自己的网格格子里**伸缩（2026-10-01）。

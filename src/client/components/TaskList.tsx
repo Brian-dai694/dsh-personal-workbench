@@ -21,10 +21,27 @@ function progressViewFor(task: Task, children: readonly Task[] | undefined, pend
   return taskProgressView({ task, children, pending })
 }
 
-export function Badge({ dict, code }: { dict: Dict[]; code: string }): JSX.Element {
+/**
+ * 徽标。
+ *
+ * 第三轮：**颜色只表达一件东西**——优先级高不高。所以：
+ * - `neutral`（状态、类型、以及 p2/p3）：中性灰，不带语义色；
+ * - 只有 `HIGH_PRIORITY` 里的优先级才保留字典色（红/橙）。
+ *
+ * 理由：一屏 40 行、每行 4 个彩色 chip，红黄蓝绿紫同时出现时，颜色不再表示任何东西。
+ */
+const HIGH_PRIORITY = new Set(['p0', 'p1'])
+
+export function Badge({ dict, code, neutral = false }: { dict: Dict[]; code: string; neutral?: boolean }): JSX.Element {
   const entry = dict.find((d) => d.code === code)
   const color = String(entry?.config.color ?? '#8a9aa8')
-  return <span className="wb-chip" style={{ background: `color-mix(in srgb, ${color} 14%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`, fontWeight: 600 }}>{entry?.name ?? code}</span>
+  // 只有「优先级且属于高优先」的徽标保留语义色；状态/类型/低优先级一律中性。
+  const isNeutral = neutral || !HIGH_PRIORITY.has(code)
+  const label = entry?.name ?? code
+  if (isNeutral) {
+    return <span className="wb-chip is-neutral" data-chip={code}>{label}</span>
+  }
+  return <span className="wb-chip" data-chip={code} style={{ background: `color-mix(in srgb, ${color} 14%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`, fontWeight: 600 }}>{label}</span>
 }
 
 export function countTaskTree(roots: TaskTreeNode<Task>[]): number {
