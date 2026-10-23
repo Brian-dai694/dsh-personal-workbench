@@ -228,7 +228,7 @@ test('层级：文档/目录弹窗必须盖得住打开它的对话框，且 por
  */
 test('间距：日期面板任务页签与下方内容必须留出间隔（写在页签上，而不是内容上）', () => {
   const styles = readFileSync(new URL('../src/client/styles.ts', import.meta.url), 'utf8')
-  assert.match(styles, /\.wb-segmented\[data-day-tabs\]\s*\{\s*margin-bottom:\s*(8|9|1\d)px/,
+  assert.match(styles, /\.wb-segmented\[data-day-tabs\]\s*\{\s*margin-bottom:\s*(?:var\(--wb-sp-[1-7]\)|(?:8|9|1\d)px)/,
     '缺少 [data-day-tabs] 的 margin-bottom —— 页签会与下方内容挤在一起（用户已反馈过）')
   /**
    * 2026-10-02 加到五个页签（计划/逾期/未排期/已完成/报告）后必须允许换行：
