@@ -1143,6 +1143,8 @@ ${panelContainerCss({ view: VIEW_ATTR, official: OFFICIAL_ATTR, active: ACTIVE_A
 .wb-tab:hover { color:var(--wb-ink-1); }
 .wb-tab.on { color:var(--wb-ink-1); font-weight:600; border-bottom-color:var(--wb-accent); }
 .wb-tab-dot { width:7px; height:7px; border-radius: 999px; display:inline-block; flex:none; }
+/* 第四轮 4a：页签圆点走中性色（字典色仍在数据里，只是不拿来画点）。 */
+.wb-tab-dot.is-neutral { background: color-mix(in srgb, var(--wb-label-secondary, #8a9aa8) 62%, transparent); }
 .wb-tab-cnt { font-size: var(--wb-fs-1); background:color-mix(in srgb, var(--wb-ink-1) 8%, transparent);
   border-radius:999px; padding: var(--wb-sp-1) var(--wb-sp-2); color:var(--wb-ink-3); font-variant-numeric:tabular-nums; }
 .wb-tab.on .wb-tab-cnt { color:var(--wb-ink-1); background:var(--wb-accent-soft); }

@@ -61,6 +61,17 @@ export function isTabActive(selected: readonly string[], code: string): boolean 
   return selected.includes(code)
 }
 
+/**
+ * 圆点是否用中性色（第四轮 4a）。
+ *
+ * 版式与语义都不变：圆点还在、还表示"这个页签来自带色的字典条目"，
+ * 只是**不用字典色**渲染了 —— 一屏 8 个页签 × 每页签 4–7 个彩色点，
+ * 颜色在这里不承载任何信息，只制造噪音。
+ *
+ * 想恢复彩色只改这一个常量（用户字典里的 color 数据一个字没动）。
+ */
+const NEUTRAL_TAB_DOTS = true
+
 export function TabBar({ tabs, selected, onSelect, ariaLabel = '分类' }: {
   tabs: readonly TabItem[]
   selected: readonly string[]
@@ -81,7 +92,11 @@ export function TabBar({ tabs, selected, onSelect, ariaLabel = '分类' }: {
           // Ctrl/Cmd 是"多选"的修饰键：从事件里读，不让调用方各自判断
           onClick={(e) => onSelect(tab.code, e.ctrlKey || e.metaKey)}
         >
-          {tab.color !== undefined && tab.color !== '' && <i className="wb-tab-dot" style={{ background: tab.color }} />}
+          {tab.color !== undefined && tab.color !== '' && (
+            NEUTRAL_TAB_DOTS
+              ? <i className="wb-tab-dot is-neutral" />
+              : <i className="wb-tab-dot" style={{ background: tab.color }} />
+          )}
           {tab.name}
           <span className="wb-tab-cnt">{count(tab.count)}</span>
         </button>
