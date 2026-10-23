@@ -79,6 +79,9 @@ ${panelContainerCss({ view: VIEW_ATTR, official: OFFICIAL_ATTR, active: ACTIVE_A
 .wb-seg svg { width:15px; height:15px; }
 .wb-seg.on { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4f8ef7) 14%, transparent); color:var(--dsw-alias-label-primary); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-business-primary, #4f8ef7) 32%, transparent); }
 .wb-sub-segmented { padding: var(--wb-sp-1); }
+/* 第四轮 A1：广告组的子页签行（顶栏第二行）。只调这一行自己的内外边距，
+   避免和主行的 gap/高度互相拉扯导致顶栏整体变高。 */
+.wb-h-sub { padding: 0 var(--wb-sp-6) var(--wb-sp-3); gap: var(--wb-sp-2); }
 .wb-sub-segmented .wb-seg { padding: var(--wb-sp-2) var(--wb-sp-5); font-size: var(--wb-fs-1); }
 .wb-sub-segmented .count { min-width:17px; height:17px; padding: 0 var(--wb-sp-2); border-radius: var(--wb-r-2); background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4f8ef7) 14%, transparent); color: var(--dsw-alias-label-primary); font-size: var(--wb-fs-1); display:inline-flex; align-items:center; justify-content:center; }
 /* 日期面板的任务页签（计划/逾期/未排期 + 已完成/报告）与下方内容之间必须留呼吸。
