@@ -10,8 +10,8 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import type { SearchTermAction, SearchTermAnnotation, TrafficRow } from '../../client/amazonTrafficTools.js'
-import { SEARCH_TERM_ACTIONS } from '../../client/amazonTrafficTools.js'
+import type { SearchTermAction, SearchTermAnnotation, TrafficRow } from '../../shared/amazonTrafficTools.js'
+import { SEARCH_TERM_ACTIONS } from '../../shared/amazonTrafficTools.js'
 
 export const AMAZON_DATASET_KINDS = ['search_term', 'targeting', 'campaign', 'placement', 'budget', 'impression_share'] as const
 export type AmazonDatasetKind = typeof AMAZON_DATASET_KINDS[number]

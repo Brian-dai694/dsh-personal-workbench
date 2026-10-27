@@ -26,7 +26,7 @@
  * 与 `panelState.ts` / `workspacePath.ts` 一样：**不 import React、不碰 DOM**，
  * 因此可被 `node --test` 直接测（`test/taskFolder.test.mjs`）。
  */
-import { folderForText } from './format.js'
+import { folderForText } from './folderName.js'
 import { pathIsUnderRoot } from './workspacePath.js'
 
 /** 目录名里允许保留的字符（其余一律丢弃）。 */

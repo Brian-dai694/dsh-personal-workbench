@@ -30,7 +30,7 @@
  */
 import { api } from './api.js'
 import { optionalService } from './runtimeServices.js'
-import { buildExpertInvocationPrompt, EXPERT_REQUEST_ID_MAX_CHARS } from './expertPrompt.js'
+import { buildExpertInvocationPrompt, EXPERT_REQUEST_ID_MAX_CHARS } from '../shared/expertPrompt.js'
 
 /** `ReferenceInsert.source`：本源的稳定名字（也是 `InputTriggerSource.name`）。 */
 export const EXPERT_REFERENCE_SOURCE = 'workbench-expert'

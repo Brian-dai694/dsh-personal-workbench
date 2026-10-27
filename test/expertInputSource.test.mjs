@@ -31,7 +31,7 @@ import {
   createExpertInputSource, createExpertInputTriggerRegistrar, decodeExpertRef, encodeExpertRef, installExpertInputSource,
   expertCandidatePersonaId, expertCandidatesFromCatalog, expertClipboardText, filterExpertCandidates,
 } from '../lib/client/expertInputSource.js'
-import { buildExpertInvocationPrompt, requireExpertRequestId } from '../lib/client/expertPrompt.js'
+import { buildExpertInvocationPrompt, requireExpertRequestId } from '../lib/shared/expertPrompt.js'
 
 const REPO = fileURLToPath(new URL('..', import.meta.url))
 const read = (path) => readFileSync(join(REPO, path), 'utf8').replace(/\r\n/g, '\n')

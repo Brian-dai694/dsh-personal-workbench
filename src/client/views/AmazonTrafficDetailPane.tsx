@@ -15,7 +15,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { abaBadgeText, lookupAba, type AbaLookupEntry } from '../trafficAbaJoin.js'
 import { deriveAdviceThresholds, type CalibrationResult } from '../adviceCalibration.js'
-import { analyseTraffic, summarizeTrafficForAI, type SearchTermAction } from '../amazonTrafficTools.js'
+import { analyseTraffic, summarizeTrafficForAI, type SearchTermAction } from '../../shared/amazonTrafficTools.js'
 import { summariseSliceForCopy } from '../trafficCopy.js'
 import {
   DEFAULT_TRAFFIC_FILTER, TRAFFIC_PRESETS, TRAFFIC_SORT_KEYS, countByPreset, filterTrafficRows,

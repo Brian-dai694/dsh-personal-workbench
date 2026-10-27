@@ -216,7 +216,7 @@ test('对比差异文案：超过 3 项就折叠（避免一行撑半屏），�
 })
 
 test('错误文案是中文：不再出现 price cannot be negative 这类内部键名', async () => {
-  const { calculateAmazonEconomics } = await import('../lib/client/amazonCalculator.js')
+  const { calculateAmazonEconomics } = await import('../lib/shared/amazonCalculator.js')
   const result = calculateAmazonEconomics({ ...DEFAULTS, price: -1, targetAcos: 2 })
   assert.equal(result.valid, false)
   const joined = result.errors.join('；')

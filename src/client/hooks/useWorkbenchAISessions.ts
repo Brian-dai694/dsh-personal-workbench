@@ -52,7 +52,7 @@ import {
 } from '../quickAttachments.js'
 import {
   classifyTaskWorkspacePath, isAutoTaskWorkspacePath, taskWorkspaceFolderName,
-} from '../taskFolder.js'
+} from '../../shared/taskFolder.js'
 import { pickIntakeWorkspace, readCreatedWorkspaceId } from '../intakeWorkspace.js'
 import { acquireSession, openSessionInMainView, type SessionReference } from '../sessionRef.js'
 import { currentSessionIdOf, safeService } from '../runtimeServices.js'
@@ -67,7 +67,7 @@ import {
   effectiveModelLabel, effectiveSelection, evaluateImageSupport, selectionToApply,
   type SelectionApplication,
 } from '../modelCapability.js'
-import { isWslStylePath, joinPath, normalizeWindowsPathToWsl } from '../workspacePath.js'
+import { isWslStylePath, joinPath, normalizeWindowsPathToWsl } from '../../shared/workspacePath.js'
 import type { PlanPromptPayload } from '../dailyPlanPrompt.js'
 import type {
   DraftView, SkillSummary, SkillsResponse, WorkbenchSettings,

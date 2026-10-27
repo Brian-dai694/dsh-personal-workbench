@@ -5,7 +5,7 @@
  *  - AI 澄清/咨询/拆解统一跳官方会话区；工作台侧边栏显示待确认草稿红点
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { isWslStylePath } from './workspacePath.js'
+import { isWslStylePath } from '../shared/workspacePath.js'
 import { DEFAULT_ESTIMATE_MINUTES, MAX_ESTIMATE_MINUTES } from './capacity.js'
 import { WORKBENCH_CSS } from './styles.js'
 import { ACTIVE_ATTR, OFFICIAL_ATTR, PANEL_NAME, PENDING_ATTR, VIEW_ATTR } from './constants.js'

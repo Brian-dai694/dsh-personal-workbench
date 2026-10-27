@@ -22,7 +22,7 @@
  *
  * 不 import React、不碰 DOM、不读 `document` —— 可被 `node --test` 直接测。
  */
-import { isWslStylePath, pathIsUnderRoot, workspacePathKeys } from './workspacePath.js'
+import { isWslStylePath, pathIsUnderRoot, workspacePathKeys } from '../shared/workspacePath.js'
 
 /**
  * 归一化一个路径用于**比较**。

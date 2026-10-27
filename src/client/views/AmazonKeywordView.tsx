@@ -15,7 +15,7 @@
  * 附带好处：导出的内容**一定等于**库里那份方案，不会出现"预览一份、导出另一份"。
  */
 import { useMemo, useState } from 'react'
-import { buildKeywordPlan, type KeywordMatch } from '../amazonKeywordTools.js'
+import { buildKeywordPlan, type KeywordMatch } from '../../shared/amazonKeywordTools.js'
 import { keywordPlanCsv } from '../../shared/keywordPlanCsv.js'
 import type { KeywordPlan, KeywordPlanSummary } from '../../db/repo/keywordPlans.js'
 import type { UseKeywordPlansResult } from '../hooks/useKeywordPlans.js'

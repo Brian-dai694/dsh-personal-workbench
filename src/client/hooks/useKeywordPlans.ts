@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
 import type { KeywordPlan, KeywordPlanSummary } from '../../db/repo/keywordPlans.js'
-import type { KeywordMatch } from '../amazonKeywordTools.js'
+import type { KeywordMatch } from '../../shared/amazonKeywordTools.js'
 
 export interface SaveKeywordPlanInput {
   title: string

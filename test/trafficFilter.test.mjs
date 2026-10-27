@@ -170,7 +170,7 @@ test('渲染：筛选工具条与汇总条出现在结果区，行数按整份�
 })
 
 test('诊断文案与筛选预设共用同一个点击门槛（不许两处各写一个 8）', async () => {
-  const { analyseTraffic } = await import('../lib/client/amazonTrafficTools.js')
+  const { analyseTraffic } = await import('../lib/shared/amazonTrafficTools.js')
   const { WASTE_MIN_CLICKS } = await import('../lib/shared/trafficFilter.js')
   // 恰好等于门槛：诊断要判成"高点击无订单"，筛选也要能筛出来
   const atThreshold = analyseTraffic([{ keyword: 'k', impressions: 100, clicks: WASTE_MIN_CLICKS, orders: 0, spend: 5, sales: 0 }])[0]

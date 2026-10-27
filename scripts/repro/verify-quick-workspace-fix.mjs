@@ -30,7 +30,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { decideQuickWorkspaceDefault, quickFollowFolderDefault, shouldRememberQuickWorkspace } from '../../lib/client/quickWorkspaceDefault.js'
-import { normalizeWindowsPathToWsl } from '../../lib/client/workspacePath.js'
+import { normalizeWindowsPathToWsl } from '../../lib/shared/workspacePath.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const argv = process.argv.slice(2)

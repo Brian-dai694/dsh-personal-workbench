@@ -10,7 +10,7 @@
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
-import type { TrafficRow } from '../../client/amazonTrafficTools.js'
+import type { TrafficRow } from '../../shared/amazonTrafficTools.js'
 import { readXlsx, sheetToTsv, sniffKind } from '../../lib/xlsx.js'
 import {
   createAmazonDataset, deleteAmazonDataset, getAmazonDataset, isAmazonDatasetKind, listAmazonDatasets,

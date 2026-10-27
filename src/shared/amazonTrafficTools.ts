@@ -14,9 +14,9 @@
  * - 用户粘贴常被截断，导致引号不闭合。这种情况**不再整份拒绝**（旧实现会直接
  *   "CSV 引号未闭合"），而是按容错模式解析并给一条 warning，让数据尽量可用。
  */
-import { WASTE_MIN_CLICKS } from '../shared/trafficFilter.js'
-import { aggregateByKeyword } from '../shared/keywordAggregate.js'
-import { summarizeDecisions } from '../shared/keywordDecision.js'
+import { WASTE_MIN_CLICKS } from './trafficFilter.js'
+import { aggregateByKeyword } from './keywordAggregate.js'
+import { summarizeDecisions } from './keywordDecision.js'
 
 export interface TrafficRow {
   keyword: string

@@ -4,7 +4,7 @@ import {
   isWslStylePath,
   joinPath,
   normalizeWindowsPathToWsl,
-} from '../lib/client/workspacePath.js'
+} from '../lib/shared/workspacePath.js'
 
 test('workspacePath: converts Windows drive paths to WSL /mnt paths', () => {
   assert.equal(normalizeWindowsPathToWsl('D:\\Code'), '/mnt/d/Code')

@@ -32,7 +32,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { DatabaseSync } from 'node:sqlite'
 
 import type { ExpertCatalogResponse, ExpertService } from './service.js'
-import { buildExpertInvocationPrompt } from '../client/expertPrompt.js'
+import { buildExpertInvocationPrompt } from '../shared/expertPrompt.js'
 
 /** 菜单里显示的帮助头（也用于两个错误分支的提示）。 */
 export const EXPERT_COMMAND_USAGE = '/expert <persona-id> -- <任务>'

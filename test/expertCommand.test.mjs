@@ -19,7 +19,7 @@ import http from 'node:http'
 import { fileURLToPath } from 'node:url'
 
 import { EXPERT_COMMAND_HELP_MAX_IDS, expertCommandDefinition, expertCommandHelp, expertHelpIds, parseExpertCommand } from '../lib/experts/command.js'
-import { EXPERT_INVOCATION_DIRECTIVE } from '../lib/client/expertPrompt.js'
+import { EXPERT_INVOCATION_DIRECTIVE } from '../lib/shared/expertPrompt.js'
 import { ExpertServiceError, expertErrorStatus } from '../lib/experts/service.js'
 import { makeExpertRoutes } from '../lib/api/routes/experts.js'
 import { EXPERTS_MANUAL_REQUESTS_PATH } from '../lib/client/expertInputSource.js'

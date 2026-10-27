@@ -12,7 +12,7 @@
  * 3. **不连接广告账户**：这里没有出价下发、没有预算修改，只有可复核的数字与建议。
  */
 import { useMemo, useState } from 'react'
-import { calculateAmazonBid, calculateAmazonEconomics, type AmazonCalculatorInput } from '../amazonCalculator.js'
+import { calculateAmazonBid, calculateAmazonEconomics, type AmazonCalculatorInput } from '../../shared/amazonCalculator.js'
 import {
   COMPARISON_METRICS, bestColumnId, buildComparison, describeDiffs, formatComparisonValue,
 } from '../calculatorCompare.js'

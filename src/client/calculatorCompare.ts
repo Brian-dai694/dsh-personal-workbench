@@ -12,7 +12,7 @@
  * 3. **差值只报真实差异**：`diffCalculatorInputs` 只报数值不同的字段；
  *    两个方案完全相同时返回空数组，界面据此显示"参数相同"。
  */
-import { calculateAmazonEconomics, type AmazonCalculatorInput, type AmazonCalculatorResult } from './amazonCalculator.js'
+import { calculateAmazonEconomics, type AmazonCalculatorInput, type AmazonCalculatorResult } from '../shared/amazonCalculator.js'
 import {
   CALCULATOR_FIELD_LABELS, diffCalculatorInputs,
   type CalculatorInputRecord,

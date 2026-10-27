@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { calculateAmazonBid, calculateAmazonEconomics } from '../lib/client/amazonCalculator.js'
+import { calculateAmazonBid, calculateAmazonEconomics } from '../lib/shared/amazonCalculator.js'
 
 const base = {
   price: 40,

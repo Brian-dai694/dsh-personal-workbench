@@ -42,7 +42,7 @@ const appHeaderSource = read('src/client/app/WorkbenchHeader.tsx')
 const amazonToolsSource = read('src/amazon/tools.ts')
 /** 测算视图与共享成本模型：面板/DSH 工具同源，出价公式只有一份实现。 */
 const amazonToolsViewSource = read('src/client/views/AmazonToolsView.tsx')
-const calculatorSource = read('src/client/amazonCalculator.ts')
+const calculatorSource = read('src/shared/amazonCalculator.ts')
 const stylesSource = read('src/client/styles.ts')
 /** 「带入 AI 协助」的投递路径：consult + 无任务时必须把面板文本写进提示词，否则按钮等于空操作。 */
 const aiSessionsSource = read('src/client/hooks/useWorkbenchAISessions.ts')

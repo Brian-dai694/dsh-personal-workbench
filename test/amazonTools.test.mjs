@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildKeywordPlan, keywordPlanCsv } from '../lib/client/amazonKeywordTools.js'
-import { analyseTraffic, parseTrafficCsv } from '../lib/client/amazonTrafficTools.js'
+import { buildKeywordPlan, keywordPlanCsv } from '../lib/shared/amazonKeywordTools.js'
+import { analyseTraffic, parseTrafficCsv } from '../lib/shared/amazonTrafficTools.js'
 
 // Keep the pure client regressions here; host tools are validated through build/wiring.
 test('builds deduplicated keyword tiers and CSV safely', () => {

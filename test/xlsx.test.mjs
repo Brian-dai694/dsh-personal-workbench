@@ -10,7 +10,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readXlsx, sheetToTsv, sniffKind } from '../lib/lib/xlsx.js'
-import { parseTrafficCsv } from '../lib/client/amazonTrafficTools.js'
+import { parseTrafficCsv } from '../lib/shared/amazonTrafficTools.js'
 import { buildFakeCfb, buildXls, buildXlsx } from './_xlsxFixture.mjs'
 
 const HEADER = ['用户搜索词', '曝光', '点击', '广告订单', '广告花费', '广告销售额']

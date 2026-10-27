@@ -1,4 +1,4 @@
-import { CALCULATOR_FIELD_LABELS } from '../shared/calculatorScenario.js'
+import { CALCULATOR_FIELD_LABELS } from './calculatorScenario.js'
 
 export interface AmazonCalculatorInput {
   price: number

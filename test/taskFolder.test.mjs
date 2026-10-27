@@ -19,7 +19,7 @@ import {
   MIN_TASK_ID_PREFIX_LENGTH,
   classifyTaskWorkspacePath, isAutoTaskWorkspacePath, lastPathSegment,
   legacyTitleFolderNames, sanitizeTaskId, taskWorkspaceFolderName,
-} from '../lib/client/taskFolder.js'
+} from '../lib/shared/taskFolder.js'
 
 const ID = '2da8c5bb-30fb-4fba-b3f7-e5cecb513737'
 

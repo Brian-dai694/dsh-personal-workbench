@@ -4,7 +4,7 @@ export type KeywordMatch = 'exact' | 'phrase' | 'broad'
  * CSV 生成已迁到 `shared/keywordPlanCsv.ts`（服务端写文件要用**同一份**转义规则）。
  * 这里保留旧导出名，避免一次性改掉所有调用点；实现只有一处。
  */
-export { keywordPlanCsv } from '../shared/keywordPlanCsv.js'
+export { keywordPlanCsv } from './keywordPlanCsv.js'
 
 export interface KeywordPlanRow {
   keyword: string

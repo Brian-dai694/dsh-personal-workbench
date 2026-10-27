@@ -35,7 +35,7 @@
  *
  * 不 import React、不碰 DOM、不读 `document` —— 可被 `node --test` 直接测。
  */
-import { normalizeWindowsPathToWsl } from './workspacePath.js'
+import { normalizeWindowsPathToWsl } from '../shared/workspacePath.js'
 import { normalizeRecentWorkspaces } from '../shared/quickWorkspaceRecent.js'
 
 /** 参与判定的设置片段（只声明用得到的字段）。 */

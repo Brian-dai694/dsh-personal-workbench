@@ -2,10 +2,10 @@
  * 客户端纯格式化/标签工具（从 index.tsx 抽出，行为不变）。
  * 无副作用、无状态：时间格式化、日期边界、草稿/角色/事件的中文标签。
  */
-export const folderForText = (text: string): string => {
-  const cleaned = text.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').slice(0, 24).trim()
-  return cleaned === '' ? '未命名任务' : cleaned
-}
+
+/** 目录名清洗的唯一实现在 `shared/folderName.ts`（宿主的 /workbench 命令也要用）。 */
+export { folderForText } from '../shared/folderName.js'
+
 export const clientFileLinkToPath = (link: string): string => {
   const trimmed = link.trim()
   if (!/^file:/i.test(trimmed)) return trimmed

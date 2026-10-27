@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { parseTrafficCsv } from '../amazonTrafficTools.js'
+import { parseTrafficCsv } from '../../shared/amazonTrafficTools.js'
 import { WORKBENCH_BUILD_ID } from '../buildId.js'
 import { AmazonSopCard } from '../components/AmazonSopCard.js'
 import type { UseAmazonDatasetsResult } from '../hooks/useAmazonDatasets.js'

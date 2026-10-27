@@ -10,7 +10,7 @@
  * - 空值写 `—` 而不是 `0`/空：**没有数据不等于零**，写 0 会被下游当成事实；
  * - 百分比保留 1 位小数，钱保留 2 位 —— 与界面显示完全一致。
  */
-import type { TrafficMetric, SearchTermAction } from './amazonTrafficTools.js'
+import type { TrafficMetric, SearchTermAction } from '../shared/amazonTrafficTools.js'
 
 const ACTION_LABEL: Record<SearchTermAction, string> = {
   add_exact: '加精准',
