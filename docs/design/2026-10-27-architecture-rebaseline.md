@@ -34,8 +34,9 @@
 | **3a 信封收口（决策 2）** | ✅ **完成并验收（本会话）** | `api/http.ts` 新增 `apiOk()` / `apiError()`；7 个 Amazon 路由文件 **134 处**响应全部改走收口函数，源码零手写 `{ok:…}`；新增 `test/apiEnvelope.test.mjs`（债务棘轮基线 = 278）。**验证（窗口独占，`pnpm build` + `node --test` 一次跑完）：1544 / 1544 全绿，0 失败**；`tsc --noEmit` 0 error。已随 `6c8bbc6` 合入 |
 | **3b 路径收敛（D3）** | ✅ **完成（本会话）** | 7 个前缀收敛到 `helpers.ts` 一处（`ABA_KEYWORDS_PREFIX` … `OPLOG_PREFIX`），7 处内联 `pathname.slice(...)` 全部改走 `pathSegments(url, PREFIX)`。**验证**：`tsc` 0 error；定向 22 文件 **207/207**；全量 **1544/1544**；`architecture.test.mjs` 8/8 |
 | **4 域解耦（D3 / R3）** | ✅ **完成（本会话）** | ① `status.ts` 不再 `import './asin.js'` —— 改由新的中立模块 `db/repo/task-completion-hooks.ts` 广播「任务已完成」，选品域在 `asin.ts` 自己 `onTaskCompleted` 订阅；② `findOpenTaskByAsin` 从通用任务域 `tasks.ts` 归位到 `asin.ts`（问的是选品语义，不是任务表语义）；③ 失败静默纪律从单域上移到广播口，对所有订阅方统一生效。**验证**：`status.ts` 对 asin 的**代码级** import = 0；`tsc` 0；全量 **1544/1544** |
-| **6 拆大文件（D5）** | ⬜ 未开始 | 仍 **23 个**文件 >600 行、**17 个** >800 行；`client/index.tsx` 仍 2092 行 |
-| **7 安全护栏（D6）** | ⬜ 未开始 | `api/routes/knowledge.ts` 无白名单逻辑 |
+| **7a 打开文件注入面（D6）** | ✅ **完成（本会话）** | `api/openFileRoute.ts` 删掉 `execFile('cmd', ['/c','start',…], { windowsVerbatimArguments: true })` —— 那两件事叠加成**命令注入**（Node 不转义 + cmd 二次解析，路径里的 `&`/`|` 变命令分隔符），而路径来自知识条目 `fileLink`（**AI 能写**）。改为 `rundll32 url.dll,FileProtocolHandler` + `file://` URL（无 shell，每参数独立 argv），WSL 分支同样删掉 `cmd.exe /c start`。新增 `test/openFileSafety.test.mjs`（3 条源码守卫 + 2 条行为）。**验证**：`tsc` 0；`build` 0；定向 **22/22** |
+| **7b 目录白名单（D6）** | ⏸ **暂缓（用户决策）** | 按字面加白名单会砍掉「选择本地文档」的**选任意盘**能力（该弹窗现在能浏览所有盘符）。留待单独决策：严格模式 / 可配置开关 / 只写文档。**现状是"本机同用户能力"，不是提权** |
+| **6 拆大文件（D5）** | 🔶 **部分完成（对方会话）** | `index.ts` 723 → 33 行 + `plugin/*` 六模块（`0873664`）。剩：`experts/install.ts`(1916)、`knowledge/recall.ts`(1423)、`experts/drafts.ts`(1413)、`tools/workbench.ts`(1177) |
 | **8 客户端纪律** | ⬜ 未开始 | `client/views/*.tsx` 仍有 **15 处**直接 `api(` 调用 |
 
 **当前快照（11:00:49）**：`src` 257 文件 / 70,632 行。
