@@ -5,7 +5,8 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, type DictionaryEntry } from '../repo.js'
+import { nowIso } from './shared.js'
+import type { DictionaryEntry } from '../types.js'
 
 
 export function listDictionaries(db: DatabaseSync, kind?: string): DictionaryEntry[] {

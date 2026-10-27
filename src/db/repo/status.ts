@@ -7,7 +7,8 @@ import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
 import { appendEvent } from './task-primitives.js'
 import { getTask, listTasks, listChildren, updateTask } from './tasks.js'
-import { nowIso, type TaskPatch, type TaskRow } from '../repo.js'
+import { nowIso } from './shared.js'
+import type { TaskPatch, TaskRow } from '../types.js'
 import { appendAsinLaunchOutcome } from './asin.js'
 
 /**

@@ -5,7 +5,9 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, appendEvent, getTask } from '../repo.js'
+import { nowIso } from './shared.js'
+import { appendEvent } from './task-primitives.js'
+import { getTask } from './tasks.js'
 
 
 export interface TaskMemoryInput {

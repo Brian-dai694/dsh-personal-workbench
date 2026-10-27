@@ -6,7 +6,8 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, type TaskRow } from '../repo.js'
+import { nowIso } from './shared.js'
+import type { TaskRow } from '../types.js'
 
 export interface RawTaskRow {
   id: string

@@ -23,7 +23,7 @@
  * 而真实原因是数据坏了（需求 §6.4 的失败四态之外，这一条属于"可观测优先"）。
  */
 import type { DatabaseSync } from 'node:sqlite'
-import { getAiSession, registerAiSession } from '../repo.js'
+import { getAiSession, registerAiSession } from './ai-sessions.js'
 import {
   parsePersonaBinding,
   serializePersonaBinding,

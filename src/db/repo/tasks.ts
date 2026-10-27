@@ -8,7 +8,8 @@ import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
 import { parseTask, effectiveDueAtForTask, effectiveWorkspacePathForTask, appendEvent, collectArchivedDescendants, isDescendantOf, type RawTaskRow } from './task-primitives.js'
 import { listDictionaries } from './dictionaries.js'
-import { nowIso, type TaskInput, type TaskPatch, type TaskRow } from '../repo.js'
+import { nowIso } from './shared.js'
+import type { TaskInput, TaskPatch, TaskRow } from '../types.js'
 
 
 /**

@@ -21,7 +21,7 @@ import { getTask } from './tasks.js'
 import { createDraft, getDeferredDraftForTask, getPendingDraftForTask, updateDraft } from './drafts.js'
 import { getDraft, nowIso, parseDraft, type DraftRow, type RawDraftRow } from './shared.js'
 import { listTaskEvents } from './status.js'
-import type { TaskRow } from '../repo.js'
+import type { TaskRow } from '../types.js'
 
 export type { PendingCompletionView }
 

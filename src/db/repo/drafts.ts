@@ -12,7 +12,7 @@ import { getDictionary } from './dictionaries.js'
 import { linkTaskSession } from './task-sessions.js'
 import { checkWorkspacePath } from '../../workspace-check.js'
 import { addReminder } from './reminders.js'
-import type { DraftInput, TaskInput, TaskRow } from '../repo.js'
+import type { DraftInput, TaskInput, TaskRow } from '../types.js'
 
 
 

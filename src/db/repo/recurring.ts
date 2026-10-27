@@ -5,7 +5,11 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, createTask, localDateString, parseTask, type RawTaskRow, type TaskRow } from '../repo.js'
+import { nowIso } from './shared.js'
+import { createTask } from './tasks.js'
+import { parseTask, type RawTaskRow } from './task-primitives.js'
+import { localDateString } from './local-date.js'
+import type { TaskRow } from '../types.js'
 
 
 export const RECURRENCE_BACKFILL_LIMIT = 100

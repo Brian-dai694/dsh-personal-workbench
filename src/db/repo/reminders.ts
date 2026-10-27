@@ -6,7 +6,8 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, effectiveDueAtForTask } from '../repo.js'
+import { nowIso } from './shared.js'
+import { effectiveDueAtForTask } from './task-primitives.js'
 
 
 export interface DueReminder {

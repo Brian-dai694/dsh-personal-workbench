@@ -1,8 +1,11 @@
 # 架构重新梳理（2026-10-27）
 
-> 范围：`src/` 全量 254 文件 / 70,453 行、构建产物 `lib/`、测试与脚本链。
+> 范围：`src/` 全量 254 文件 / 70,550 行、构建产物 `lib/`、测试与脚本链。
 > 方法：只读静态分析（分层深读 + 引用统计 + 构建产物核对 + git 状态）。结论全部带 file:line 或实测数字。
-> 本文替代 `2026-09-09-architecture-refactor.md` 作为当前架构基线；那份文档描述的是 v1.10 的「拆上帝文件」，当时源码 4.7k 行，现在 70k 行（14.9×），已不足以解释当前形态。
+> **数字口径**：所有行数为物理行（含空行），快照时间 **2026-10-27 10:54:48**。
+> 采集期间该仓库处于活跃开发循环（10:47–10:54 有 6 个 `src/client/**` 文件被改，10:54:28 一次 `pnpm build` 落盘，随后 `pnpm test` 起跑），
+> 故行数存在 ±0.1% 级漂移；架构结论与该漂移无关。
+> 本文替代 `2026-09-09-architecture-refactor.md` 作为当前架构基线；那份文档描述的是 v1.10 的「拆上帝文件」，当时源码 4.7k 行，现在 70.5k 行（15×），已不足以解释当前形态。
 
 ---
 
@@ -12,7 +15,7 @@
 而目录主轴仍然是**按技术层**（db / api / client / shared）。
 
 一域时代这是对的；现在它是错的 —— **域边界无处安放，于是每个新域都从各层"借"地方**。
-这不是审美问题，它已经产生了一个真实后果：**宿主的编译产物里混进了 44 个浏览器 UI 组件**（§3.D1）。
+这不是审美问题，它已经产生了一个真实后果：**宿主的编译产物里混进了 22 个浏览器 UI 组件（235 KB）**（§3.D1）。
 
 ---
 
@@ -22,19 +25,21 @@
 
 | 区域 | 文件 | 行数 | 占比 |
 |---|---:|---:|---:|
-| `src/client/` | 135 | 31,096 | 44.1% |
+| `src/client/` | 135 | 31,193 | 44.2% |
 | `src/experts/` | 12 | 11,269 | 16.0% |
 | `src/shared/` | 24 | 7,594 | 10.8% |
 | `src/db/` | 32 | 7,316 | 10.4% |
 | `src/api/` | 29 | 4,814 | 6.8% |
 | **`src/` 根散件** | **8** | **4,985** | **7.1%** |
-| `src/personas/` | 6 | 1,940 | 2.8% |
+| `src/personas/` | 6 | 1,940 | 2.7% |
 | `src/reminder/` | 6 | 1,265 | 1.8% |
 | `src/lib/` | 2 | 174 | 0.2% |
-| **合计** | **254** | **70,453** | 100% |
+| **合计** | **254** | **70,550** | 100% |
 
 `src/` 根散件 = `knowledge-recall.ts`(1423) + `tools.ts`(1177) + `index.ts`(723) + `amazon-tools.ts`(662)
-+ `review-memory.ts`(405) + `knowledge-recall-log.ts`(256) + `knowledge-tools.ts`(244) + `workspace-check.ts`(95)。
++ `review-memory.ts`(405) + `knowledge-recall-log.ts`(256) + `knowledge-tools.ts`(244) + `workspace-check.ts`(95) = 4,985。
+
+`client/` 内部分布：根 56 文件 / 11,502 · `hooks/` 24 / 7,151 · `components/` 26 / 6,146 · `views/` 23 / 5,180 · `app/` 6 / 1,214。
 
 ### 1.2 周边资产
 
@@ -50,10 +55,10 @@
 
 | 项 | 数值 |
 |---|---:|
-| `lib/**/*.js` | 394 文件 / 4.11 MB |
-| `lib/client/**` | **154 文件 / 1.03 MB**（占宿主产物 25%） |
-| 其中 `client/{components,views,app}/` | **44 文件 / 0.28 MB，宿主运行期从不 import** |
-| `lib/client.js`（浏览器 bundle，minified） | 914,946 B ≈ 915 KB |
+| `lib/` 文件总数 | 394（`*.js` **197** = 3,285 KB；`*.d.ts` 196） |
+| `lib/client/**/*.js` | **77 文件 / 764 KB**（占宿主 js 产物 23%） |
+| 其中 `client/{components,views,app}/*.js` | **22 文件 / 235 KB，宿主运行期从不 import** |
+| `lib/client.js`（浏览器 bundle，minified） | **896 KB** |
 
 ### 1.4 接口与数据面
 
@@ -70,6 +75,11 @@
 
 ⇒ 当前不是「重构一个稳定系统」，而是「**往一个插件里塞第二个产品塞到一半**」。
 所以本梳理必须先回答「第二个产品该不该住在这个包里」（§7 决策 1），再谈怎么拆文件。
+
+**并且：采集期间该仓库处于活跃写入状态。** 10:47–10:54 有 6 个 `src/client/**` 文件被修改，
+10:54:28 一次 `pnpm build` 落盘，紧接着 `node --test test/*.test.mjs` 起跑（PID 23508）。
+⇒ 有另一条会话/编辑器窗口正在同一个工作副本上工作。**批次 0（提交基线）动手前必须先确认没有并发写入**，
+否则会把别人正在写的东西一起提交，或让别人的构建读到半改状态。
 
 ---
 
@@ -102,9 +112,12 @@ DSH 宿主（cordis）
 
 | 域 | 内容 | 跨层分布 |
 |---|---|---|
-| **A 工作台本体** | 任务/日历/计划/报告/提醒/草稿/复盘/知识/点子/记忆 | 14 张表 · 14 工具 · 21 路由文件主体 · views 9 文件 1,447 行 |
-| **B AI 供给** | 专家/角色/技能包/知识召回/工具面 | 0 表（用 `task_drafts` + 文件系统）· 11 工具 · experts+personas 13.2k 行 |
+| **A 工作台本体** | 任务/日历/计划/报告/提醒/草稿/复盘/知识/点子/记忆 | **19 张表** · 12 工具 · 14 路由文件 · views 9 文件 1,447 行 |
+| **B AI 供给** | 专家/角色/技能包/知识召回/工具面 | **0 张表**（用 `task_drafts` + 文件系统）· 12 工具 · experts+personas 13.2k 行 |
 | **C Amazon 运营** | ABA/搜索词/关键词/ASIN/库存/对账/运营日志/测算 | **10 张表 · 12 工具 · 7 路由文件（占 api 24.4%）· client 32 文件 5,766 行** |
+
+工具面恒等式：**12 + 12 + 12 = 36**（A 的 12 个在 `tools.ts` 的 14 个工厂里，另 2 个 `load_persona` / `read_persona_resource` 属 B）。
+分配依据不是命名，而是「这个工具写的表属于哪个域」—— 这正是 §3.D4 说 `tools.ts` 该按域拆的原因。
 
 C 域在客户端已占 **72%**（views 13 文件 3,733 行 vs 本体 9 文件 1,447 行），**但它仍是未提交的半成品**。
 
@@ -127,7 +140,7 @@ C 域在客户端已占 **72%**（views 13 文件 3,733 行 vs 本体 9 文件 1
 | `src/db/repo/amazonDatasets.ts:13-14` | `client/amazonTrafficTools.ts`（**值**导入 `SEARCH_TERM_ACTIONS`） |
 | `src/experts/command.ts:35` | `client/expertPrompt.ts` |
 
-**代价**：44 个 UI 文件 0.28 MB 随宿主构建产出却永不被宿主 import；同一份逻辑进两个 bundle；
+**代价**：22 个 UI 文件 235 KB 随宿主构建产出却永不被宿主 import；同一份逻辑进两个 bundle；
 「client 只跑在浏览器 / 宿主只跑在 node」这条约束在结构上已经不成立，只能靠人记。
 
 **根因**：Amazon 域的纯计算出生在 `client/`（因为先做的是面板），而宿主工具也需要它 ⇒ 只能反向 import。
@@ -159,7 +172,8 @@ C 域在客户端已占 **72%**（views 13 文件 3,733 行 vs 本体 9 文件 1
 ### D4 —— 归属混乱：`src/` 根 8 个散件 + `shared/` 成了第四个垃圾桶
 
 - **`src/` 根 4,985 行（7.1%）** 是「单文件子系统」，而 `reminder/`、`experts/`、`personas/` 都有目录。
-  `knowledge-recall.ts`(1423) 是唯一以散件形态存在的子系统（日志 256 + 工具 244 + shared 1058 + 路由 98 四处分居）。
+  `knowledge-recall.ts`(1423) 是其中最典型的：一个**子系统级**的东西仍以散件形态躺在根目录，而它的另外四块分居别处（日志 256 + 工具 244 + `shared/knowledgeRecall.ts` 1058 + 路由 98）。
+  同理 `amazon-tools.ts`(662) 与 `tools.ts`(1177) 是**工具面**，按域拆之后也该有各自的家。
 - **`shared/` 24 个模块里 7 个错位**（实测引用方向）：
 
 | 模块 | 行数 | 宿主引用 | 客户端引用 | 判定 |
@@ -191,7 +205,10 @@ C 域在客户端已占 **72%**（views 13 文件 3,733 行 vs 本体 9 文件 1
 实测在 **4 个视图 / 23 处**被破（`OpsLogView.tsx:402/403/410`、`AsinView.tsx` 9 处 `api(`、`InventoryView.tsx:40/77`、`KnowledgeDetailPane.tsx:49/72`）。
 `test/httpFence.test.mjs` 管的是**服务端**围栏，与 views 无关 —— 所以这条纪律目前只写在注释里。
 
-**附带：一个 0 字节死文件** `views/AmazonOperationsView.tsx`，全仓无引用。
+**附带：一个 0 字节墓碑文件** `views/AmazonOperationsView.tsx`（已提交、0 字节、mtime 2026-10-22）。
+没有任何模块 import 它；唯一提到它的是 `test/taskDetailWiring.test.mjs:142` —— 那条断言的是
+`appBodySource` **不含** `AmazonOperationsView`，即「运营总览已从 WorkbenchBody 移除」的守卫。
+所以它是上一轮删除动作留下的墓碑：**删文件不会破测试，但那条断言要留**（否则将来有人又把视图挂回去）。
 
 ### D6（附带）—— loopback-only ≠ 文件系统边界
 
@@ -243,9 +260,9 @@ src/
      host/entry.tsx         ← index.tsx:827-2092 迁入
 ```
 
-`shared/` 保留 17 个真正双端的模块不动（`dailyPlanPolicy`、`contracts`、`expert`、`persona`、`taskProgress`、`abaKeywordTable`、
-`i18n`、`inventoryForecast`、`calculatorScenario`、`keyword*`、`asinJudgment`、`oplogView`、`quickAttachments`、`quickWorkspaceRecent`、
-`knowledgeDraftOverwrite`、`asinImport` 等待归位项除外）。
+`shared/` 的 **17 个真正双端模块保持不动**：`dailyPlanPolicy`、`contracts`、`expert`、`persona`、`taskProgress`、
+`i18n`、`abaKeywordTable`、`inventoryForecast`、`calculatorScenario`、`keywordAggregate`、`keywordDecision`、
+`keywordPlanCsv`、`asinJudgment`、`oplogView`、`quickAttachments`、`quickWorkspaceRecent`、`knowledgeDraftOverwrite`。
 
 ### 4.4 明确**不**建议做的事
 
@@ -262,7 +279,7 @@ src/
 |---|---|---|
 | **0 基线固化（硬前提）** | 把当前 Amazon 未提交工作落成一次 commit（36 改 + 34 新增，schema 20→34）。**在此之前任何重构都无法用 git 回退。** | `git status` 干净；`pnpm build` 通过 |
 | **1 断环（D2）** | 17 处 `from '../repo.js'` 回导改直连 `./shared.js`/`./tasks.js` …；`repo.ts` 的 `localDateString` 抽到 `repo/local-date.ts`；删 3 个死导入 | `tsc --noEmit` 0 error；新增 R4 断言通过；`test/db.test.mjs` 全绿 |
-| **2 收回共享（D1）** | 把宿主需要的纯计算从 `client/` 移到 `shared/amazon*`（`amazonCalculator` / `amazonKeywordTools` / `amazonTrafficTools` 的纯函数）；清掉 5 处反向依赖；**`tsconfig.build.json` 由"白名单"改"排除法"**（`src/**` 减 `src/client/{components,views,app}/**`） | 断言 `lib/client/{components,views,app}` 不存在；`lib` 体积下降 ≈0.28MB；`test/amazonThreePageWiring` 等全绿 |
+| **2 收回共享（D1）** | 把宿主需要的纯计算从 `client/` 移到 `shared/amazon*`（`amazonCalculator` / `amazonKeywordTools` / `amazonTrafficTools` 的纯函数）；清掉 5 处反向依赖；**`tsconfig.build.json` 由"120 行白名单"改"排除法"**：`include: ["src/**/*"]` + `exclude: ["src/client/**"]`（批次 2 把宿主需要的几个纯函数迁进 `shared/` 后，这个 exclude 才成立 —— 在此之前减不掉） | 断言 `lib/client/{components,views,app}` 不存在；`lib/client/**` 从 764 KB 降到只剩 `lib/client.js` 需要的部分；`test/amazonThreePageWiring` 等全绿 |
 | **3 域解耦（D3）** | `status.ts` 摘掉 `asin.ts`（改事件/回调注入）；`findOpenTaskByAsin` 移到 asin 域；`api/routes/asin.ts` 不再直接 `createTask` | 新增 R3 断言；`test/routes` + `test/asinTaskLaunch` 全绿 |
 | **4 收编散件（D4）** | `src/knowledge/*`、`src/amazon/*`；`shared/` 7 个错位模块归位 | 新增 R1 断言；无新增循环依赖 |
 | **5 拆大文件（D5）** | `tools.ts` → `tools/*`（7 文件）；`index.tsx` → `app/WorkbenchApp.tsx` + `host/entry.tsx`；`experts/{install,drafts,invocation}` 按阶段拆 | 单文件 >800 行数量从 11 降到 ≤3 |

@@ -5,7 +5,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, getDraft, withDraftConfirm, type DraftRow } from '../repo.js'
+import { nowIso, getDraft, withDraftConfirm, type DraftRow } from './shared.js'
 import { parseDraft, type RawDraftRow } from './shared.js'
 
 

@@ -4,7 +4,9 @@
  * 从 repo.ts 原样抽出（行为不变）。对外符号由 repo.ts 再导出。
  */
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, appendEvent, type TaskSessionLinkInput } from '../repo.js'
+import { nowIso } from './shared.js'
+import { appendEvent } from './task-primitives.js'
+import type { TaskSessionLinkInput } from '../types.js'
 
 
 export function linkTaskSession(db: DatabaseSync, input: TaskSessionLinkInput, at = nowIso()): void {

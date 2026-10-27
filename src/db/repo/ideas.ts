@@ -5,7 +5,11 @@
  */
 import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, getDraft, withDraftConfirm, toTaskInputFromDraftItem, createTask, getDictionary, type DraftRow, type DraftTaskItem, type TaskRow } from '../repo.js'
+import { nowIso, getDraft, withDraftConfirm, type DraftRow } from './shared.js'
+import { toTaskInputFromDraftItem, type DraftTaskItem } from './drafts.js'
+import { createTask } from './tasks.js'
+import { getDictionary } from './dictionaries.js'
+import type { TaskRow } from '../types.js'
 import { parseDraft, type RawDraftRow } from './shared.js'
 
 

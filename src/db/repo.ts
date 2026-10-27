@@ -1,163 +1,48 @@
 /**
- * 仓储层：任务 / 草稿 / 会话关联 / 提醒 / 事件。
- * 所有写操作都记 task_events；字典 code 在服务层进一步校验。
+ * 仓储层门面：**只做 re-export，不放实现**。
+ *
+ * ## 为什么它必须保持"纯门面"（架构规则 R4）
+ *
+ * 门面 re-export 28 个领域模块；只要它还定义任何**值**（函数/常量），
+ * 需要那个值的子模块就只能回导 `'../repo.js'` —— 于是 `repo.ts ↔ repo/*.ts` 成环。
+ * 这类环在 ESM 下能跑，是因为子模块只在函数体里取用；
+ * 一旦有人在模块求值期用它，拿到的是 `undefined`，而报错位置与被改文件无关。
+ *
+ * 2026-10-27：`localDateString` 已挪到 `repo/local-date.ts`，
+ * 6 个接口已挪到 `db/types.ts`，17 个子模块改为直连具体模块 —— 环已断。
+ * 新增领域模块时请遵守：**本文件不得出现 `function` / `const … =` 实现**，
+ * 子模块不得 `import ... from '../repo.js'`。两条例外用测试钉住（R4）。
+ *
+ * 领域模块清单见下方分组注释；对外 API 与拆分前逐字一致（调用点不必改）。
  */
-import { randomUUID } from 'node:crypto'
-import type { DatabaseSync } from 'node:sqlite'
-import { nowIso, getDraft, setDraftStatus, withDraftConfirm, parseDraft, type DraftRow, type RawDraftRow } from './repo/shared.js'
+
+// ---------------------------------------------------------------------------
+// 原语（时间 / 草稿骨架）
+// ---------------------------------------------------------------------------
 export { nowIso, getDraft, setDraftStatus, withDraftConfirm } from './repo/shared.js'
 export type { DraftRow } from './repo/shared.js'
-import { effectiveDueAtForTask, effectiveWorkspacePathForTask, parseTask, appendEvent, collectArchivedDescendants, isDescendantOf, type RawTaskRow } from './repo/task-primitives.js'
+
+/** 「本地日」的唯一实现在 `repo/local-date.ts`（叶子模块，可被任何子模块直连）。 */
+export { localDateString } from './repo/local-date.js'
+
+// ---------------------------------------------------------------------------
+// 行 / 输入类型（叶子模块，无运行时依赖）
+// ---------------------------------------------------------------------------
+export type { DictionaryEntry, DraftInput, TaskInput, TaskPatch, TaskRow, TaskSessionLinkInput } from './types.js'
+
 export { effectiveDueAtForTask, effectiveWorkspacePathForTask, parseTask, appendEvent, isDescendantOf } from './repo/task-primitives.js'
 export type { RawTaskRow } from './repo/task-primitives.js'
 
-
-/** 服务器本地时区的 YYYY-MM-DD；每日计划按本地“天”划分。 */
-export function localDateString(date = new Date()): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-export interface DictionaryEntry {
-  kind: string
-  code: string
-  name: string
-  config: Record<string, unknown>
-  builtin: number
-  active: number
-  sortOrder: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface TaskInput {
-  /**
-   * 由调用方**预先分配**的任务 id（v1.15.1）。
-   *
-   * 为什么要留这个口：澄清阶段需要先把"任务资料夹"建出来并写进提示词，
-   * 而旧做法是拿**用户打的那句自然语言**当目录名（`folderForText(text)`）——
-   * 等于把一句话当路径，还会因为改标题变成孤儿。现在客户端先 `randomUUID()` 预留 id、
-   * 用它建资料夹，确认草稿时复用同一个 id（`confirmTaskDraft` 读 `payload.id`）。
-   *
-   * 缺省仍由仓储层 `randomUUID()`：老调用点行为不变。
-   */
-  id?: string
-  title: string
-  description?: string
-  typeCode: string
-  statusCode?: string
-  priorityCode: string
-  aiPolicyCode?: string
-  dueAt?: string | null
-  allDay?: boolean
-  estimatedMinutes?: number | null
-  source?: string
-  parentId?: string | null
-  workspacePath?: string | null
-  /**
-   * 显式进度（0–99）。**只由 `repo/progress.ts#setTaskProgress` 写** ——
-   * 这里留给"建任务时就带进度"的极少数场景（迁移/导入），常规入口一律默认 0。
-   */
-  progressPercent?: number
-  extra?: Record<string, unknown>
-  children?: Array<Partial<TaskInput>>
-  recurrenceCode?: string | null
-  recurrenceRule?: Record<string, unknown>
-  recurrenceMasterId?: string | null
-}
-
-export interface TaskPatch {
-  title?: string
-  description?: string
-  typeCode?: string
-  statusCode?: string
-  priorityCode?: string
-  aiPolicyCode?: string
-  dueAt?: string | null
-  allDay?: boolean
-  estimatedMinutes?: number | null
-  archived?: boolean
-  workspacePath?: string | null
-  /**
-   * 显式进度（0–99）。
-   *
-   * ⚠️ 不在这里做范围/幂等判断：唯一权威入口是
-   * `repo/progress.ts#setTaskProgress`（同值不写事件、越界拒绝）。`updateTask` 只负责落库，
-   * 给它传 100 会被 DDL 的 CHECK 挡下来（那是"绕过守卫"的响铃）。
-   */
-  progressPercent?: number
-  /** 改父任务：undefined = 不变；null = 移到顶层；字符串 = 挂到该父任务下（仓储层会做存在/归档/防环校验）。 */
-  parentId?: string | null
-  extra?: Record<string, unknown>
-  recurrenceCode?: string | null
-  recurrenceRule?: Record<string, unknown>
-}
-
-export interface TaskRow {
-  id: string
-  parentId: string | null
-  title: string
-  description: string
-  typeCode: string
-  statusCode: string
-  priorityCode: string
-  aiPolicyCode: string
-  dueAt: string | null
-  /** 动态有效截止时间：优先自身 dueAt，未设置时向上继承最近一个有截止时间的祖先。 */
-  effectiveDueAt: string | null
-  allDay: number
-  estimatedMinutes: number | null
-  source: string
-  workspacePath: string | null
-  /** 动态有效工作区：优先自身 workspacePath，未设置时向上继承最近一个已设工作区的祖先。 */
-  effectiveWorkspacePath: string | null
-  /** 显式进度 0–99（写入口只有 `repo/progress.ts`；DRL 的 CHECK 是最后防线）。 */
-  progressPercent: number
-  archived: number
-  extra: Record<string, unknown>
-  recurrenceCode: string | null
-  recurrenceRule: Record<string, unknown>
-  recurrenceMasterId: string | null
-  recurrenceLastGenerated: string | null
-  createdAt: string
-  updatedAt: string
-  completedAt: string | null
-  cancelledAt: string | null
-}
-
-export interface DraftInput {
-  kindCode?: 'task' | 'subtask_plan' | string
-  sessionId?: string | null
-  payload: Record<string, unknown>
-}
-
-export interface TaskSessionLinkInput {
-  taskId: string
-  sessionId: string
-  roleCode: string
-  workspace?: string
-  note?: string
-}
-
-
 // 字典域已抽到 repo/dictionaries.ts
-import { listDictionaries, getDictionary, dictionaryUsageCount } from './repo/dictionaries.js'
 export {
   listDictionaries, getDictionary, createDictionaryEntry, updateDictionaryEntry, deleteDictionaryEntry, dictionaryUsageCount,
   listActiveDictionaryCodes,
 } from './repo/dictionaries.js'
 
 // 任务域已抽到 repo/tasks.ts
-import { createTask, getTask, listTasks, listChildren, updateTask } from './repo/tasks.js'
 export { createTask, findOpenTaskByAsin, getTask, listTasks, listChildren, updateTask, taskIdProblem } from './repo/tasks.js'
 
 // 状态聚合与级联已抽到 repo/status.ts
-import {
-  completeTaskCascade, updateTaskWithCompletion, repairParentCompletion,
-  archiveTask, restoreTask, listArchivedTasks, listTaskEvents, createTaskReview, listTaskReviews,
-} from './repo/status.js'
 export {
   completeTaskCascade, updateTaskWithCompletion, repairParentCompletion,
   archiveTask, restoreTask, listArchivedTasks, listTaskEvents, createTaskReview, listTaskReviews,
@@ -175,18 +60,14 @@ export type {
   DraftTaskItem, DraftItemProblem, ConfirmTaskDraftResult, ConfirmSubtaskPlanResult,
 } from './repo/drafts.js'
 
-
 // 任务会话关联已抽到 repo/task-sessions.ts
-import { linkTaskSession } from './repo/task-sessions.js'
 export { linkTaskSession, listTaskSessions } from './repo/task-sessions.js'
-
 
 // 任务共享记忆已抽到 repo/task-memory.ts
 export { getTaskRootId, getTaskMemory, listTaskMemories, addTaskMemory, getTaskMemoryContext } from './repo/task-memory.js'
 export type { TaskMemoryRow } from './repo/task-memory.js'
 
 // 提醒域已抽到 repo/reminders.ts
-import { addReminder } from './repo/reminders.js'
 export {
   listDueReminders, skipStaleReminders, listReminders,
   fireReminder, acknowledgeReminder, resetReminder, skipReminder, addReminder,
@@ -195,7 +76,6 @@ export type { DueReminder, TaskReminderRow } from './repo/reminders.js'
 
 // meta 已抽到 repo/meta.ts
 export { readMeta, writeMeta } from './repo/meta.js'
-
 
 // 提醒队列已抽到 repo/reminder-queue.ts
 export {
@@ -269,6 +149,7 @@ export type {
   CreateAmazonDatasetInput, SearchTermReviewInput,
 } from './repo/amazonDatasets.js'
 
+// 运营日志域
 export {
   createOplogEntry,
   deleteOplogEntry,
@@ -287,6 +168,7 @@ export {
 } from './repo/oplog.js'
 export type { OplogDraft, OplogEntry, OplogFacets, OplogFilter, OplogImportSummary, OplogKpiCounts, OplogTaskOption, OplogDayIndexEntry, OplogType } from './repo/oplog.js'
 
+// ASIN 域
 export { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinJudgments, listAsinProducts, listAsinStoreSummaries, listAsinStores, setAsinStoreWatch, queryAsinPage, setAsinJudgment, setAsinWatch, trendsFor } from './repo/asin.js'
 export type { AsinBatchAction, AsinBatchResult, AsinStoreSummary } from './repo/asin.js'
 export type { AsinFacets, AsinFilter, AsinImportSummary, AsinJudgment, AsinJudgmentInput, AsinPage, AsinTrendPoint, AsinVerdict } from './repo/asin.js'
@@ -295,6 +177,7 @@ export type { AsinFacets, AsinFilter, AsinImportSummary, AsinJudgment, AsinJudgm
 export { createInventorySnapshot, deleteInventorySnapshot, getInventorySnapshot, getLatestInventorySnapshot, listInventorySnapshots } from './repo/inventory.js'
 export type { CreateInventorySnapshotInput, InventorySnapshot, InventorySnapshotSummary } from './repo/inventory.js'
 
+// 关键词计划
 export {
   createKeywordPlan, deleteKeywordPlan, getKeywordPlan, listKeywordPlans, updateKeywordPlan,
 } from './repo/keywordPlans.js'
@@ -302,12 +185,14 @@ export type {
   KeywordMatchCode, KeywordPlan, KeywordPlanInput, KeywordPlanRow, KeywordPlanSummary,
 } from './repo/keywordPlans.js'
 
+// 测算场景
 export {
   createCalculatorScenario, deleteCalculatorScenario, findCalculatorScenarioByName,
   getCalculatorScenario, listCalculatorScenarios, updateCalculatorScenario,
 } from './repo/calculatorScenarios.js'
 export type { CalculatorScenario, CalculatorScenarioInput } from './repo/calculatorScenarios.js'
 
+// ABA 词集
 export {
   createAbaKeywordSet, deleteAbaKeywordSet, getAbaKeywordSet, listAbaKeywordSets, setAbaAnnotations,
 } from './repo/abaKeywordSets.js'
