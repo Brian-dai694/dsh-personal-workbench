@@ -15,7 +15,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { createOplogEntry, deleteOplogEntry, deleteOplogType, getOplogEntry, getTask, importOplogEntries, listOplogDayIndex, listOplogEntries, listOplogTaskOptions, listOplogTypes, oplogFacets, oplogKpiCounts, setOplogPinned, updateOplogEntry, upsertOplogType } from '../../db/repo.js'
 import type { OplogDraft } from '../../db/repo.js'
 import { normalizeOplogImport } from '../../shared/oplogImport.js'
-import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
+import { OPLOG_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody } from './helpers.js'
 
 
 function readDraft(body: Record<string, unknown>): OplogDraft | string {
@@ -40,7 +40,6 @@ function readDraft(body: Record<string, unknown>): OplogDraft | string {
   }
 }
 
-const PREFIX = '/api/workbench/oplog'
 
 export function makeOplogRoutes(db: DatabaseSync): WebRoute[] {
   return [
@@ -50,7 +49,7 @@ export function makeOplogRoutes(db: DatabaseSync): WebRoute[] {
       handler: async (req, res) => {
         if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
-        const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
+        const segments = pathSegments(url, PREFIX)
         const action = segments[0] ?? ''
 
         if (req.method === 'GET' && (action === '' || action === 'list')) {

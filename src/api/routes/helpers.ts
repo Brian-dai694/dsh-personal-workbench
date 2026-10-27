@@ -59,6 +59,23 @@ export const KNOWLEDGE_RECALL_PREFIX = '/api/workbench/knowledge-recall'
 export const IDEAS_PREFIX = '/api/workbench/ideas'
 export const IDEA_CLUSTERS_PREFIX = '/api/workbench/idea-clusters'
 
+/**
+ * Amazon 域的端点前缀（2026-10-27 批次 3b）。
+ *
+ * 原先这 7 个前缀各自写在对应的路由文件里（`const PREFIX = '/api/workbench/xxx'`），
+ * 一共 8 份（外加 `dictionaryRoute.ts` 自己那份），而 `pathSegments()` 的正确性
+ * 又依赖"传进来的 prefix 与路由注册的前缀**逐字相同**"。
+ * 两处各写一份 = 改一处漏一处就是 404，且没有任何测试会红。
+ * 现在前缀只有这一份，路由注册与路径解析都从这里取。
+ */
+export const ABA_KEYWORDS_PREFIX = '/api/workbench/aba-keywords'
+export const AMAZON_DATASETS_PREFIX = '/api/workbench/amazon/datasets'
+export const ASIN_PREFIX = '/api/workbench/asin'
+export const CALCULATOR_SCENARIOS_PREFIX = '/api/workbench/calculator-scenarios'
+export const INVENTORY_PREFIX = '/api/workbench/inventory'
+export const KEYWORD_PLANS_PREFIX = '/api/workbench/keyword-plans'
+export const OPLOG_PREFIX = '/api/workbench/oplog'
+
 export const MAX_LOCAL_DOC_BYTES = 1024 * 1024
 
 /** 把 file:// URL 或绝对路径转成服务器本地文件路径。 */

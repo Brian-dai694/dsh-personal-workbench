@@ -16,11 +16,10 @@ import type { DatabaseSync } from 'node:sqlite'
 import {
   createAbaKeywordSet, deleteAbaKeywordSet, getAbaKeywordSet, listAbaKeywordSets, setAbaAnnotations,
 } from '../../db/repo.js'
-import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
+import { ABA_KEYWORDS_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody } from './helpers.js'
 import { writeAbaComparisonCsv } from '../../lib/abaExport.js'
 import { getLatestAmazonDataset } from '../../db/repo.js'
 
-const PREFIX = '/api/workbench/aba-keywords'
 
 export function makeAbaKeywordRoutes(db: DatabaseSync): WebRoute[] {
   return [
@@ -30,7 +29,7 @@ export function makeAbaKeywordRoutes(db: DatabaseSync): WebRoute[] {
       handler: async (req, res) => {
         if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
-        const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
+        const segments = pathSegments(url, PREFIX)
         const method = req.method ?? 'GET'
         const id = segments[0] === undefined ? '' : decodeURIComponent(segments[0])
 

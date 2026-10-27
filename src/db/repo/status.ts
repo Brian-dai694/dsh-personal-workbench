@@ -9,24 +9,18 @@ import { appendEvent } from './task-primitives.js'
 import { getTask, listTasks, listChildren, updateTask } from './tasks.js'
 import { nowIso } from './shared.js'
 import type { TaskPatch, TaskRow } from '../types.js'
-import { appendAsinLaunchOutcome } from './asin.js'
+import { emitTaskCompleted } from './task-completion-hooks.js'
 
 /**
- * 回写「立项任务完成」到选品库（v1.28）。
+ * 「任务完成」的附带动作**不再写在这里**（2026-10-27 批次 4 / R3）。
  *
- * 只对带 `extra.asin` 锚点的任务生效 —— 那是"由选品库立项"的唯一标记。
- * 失败必须**静默**：回写只是附带的痕迹，不能因为它把任务完成本身弄失败
- * （用户在验收时点了通过，任务就该完成）。
+ * 原先这里有一个 `writeBackAsinOutcome`，直接 `import { appendAsinLaunchOutcome } from './asin.js'`。
+ * 那条 import 让任务域硬依赖选品域 —— 想单独测任务域就得拖进整个 ASIN 域，
+ * 而选品域也随时可能反向 import 造成双向依赖。
+ *
+ * 现在任务域只负责**广播**（`emitTaskCompleted`），选品域在 `asin.ts` 里自己订阅。
+ * 失败静默的纪律也上移到广播口，对所有订阅方统一生效。
  */
-function writeBackAsinOutcome(db: DatabaseSync, taskId: string, at: string): void {
-  try {
-    const task = getTask(db, taskId)
-    if (task === undefined) return
-    const asin = typeof task.extra.asin === 'string' ? task.extra.asin : ''
-    if (asin === '') return
-    appendAsinLaunchOutcome(db, asin, task.id, task.title, at)
-  } catch { /* 回写失败不影响任务完成 */ }
-}
 
 
 function isClosedStatus(statusCode: string): boolean {
@@ -95,9 +89,13 @@ export function completeTaskCascade(db: DatabaseSync, taskId: string, actor = 'u
   try {
     completeTaskCascadeInTx(db, taskId, actor, at)
     db.exec('COMMIT')
-    /** 选品立项的任务完成后回写一条事实到商品备注（幂等；无 ASIN 锚点则无操作）。 */
-    writeBackAsinOutcome(db, taskId, at)
-    return getTask(db, taskId)
+    /**
+     * 广播「任务已完成」：选品立项的回写由**选品域自己**订阅（`asin.ts` 的 `onTaskCompleted`）。
+     * 无 `extra.asin` 锚点的任务，订阅方会自行忽略，所以这里不需要判断。
+     */
+    const completed = getTask(db, taskId)
+    if (completed !== undefined) emitTaskCompleted(db, completed, at)
+    return completed
   } catch (error) {
     db.exec('ROLLBACK')
     throw error
@@ -124,9 +122,10 @@ export function updateTaskWithCompletion(
       completeTaskCascadeInTx(db, id, actor, at)
     }
     db.exec('COMMIT')
-    /** 手工把任务改成 done 与"验收通过"走同一条回写（否则两条路径行为不一致）。 */
-    if (patch.statusCode === 'done') writeBackAsinOutcome(db, id, at)
-    return getTask(db, id)
+    /** 手工把任务改成 done 与"验收通过"走**同一条广播**（否则两条路径行为不一致）。 */
+    const after = getTask(db, id)
+    if (patch.statusCode === 'done' && after !== undefined) emitTaskCompleted(db, after, at)
+    return after
   } catch (error) {
     db.exec('ROLLBACK')
     throw error

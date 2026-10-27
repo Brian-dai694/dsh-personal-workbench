@@ -40,7 +40,10 @@ export {
 } from './repo/dictionaries.js'
 
 // 任务域已抽到 repo/tasks.ts
-export { createTask, findOpenTaskByAsin, getTask, listChildIds, listTasks, listChildren, taskPriorityCode, updateTask, taskIdProblem, taskStatusIndex } from './repo/tasks.js'
+export { createTask, getTask, listChildIds, listTasks, listChildren, taskPriorityCode, updateTask, taskIdProblem, taskStatusIndex } from './repo/tasks.js'
+// 「任务已完成」的跨域广播口（2026-10-27 批次 4）：任务域只广播，选品域自己订阅。
+export { emitTaskCompleted, onTaskCompleted, taskCompletedHandlerCount } from './repo/task-completion-hooks.js'
+export type { TaskCompletedHandler } from './repo/task-completion-hooks.js'
 
 // 状态聚合与级联已抽到 repo/status.ts
 export {
@@ -170,7 +173,7 @@ export {
 export type { OplogDraft, OplogEntry, OplogFacets, OplogFilter, OplogImportSummary, OplogKpiCounts, OplogTaskOption, OplogDayIndexEntry, OplogType } from './repo/oplog.js'
 
 // ASIN 域
-export { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, getAsinTaskSource, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinJudgments, listAsinProducts, listAsinStoreSummaries, listAsinStores, setAsinStoreWatch, queryAsinPage, setAsinJudgment, setAsinWatch, trendsFor } from './repo/asin.js'
+export { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, findOpenTaskByAsin, getAsinTaskSource, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinJudgments, listAsinProducts, listAsinStoreSummaries, listAsinStores, setAsinStoreWatch, queryAsinPage, setAsinJudgment, setAsinWatch, trendsFor } from './repo/asin.js'
 export type { AsinBatchAction, AsinBatchResult, AsinStoreSummary, AsinTaskSource } from './repo/asin.js'
 export type { AsinFacets, AsinFilter, AsinImportSummary, AsinJudgment, AsinJudgmentInput, AsinPage, AsinTrendPoint, AsinVerdict } from './repo/asin.js'
 

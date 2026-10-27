@@ -19,9 +19,9 @@ import {
   saveAmazonDatasetSummary, saveSearchTermReview,
 } from '../../db/repo.js'
 import type { AmazonDatasetSummaryPayload } from '../../db/repo.js'
-import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
+import { AMAZON_DATASETS_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody } from './helpers.js'
 
-const PREFIX = '/api/workbench/amazon/datasets'
+
 /** base64 上限：约 7.5MB 源文件，够一份几千行的搜索词报表。 */
 const MAX_FILE_BASE64 = 10 * 1024 * 1024
 /**
@@ -87,7 +87,6 @@ function readRow(value: unknown): TrafficRow | null {
     share: typeof raw.share === 'number' && Number.isFinite(raw.share) && raw.share >= 0 && raw.share <= 1 ? raw.share : null,
   } as TrafficRow
 }
-
 export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
   return [
     {
@@ -96,7 +95,7 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
       handler: async (req, res) => {
         if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
-        const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
+        const segments = pathSegments(url, PREFIX)
         const method = req.method ?? 'GET'
         const bodyLimit = bodyLimitFor(method, segments)
         if (['POST', 'PATCH'].includes(method) && declaredTooLarge(req, bodyLimit)) {

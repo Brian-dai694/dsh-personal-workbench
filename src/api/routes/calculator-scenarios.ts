@@ -17,9 +17,9 @@ import {
   getCalculatorScenario, listCalculatorScenarios, updateCalculatorScenario,
 } from '../../db/repo.js'
 import { normalizeScenarioName } from '../../shared/calculatorScenario.js'
-import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
+import { CALCULATOR_SCENARIOS_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody } from './helpers.js'
 
-const PREFIX = '/api/workbench/calculator-scenarios'
+
 
 function readPatch(body: Record<string, unknown>): { name?: string; input?: unknown; note?: string; asin?: string | null } {
   const patch: { name?: string; input?: unknown; note?: string; asin?: string | null } = {}
@@ -30,7 +30,6 @@ function readPatch(body: Record<string, unknown>): { name?: string; input?: unkn
   else if (typeof body.asin === 'string') patch.asin = body.asin
   return patch
 }
-
 export function makeCalculatorScenarioRoutes(db: DatabaseSync): WebRoute[] {
   return [
     {
@@ -39,7 +38,7 @@ export function makeCalculatorScenarioRoutes(db: DatabaseSync): WebRoute[] {
       handler: async (req, res) => {
         if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
-        const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
+        const segments = pathSegments(url, PREFIX)
         const method = req.method ?? 'GET'
         const id = segments[0] === undefined ? '' : decodeURIComponent(segments[0])
 

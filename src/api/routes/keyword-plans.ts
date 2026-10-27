@@ -24,9 +24,9 @@ import {
 } from '../../db/repo.js'
 import type { KeywordPlanInput } from '../../db/repo.js'
 import { keywordCsvFileName, keywordPlanCsv } from '../../shared/keywordPlanCsv.js'
-import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
+import { KEYWORD_PLANS_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody } from './helpers.js'
 
-const PREFIX = '/api/workbench/keyword-plans'
+
 
 /**
  * 找到一个**不会覆盖已有文件**的导出路径。
@@ -74,7 +74,6 @@ function readInput(body: Record<string, unknown>): Partial<KeywordPlanInput> {
   else if (typeof body.asin === 'string') input.asin = body.asin
   return input
 }
-
 export function makeKeywordPlanRoutes(db: DatabaseSync): WebRoute[] {
   return [
     {
@@ -83,7 +82,7 @@ export function makeKeywordPlanRoutes(db: DatabaseSync): WebRoute[] {
       handler: async (req, res) => {
         if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
-        const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
+        const segments = pathSegments(url, PREFIX)
         const method = req.method ?? 'GET'
         const id = segments[0] === undefined ? '' : decodeURIComponent(segments[0])
 

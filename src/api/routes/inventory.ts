@@ -16,9 +16,9 @@ import type { InventoryRow } from '../../shared/inventoryForecast.js'
 import {
   createInventorySnapshot, deleteInventorySnapshot, getInventorySnapshot, getLatestInventorySnapshot, listInventorySnapshots,
 } from '../../db/repo.js'
-import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
+import { INVENTORY_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody } from './helpers.js'
 
-const PREFIX = '/api/workbench/inventory'
+
 
 function readRow(value: unknown): InventoryRow | null {
   if (typeof value !== 'object' || value === null) return null
@@ -39,7 +39,6 @@ function readRow(value: unknown): InventoryRow | null {
     dailyTarget: num(raw.dailyTarget),
   }
 }
-
 export function makeInventoryRoutes(db: DatabaseSync): WebRoute[] {
   return [
     {
@@ -48,7 +47,7 @@ export function makeInventoryRoutes(db: DatabaseSync): WebRoute[] {
       handler: async (req, res) => {
         if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
-        const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
+        const segments = pathSegments(url, PREFIX)
         const method = req.method ?? 'GET'
 
         if (segments.length === 0) {

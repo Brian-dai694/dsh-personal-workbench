@@ -7,6 +7,9 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { AsinProduct, AsinSnapshot, AsinStore } from '../../shared/asinImport.js'
 import { ASIN_VERDICTS, emptyJudgment, isAsinVerdict, normalizeJudgmentInput } from '../../shared/asinJudgment.js'
 import type { AsinJudgment, AsinJudgmentInput, AsinVerdict } from '../../shared/asinJudgment.js'
+import { onTaskCompleted } from './task-completion-hooks.js'
+import { parseTask, type RawTaskRow } from './task-primitives.js'
+import type { TaskRow } from '../types.js'
 
 export { ASIN_VERDICTS, isAsinVerdict, emptyJudgment }
 export type { AsinJudgment, AsinJudgmentInput, AsinVerdict }
@@ -523,3 +526,48 @@ export function getAsinTaskSource(db: DatabaseSync, asin: string): AsinTaskSourc
     judgmentJson: row.judgment_json,
   }
 }
+
+/**
+ * 选品立项的**幂等锚点**（v1.26）：同一个 ASIN 只允许有一条未完成的立项任务。
+ *
+ * 判据存在 `tasks.extra.asin`（`extra` 列里的键），用 LIKE 直接查：
+ * 这里的数据量很小（几十条），没必要为此单开一列或一张关联表；
+ * 但**必须**在创建前查一次，否则用户点两下"立项"就会得到两个重复任务。
+ *
+ * 只匹配未完成/未取消/未归档的任务：上一个立项做完了，允许再立一次
+ * （第二轮做同一个品是完全正常的事）。
+ *
+ * ⚠️ 2026-10-27 批次 4：本函数原先住在 `tasks.ts`（通用任务域）。
+ * 它问的是**选品语义** —— `extra.asin` 这个锚点只有"从选品库立项"才会写，
+ * 普通任务永远没有。放在通用任务表模块里，等于让任务域替选品域保管判据，
+ * 于是"任务表长什么样"和"选品怎么防重"被混成一个问题。
+ * 现在归位到选品域；对外仍由 `db/repo.ts` 再导出，调用点不用改。
+ */
+export function findOpenTaskByAsin(db: DatabaseSync, asin: string): TaskRow | undefined {
+  const clean = asin.trim().toUpperCase()
+  if (clean === '') return undefined
+  const rows = db.prepare(`SELECT * FROM tasks
+    WHERE archived = 0 AND status_code NOT IN ('done', 'cancelled')
+      AND extra LIKE ?`).all(`%"asin":"${clean}"%`) as unknown as RawTaskRow[]
+  return rows.map((row) => parseTask(row, db)).find((task): task is TaskRow => task !== undefined)
+}
+
+/**
+ * 选品域对「任务已完成」的反应：把立项结果回写成一条商品备注。
+ *
+ * **为什么是注册而不是被调用**：任务完成发生在任务域内部（级联 / 手工改状态两条路径），
+ * 选品域不该被任务域 import（那是 D3 的跨域渗透）。
+ * 所以反过来 —— 本模块在加载时订阅一次，任务域完成后广播。
+ * 依赖方向变成 `status → hooks ← asin`，两边互不知道对方存在。
+ *
+ * **为什么注册在模块作用域**：`db/repo.ts` 会再导出本模块，所以只要有仓储，
+ * 这个处理器就必然注册；不需要额外初始化调用（少一个"忘记调"的失败模式）。
+ *
+ * **幂等性**：处理器本身幂等 —— `appendAsinLaunchOutcome` 用
+ * `[立项完成] + 任务 id` 判重，热重载导致的重复注册不会写重复行。
+ */
+onTaskCompleted((db, task, at) => {
+  const asin = typeof task.extra.asin === 'string' ? task.extra.asin : ''
+  if (asin === '') return
+  appendAsinLaunchOutcome(db, asin, task.id, task.title, at)
+})

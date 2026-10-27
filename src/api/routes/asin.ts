@@ -26,9 +26,9 @@ import { isAsinVerdict } from '../../shared/asinJudgment.js'
 import { normalizeAsinImport } from '../../shared/asinImport.js'
 import { asinBackupFileName, buildAsinBackup } from '../../shared/asinExport.js'
 import { addReminder, createTask, findOpenTaskByAsin, getDictionary, listDictionaries } from '../../db/repo.js'
-import { apiError, apiOk, isLoopbackRequest, readJsonBody, requireCode } from './helpers.js'
+import { ASIN_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody, requireCode } from './helpers.js'
 
-const PREFIX = '/api/workbench/asin'
+
 
 /** 导出目录里找一个不覆盖已有文件的名字（同一分钟连点两次导出很常见）。 */
 async function freePath(dir: string, fileName: string): Promise<string> {
@@ -45,7 +45,6 @@ async function freePath(dir: string, fileName: string): Promise<string> {
   }
   throw new Error('同名导出文件过多，请先清理 exports 目录')
 }
-
 export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
   return [
     {
@@ -54,7 +53,7 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
       handler: async (req, res) => {
         if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
-        const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
+        const segments = pathSegments(url, PREFIX)
 
         if (req.method === 'GET' && segments.length === 0) {
           const page = Math.max(1, Number(url.searchParams.get('page') ?? '1') || 1)

@@ -32,8 +32,8 @@
 | **5 域目录收编** | ✅ 完成 | `46ef287 refactor(src): 收编根目录散件到 knowledge/ tools/ amazon/ memory/ core/`。**已实测验证**：`src/` 根散件 **8 → 1**（只剩 `index.ts`）；新增 `amazon/ core/ knowledge/ memory/ tools/` 五个目录 |
 | **2 收回共享（D1）** | 🔶 **进行中（未提交）** | 工作树 38 个改动；`src/shared/taskFolder.ts` 已出现在 shared 侧（10:59:35）、`tsconfig.build.json` 已改（10:59:14）；`node --test` 正在跑 |
 | **3a 信封收口（决策 2）** | ✅ **完成并验收（本会话）** | `api/http.ts` 新增 `apiOk()` / `apiError()`；7 个 Amazon 路由文件 **134 处**响应全部改走收口函数，源码零手写 `{ok:…}`；新增 `test/apiEnvelope.test.mjs`（债务棘轮基线 = 278）。**验证（窗口独占，`pnpm build` + `node --test` 一次跑完）：1544 / 1544 全绿，0 失败**；`tsc --noEmit` 0 error。已随 `6c8bbc6` 合入 |
-| **3b 路径收敛（D3）** | ⬜ 未开始 | 7 处内联 `pathname.slice` 与 7 个 `const PREFIX` 仍在。**刻意与 3a 分开**：它要处理各文件自己的 `decodeURIComponent` 语义，混进信封批次会让"纯机械"的承诺失效 |
-| **4 域解耦（D3）** | ⬜ 未开始 | `db/repo/status.ts:12` 仍 `import { appendAsinLaunchOutcome } from './asin.js'`；`tasks.ts:244` `findOpenTaskByAsin` 仍在 |
+| **3b 路径收敛（D3）** | ✅ **完成（本会话）** | 7 个前缀收敛到 `helpers.ts` 一处（`ABA_KEYWORDS_PREFIX` … `OPLOG_PREFIX`），7 处内联 `pathname.slice(...)` 全部改走 `pathSegments(url, PREFIX)`。**验证**：`tsc` 0 error；定向 22 文件 **207/207**；全量 **1544/1544**；`architecture.test.mjs` 8/8 |
+| **4 域解耦（D3 / R3）** | ✅ **完成（本会话）** | ① `status.ts` 不再 `import './asin.js'` —— 改由新的中立模块 `db/repo/task-completion-hooks.ts` 广播「任务已完成」，选品域在 `asin.ts` 自己 `onTaskCompleted` 订阅；② `findOpenTaskByAsin` 从通用任务域 `tasks.ts` 归位到 `asin.ts`（问的是选品语义，不是任务表语义）；③ 失败静默纪律从单域上移到广播口，对所有订阅方统一生效。**验证**：`status.ts` 对 asin 的**代码级** import = 0；`tsc` 0；全量 **1544/1544** |
 | **6 拆大文件（D5）** | ⬜ 未开始 | 仍 **23 个**文件 >600 行、**17 个** >800 行；`client/index.tsx` 仍 2092 行 |
 | **7 安全护栏（D6）** | ⬜ 未开始 | `api/routes/knowledge.ts` 无白名单逻辑 |
 | **8 客户端纪律** | ⬜ 未开始 | `client/views/*.tsx` 仍有 **15 处**直接 `api(` 调用 |
