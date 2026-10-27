@@ -39,7 +39,7 @@ dsh plugin --profile web add @dely0/dsh-personal-workbench
 
 ```sh
 # GitHub 源码
-dsh plugin --profile web add git+https://github.com/Dely0/dsh-personal-workbench.git
+dsh plugin --profile web add git+https://github.com/Brian-dai694/dsh-personal-workbench.git
 # Release tarball
 dsh plugin --profile web add file:/path/to/dsh-personal-workbench-<version>.tgz
 ```
@@ -69,7 +69,7 @@ dsh plugin --profile web add file:/path/to/dsh-personal-workbench-<version>.tgz
 ## 开发
 
 ```sh
-git clone https://github.com/Dely0/dsh-personal-workbench.git
+git clone https://github.com/Brian-dai694/dsh-personal-workbench.git
 cd dsh-personal-workbench
 pnpm install
 pnpm check                 # 类型检查 + 构建
@@ -169,7 +169,7 @@ Requires **DSH ≥ `0.1.5-rc.1`** (web), Node `^22.19.0` or `>=24.0.0`, pnpm `>=
 
 ```sh
 dsh plugin --profile web add @dely0/dsh-personal-workbench
-# or: dsh plugin --profile web add git+https://github.com/Dely0/dsh-personal-workbench.git
+# or: dsh plugin --profile web add git+https://github.com/Brian-dai694/dsh-personal-workbench.git
 ```
 
 > ⚠️ **You must restart `dsh web` after installing** — the client bundle is read into memory at host startup, so a browser refresh keeps serving the old code.
