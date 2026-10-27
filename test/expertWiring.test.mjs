@@ -18,6 +18,7 @@
  * `<home>/.dsh/workbench`）—— 所以**绝不写** `~/.dsh/workbench`。
  */
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -37,7 +38,14 @@ import { EXPERT_GENERATION_TOOL_NAMES } from '../lib/experts/tools.js'
 import { EXPERT_HTTP_BODY_MAX_BYTES } from '../lib/shared/expert.js'
 
 const REPO = fileURLToPath(new URL('..', import.meta.url))
-const INDEX_SOURCE = readFileSync(join(REPO, 'src', 'index.ts'), 'utf8')
+const INDEX_SOURCE = entrySurface()
+
+/** 释放次序要看**代码**而不是注释：注释里也会提到 dispose/close 字样。 */
+function readyCode() {
+  return readRepo('src/plugin/ready.ts')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+}
 
 const AT = '2026-01-01T00:00:00.000Z'
 const BOUND_SESSION = 'session-wiring-bound-aaaa'
@@ -556,7 +564,7 @@ test('AX-E50: 入口源码里技能 provider 的注册与释放都是"子 fiber 
   assert.equal(routesSource.match(/deps\.experts\?\.setAutoEnabled\(body\.autoSummonExperts\)/g)?.length, 1)
   /** dispose 必须注册在 db.close 之后（cordis 逆序释放 ⇒ 先跑 experts.dispose）。 */
   assert.equal(
-    INDEX_SOURCE.indexOf('experts.dispose()') > INDEX_SOURCE.indexOf('db.close()'),
+    readyCode().indexOf('experts.dispose()') > readyCode().indexOf('db.close()'),
     true,
   )
   /** expert 分支不许接管旧任务草稿。 */

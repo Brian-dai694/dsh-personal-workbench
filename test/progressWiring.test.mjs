@@ -12,6 +12,7 @@
  * 免得下次无关重构就把测试扫红（脆断言最耗排查时间）。
  */
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -36,7 +37,7 @@ const taskDetailPane = read('src/client/views/TaskDetailPane.tsx')
 const taskProgressComponent = read('src/client/components/TaskProgress.tsx')
 const taskProgressViewSource = read('src/client/taskProgressView.ts')
 const sharedProgress = read('src/shared/taskProgress.ts')
-const serviceChrome = read('src/index.ts')
+const serviceChrome = entrySurface()
 
 /**
  * 剥掉注释再扫。

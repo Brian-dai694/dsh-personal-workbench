@@ -15,6 +15,7 @@
  * 且工具必须真的注册进 `ctx.tools`（只写实现不注册 = 用户永远用不到）。
  */
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import http from 'node:http'
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs'
@@ -236,7 +237,7 @@ test('工具：recall_control 五种动作各管一件事，且能关掉/打开/
 })
 
 test('接线：两个工具真的注册进 ctx.tools（只写实现不注册 = 用户永远用不到）', () => {
-  const index = readFileSync('src/index.ts', 'utf8').replace(/\r\n/g, '\n')
+  const index = entrySurface()
   assert.match(index, /searchKnowledgeTool\(knowledgeRecall\)/, '搜索工具要注册')
   assert.match(index, /knowledgeRecallControlTool\(knowledgeRecall\)/, '开关/引用工具要注册')
   assert.match(index, /installKnowledgeRecall\(ctx, db, \{/, '召回管理器由入口创建')

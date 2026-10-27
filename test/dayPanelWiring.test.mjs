@@ -9,6 +9,7 @@
  * "逾期/未排期到底是谁"这种判定出现在组件里，就是下一次"同一语义两处实现"。
  */
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -138,7 +139,7 @@ test('AX-T02: 清除某日计划只有一处实现，且写完之后必须重新
 test('ADR0010: AI 侧四处口径都只说「只能排可执行叶子」，不再教「同一父子链」', () => {
   const files = {
     'src/tools/workbench.ts': read('src/tools/workbench.ts'),
-    'src/index.ts': read('src/index.ts'),
+    'src/plugin/prompt.ts': readRepo('src/plugin/prompt.ts'),
     'src/client/dailyPlanPrompt.ts': read('src/client/dailyPlanPrompt.ts'),
     'src/client/hooks/useWorkbenchAISessions.ts': read('src/client/hooks/useWorkbenchAISessions.ts'),
   }

@@ -13,6 +13,7 @@
  * 不需要真的起 cordis —— 只有"注册外壳"那一组用假 ctx（与 `expertWiring.test.mjs` 同风格）。
  */
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import http from 'node:http'
@@ -271,24 +272,26 @@ test('AX-E47 没有专家服务时工厂当场拒绝（不是"注册一个永远
  */
 test('AX-E51 缺 commands 服务：入口必须"软探测 + 可读日志 + 不抛 + 不进 inject"', () => {
   const index = read('src/index.ts')
-  const code = index.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+  const commands = readRepo('src/plugin/commands.ts')
+  const code = commands.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
   assert.match(code, /probeService<CommandsProbe>\(ctx, 'commands'\)/, '拿不到 commands 必须走软探测（ctx.get）')
   assert.match(code, /未注册 \/expert 命令：宿主没有提供 commands 服务/, '缺服务时要有可读日志')
-  assert.match(code, /^export const inject = \['webServer', 'systemPrompt', 'tools', 'commands'\]$/m, 'commands 已在 inject 里，但不许再塞别的宿主服务')
+  assert.match(index, /^export const inject = \['webServer', 'systemPrompt', 'tools', 'commands'\]$/m, 'commands 已在 inject 里，但不许再塞别的宿主服务')
   assert.equal(/console\.warn\(notice\)/.test(code), true, '日志要能被终端看到（不只写 logger）')
 })
 
 test('AX-E47/E51 入口源码：/expert 与 /workbench 同层注册、commands 走软探测、顶层 inject 逐字不变', () => {
   const index = read('src/index.ts')
+  const ready = readRepo('src/plugin/ready.ts')
   assert.match(index, /^export const inject = \['webServer', 'systemPrompt', 'tools', 'commands'\]$/m, '顶层 inject 必须逐字不变')
-  assert.equal((index.match(/registerExpertCommand\(ctx, db, experts\)/g) ?? []).length, 1, '注册点只许一处')
-  const workbenchAt = index.indexOf('registerWorkbenchCommand(ctx, db)')
-  const expertAt = index.indexOf('registerExpertCommand(ctx, db, experts)')
+  assert.equal((ready.match(/registerExpertCommand\(ctx, db, experts\)/g) ?? []).length, 1, '注册点只许一处')
+  const workbenchAt = ready.indexOf('registerWorkbenchCommand(ctx, db)')
+  const expertAt = ready.indexOf('registerExpertCommand(ctx, db, experts)')
   assert.equal(workbenchAt > 0 && expertAt > workbenchAt, true, '/expert 紧随 /workbench 之后（同一层）')
-  assert.match(index, /ctx\.effect\(\s*\(\) => commands\.register\(expertCommandDefinition\(db, \{ experts \}\)\)/, '/expert 必须用 ctx.effect 包住 disposer')
-  assert.match(index, /probeService<CommandsProbe>\(ctx, 'commands'\)/, '拿不到 commands 走软探测（不写进 inject）')
+  assert.match(readRepo('src/plugin/commands.ts'), /ctx\.effect\(\s*\(\) => commands\.register\(expertCommandDefinition\(db, \{ experts \}\)\)/, '/expert 必须用 ctx.effect 包住 disposer')
+  assert.match(readRepo('src/plugin/commands.ts'), /probeService<CommandsProbe>\(ctx, 'commands'\)/, '拿不到 commands 走软探测（不写进 inject）')
   /** 命令定义必须**只有工厂**：入口里不许再出现一份分隔符解析（那会让 AX-E47 的用例失去意义）。 */
-  const code = index.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+  const code = readRepo('src/plugin/commands.ts').replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
   assert.equal(code.includes(' -- '), false, '入口不许内联 " -- " 解析（解析只在 experts/command.ts）')
 })
 

@@ -17,6 +17,7 @@
  *    入口不再持有第二份可写副本。
  */
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import { read, stripComments, countInClient, assertClientCount } from './_clientSources.mjs'
 
@@ -58,7 +59,7 @@ const buildTsconfigSource = read('tsconfig.build.json')
 const amazonDatasetsHookSource = read('src/client/hooks/useAmazonDatasets.ts')
 const assemblySource = read('src/client/app/assembly.ts')
 /** 服务端入口（工具注册的地方）—— 注意不是 `src/client/index.tsx`。 */
-const serverEntrySource = read('src/index.ts')
+const serverEntrySource = entrySurface()
 
 const DETAIL_STATES = [
   'detailTab', 'sessionPickerOpen', 'sessionPickerRole',

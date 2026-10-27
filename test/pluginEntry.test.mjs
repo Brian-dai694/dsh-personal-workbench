@@ -29,6 +29,7 @@
  *    下一条断言同时钉住"写法不能退化成 `*` / `>=0`"：那等于对所有核心都声明兼容。
  */
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import * as plugin from '../lib/index.js'
@@ -328,7 +329,7 @@ test('回归 F5：/workbench 的任务资料夹必须过平台归一化（与客
   assert.equal(normalizeHostPath('D:\\DSHWorkspace\\abc-标题', 'win32'), 'D:\\DSHWorkspace\\abc-标题', 'Windows 上必须原样')
   assert.equal(normalizeHostPath('/mnt/d/DSHWorkspace/abc', 'linux'), '/mnt/d/DSHWorkspace/abc', '已是 WSL 形态不再转换')
   // 源码级：命令侧必须把 join 的结果过一次归一化（不许裸 join）
-  const source = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8')
+  const source = entrySurface()
   assert.match(
     source,
     /folderPath = normalizeHostPath\(join\(root, folderName\)\)/,
@@ -339,10 +340,10 @@ test('回归 F5：/workbench 的任务资料夹必须过平台归一化（与客
 test('pluginEntry: 服务端不许自建 / 补全浮层（宿主原生 / 菜单本来就会列出注册的命令）', () => {
   /** 注释里会出现这些名字（说明"为什么不做"），所以只扫**去掉注释**后的代码。 */
   const stripComments = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
-  for (const path of ['../src/index.ts', '../src/client/index.tsx', '../src/client/styles.ts']) {
-    const code = stripComments(readFileSync(new URL(path, import.meta.url), 'utf8'))
-    assert.equal(/data-dsh-workbench-slash-menu/.test(code), false, `${path} 里出现了自建斜杠菜单标记`)
-    assert.equal(/installWorkbenchSlashMenu/.test(code), false, `${path} 里出现了自建斜杠菜单函数`)
-    assert.equal(/textarea\[data-phase\]/.test(code), false, `${path} 里出现了"手动定位官方输入框"的写法`)
+  for (const rel of [...ENTRY_FILES, 'src/client/index.tsx', 'src/client/styles.ts']) {
+    const code = stripComments(readRepo(rel))
+    assert.equal(/data-dsh-workbench-slash-menu/.test(code), false, `${rel} 里出现了自建斜杠菜单标记`)
+    assert.equal(/installWorkbenchSlashMenu/.test(code), false, `${rel} 里出现了自建斜杠菜单函数`)
+    assert.equal(/textarea\[data-phase\]/.test(code), false, `${rel} 里出现了"手动定位官方输入框"的写法`)
   }
 })

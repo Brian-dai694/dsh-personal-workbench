@@ -1,4 +1,5 @@
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
@@ -17,7 +18,7 @@ import { readFileSync } from 'node:fs'
  * （注入的是 `() => false` 的桩），**它管不住 `src/index.ts` 里那个闭包到底怎么算的** ——
  * 所以这里必须用源码扫描把它钉住，否则把 `available()` 加回去不会有任何测试变红。
  */
-const indexSource = readFileSync('src/index.ts', 'utf8').replace(/\r\n/g, '\n')
+const indexSource = entrySurface()
 
 /** 去掉注释：`isTargetConfigured` 的文档注释里就提到了 `adapter.available()`（作为反例），不剥会误判。 */
 function stripComments(source) {

@@ -28,6 +28,7 @@
  * 所以这里既能测判定表，也能在变异探针里被整段替换。
  */
 import { test } from 'node:test'
+import { entrySurface, readRepo, ENTRY_FILES } from './_entrySources.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
@@ -42,7 +43,7 @@ const content = (over = {}) => ({
 })
 
 const toolsSource = readFileSync(new URL('../src/tools/workbench.ts', import.meta.url), 'utf8')
-const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8')
+const indexSource = entrySurface()
 const bannerSource = readFileSync(new URL('../src/client/components/DraftBanner.tsx', import.meta.url), 'utf8')
 const bodySource = readFileSync(new URL('../src/client/components/KnowledgeDraftBody.tsx', import.meta.url), 'utf8')
 
