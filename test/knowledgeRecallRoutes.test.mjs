@@ -270,7 +270,8 @@ test('客户端接线：设置页有「知识库召回」分区与开关，且�
   // 契约：设置接口必须带上这个字段（漏了会表现为"保存后开关自己变回去"）
   const contracts = readFileSync('src/shared/contracts.ts', 'utf8').replace(/\r\n/g, '\n')
   assert.match(contracts, /autoKnowledgeRecall: boolean/, 'WorkbenchSettings 里有这个字段')
-  const routes = readFileSync('src/api/routes.ts', 'utf8').replace(/\r\n/g, '\n')
+  // 设置域的读写实现 2026-10-27 搬到 routes/settings.ts —— 判据跟着 owner 走。
+  const routes = readFileSync('src/api/routes/settings.ts', 'utf8').replace(/\r\n/g, '\n')
   assert.match(routes, /autoKnowledgeRecall: \(readMeta\(db, 'knowledge_recall_auto'\)/, 'GET 会回这个字段')
   assert.match(routes, /body\.autoKnowledgeRecall === true \|\| body\.autoKnowledgeRecall === false/, 'POST 能写这个字段（且只认布尔）')
 })

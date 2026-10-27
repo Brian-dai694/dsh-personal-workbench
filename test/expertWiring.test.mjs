@@ -560,7 +560,8 @@ test('AX-E50: 入口源码里技能 provider 的注册与释放都是"子 fiber 
    * 真正的作用要到 P6 的自主召唤调度读服务状态时才显现 —— 这里至少用源码扫描
    * 挡住"接线被悄悄删掉"（这是 P5 能给出的最强证据，见报告"测试证明不了的地方"）。
    */
-  const routesSource = readFileSync(join(REPO, 'src', 'api', 'routes.ts'), 'utf8')
+  // 设置域的 POST 实现 2026-10-27 搬到 routes/settings.ts —— 判据跟着 owner 走。
+  const routesSource = readFileSync(join(REPO, 'src', 'api', 'routes', 'settings.ts'), 'utf8')
   assert.equal(routesSource.match(/deps\.experts\?\.setAutoEnabled\(body\.autoSummonExperts\)/g)?.length, 1)
   /** dispose 必须注册在 db.close 之后（cordis 逆序释放 ⇒ 先跑 experts.dispose）。 */
   assert.equal(

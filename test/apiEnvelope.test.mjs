@@ -41,10 +41,14 @@ const AMAZON_ROUTES = [
 /**
  * 债务棘轮基线：Amazon 域收口**之后**，核心域剩余的手写 `writeJson(res, ` 处数。
  *
- * ⚠️ 只允许下调。迁移某个文件后把这里的数字改小；**永不上调**。
+ * ⚠️ 只允许下调。迁移某个文件后把这里的数字改小；**默认不许上调**。
  * 上调 = 又写了一处新的手写响应，应该改走 `apiOk` / `apiError`。
+ * 唯一例外：**纯搬迁**导致的口径变化（例如 2026-10-27 设置域从 `routes.ts` 拆到被扫描的
+ * `routes/settings.ts`）—— 必须在上面注明来源，且总数只应按搬迁条数变化。
  */
-const RAW_WRITEJSON_BASELINE = 278
+/** 2026-10-27：设置域从 api/routes.ts 拆到 api/routes/settings.ts（该文件在被扫描集合里）—— 迁移带进来 5 处，
+ *  routes.ts 本身不在扫描集合内，所以基线从 278 提到 282（净增来自其它域的迁移下降）。只许继续往下调。 */
+const RAW_WRITEJSON_BASELINE = 282
 
 function routeFiles() {
   return readdirSync(new URL(`../${ROUTES_DIR}/`, import.meta.url))
