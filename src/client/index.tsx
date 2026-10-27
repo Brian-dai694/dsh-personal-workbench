@@ -39,6 +39,11 @@ import type { ExpertInstallResult } from '../shared/expert.js'
 import { useWorkbenchPolling } from './hooks/useWorkbenchPolling.js'
 import { useWorkbenchNavigation } from './hooks/useWorkbenchNavigation.js'
 import { useWorkbenchBusy } from './hooks/useWorkbenchBusy.js'
+import { useOplogDayIndex } from './hooks/useOplogDayIndex.js'
+import { useKeywordPlans } from './hooks/useKeywordPlans.js'
+import { useCalculatorScenarios } from './hooks/useCalculatorScenarios.js'
+import { useAbaKeywordSets } from './hooks/useAbaKeywordSets.js'
+import { useAdReportDatasets } from './hooks/useAdReportDatasets.js'
 import type { WorkbenchAssembly } from './app/assembly.js'
 import { WorkbenchHeader } from './app/WorkbenchHeader.js'
 import { WorkbenchOverlays } from './app/WorkbenchOverlays.js'
@@ -249,6 +254,21 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
   const busyApi = useWorkbenchBusy()
   const { busy } = busyApi
   const { setBusy } = busyApi.actions
+  /**
+   * 运营日志 × 日历（2026-10-24）：**每天有几条日志**的索引。
+   *
+   * 日历是纯渲染视图（D17 结构硬门：视图不发 HTTP），所以这份数据必须在这里拉、
+   * 经装配层注入给 `CalendarView`。日志页写完之后调 `refresh()` 让日历不失真。
+   */
+  const oplogIndex = useOplogDayIndex()
+  /** 关键词库（2026-10-24）：已保存方案的唯一状态所有者（视图不发 HTTP）。 */
+  const keywordPlans = useKeywordPlans()
+  /** 测算方案库（2026-10-24）：已保存方案 + 对比选择的唯一所有者。 */
+  const calculatorScenarios = useCalculatorScenarios()
+  /** ABA 词表域（T3）：关键词页那 7 条请求的唯一所有者（视图不发 HTTP）。 */
+  const abaKeywordSets = useAbaKeywordSets()
+  /** 广告报表域（T3）：非搜索词类型的本地状态；搜索词读下面的 `amazonData`。 */
+  const adReportData = useAdReportDatasets()
   // AI 会话域（D17/P6-3）：`promptModal` / `promptResolveRef` / `skillCatalog` / `skillsAvailable` /
   // `skillsLoading` / `skillProblem` / `skillQuery` / `selectedSkills` / `promptPersona` /
   // `quickPersona` / `promptModelSelection`（含包装 setter）10 项 state + 1 个 ref 已收进
@@ -773,7 +793,8 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
    */
   const assembly: WorkbenchAssembly = {
     nav, data, forms, detail, taskList, day, quick, ai,
-    prefs, dir, busyApi, remindersApi, draftsApi, knowledge, ideas, feedback, experts, amazonData,
+    prefs, dir, busyApi, remindersApi, draftsApi, oplogIndex, keywordPlans, calculatorScenarios, knowledge, ideas, feedback, experts, amazonData,
+    abaKeywordSets, adReportData,
     runtime, closePanel, loadModelModalityTable, aiSessionUsable,
     collapseAll, dayPanelProps, now, pendingCount, linkedSessionIds, sessionCandidates,
     sessionListSnapshot, reparentCandidates, workspaceChoices, openTask, openTaskById,

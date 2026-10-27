@@ -113,12 +113,19 @@ export const ENTRY_TITLE = '打开工作台（任务 / 日历 / 知识库 / 点�
  *
  * 现在的做法：先映射到我们自己的 `--wb-*`，回退值用 `light-dark()`，
  * 令牌缺失时退化成"跟随系统明暗"，而不是"变成黑色"。
+ *
+ * ⚠️ 这张表是**白名单**：`styles.ts` 里写了 `var(--dsw-alias-x, <回退>)` 但 `x` 没登记，
+ * 改写就会整段跳过，宿主一改名就只剩那个写死的回退值 —— 而历史回退值多是**纯深色**
+ * （`rgba(255,255,255,.12)` 这种），浅色主题下等于不可见。`test/panelCss.test.mjs`
+ * 里有一条守卫把"样式表引用了但没登记的别名"钉死，别绕过它。
  */
 const TOKENS: Record<string, string> = {
   'bg-base': 'light-dark(#ffffff, #17171a)',
   'bg-layer-1': 'light-dark(#f7f7f8, #202024)',
   'bg-layer-2': 'light-dark(#ffffff, #1c1c1f)',
+  'bg-layer-3': 'light-dark(#ffffff, #26262a)',
   'border-l1': 'light-dark(rgba(0,0,0,.16), rgba(255,255,255,.20))',
+  'border-l2': 'light-dark(rgba(0,0,0,.10), rgba(255,255,255,.12))',
   'label-primary': 'light-dark(#1a1a1c, #eeeeef)',
   'label-secondary': 'light-dark(rgba(0,0,0,.58), rgba(255,255,255,.64))',
   'state-business-primary': 'light-dark(#2f6fe0, #6f9df0)',
@@ -164,6 +171,50 @@ export function toWorkbenchTokens(css: string): string {
 /** 已登记的令牌名（单测用：确保样式里用到的 `--wb-*` 都真的被定义了）。 */
 export function registeredTokenNames(): string[] {
   return Object.keys(TOKENS)
+}
+
+/**
+ * **层叠阶梯**（round7）：面板里所有"层级"收敛成一张**有序表**，只剩这一处定义。
+ *
+ * 为什么不是"顺手把数字改成好看的档位"：改 z-index 是**最容易造成"看得见点不到"**
+ * 的一类改动（历史事故：portal 菜单 40 < 面板 55，实测 `elementFromPoint` 命中的是卡片）。
+ * 所以本轮只做两件事：
+ *   1. 给每个值一个**名字**，让"谁必须压住谁"变成可读、可断言；数值**冻结**，不动视觉；
+ *   2. 把"顺序"本身写成单测（读这张表比大小），替掉原先在测试里用正则抠数字的脆弱做法。
+ *
+ * 唯一的既有事故是 `.wb-tagmenu`（60）必须高于 `.wb-panel-host`（55）—— 见 `test/listViewWiring.test.mjs`。
+ *
+ * | 名字 | 值 | 谁在用 |
+ * |---|---|---|
+ * | sticky | 12 | 统计条 sticky |
+ * | actions | 16 | 详情操作条（要压住列表行） |
+ * | panel | 55 | 面板宿主 `.wb-panel-host` |
+ * | content | 60 | 面板内容节点（`VIEW_ATTR`） |
+ * | popover | 60 | 面板内浮层（标签菜单 / 点子折叠菜单），同层但 DOM 在后 |
+ * | dialog | 300 | 对话框遮罩层 `.wb-overlay` |
+ * | dock | 305 | 非模态 dock |
+ * | dialog-mask | 320 | 对话框内的二级遮罩 |
+ * | toast | 320 | toast 宿主（与二级遮罩同层，刻意） |
+ * | scrim | 329 | 点外面关掉的透明层 |
+ * | top | 330 | 顶层浮层（模型菜单） |
+ */
+export const Z_LAYERS = {
+  'z-sticky': 12,
+  'z-actions': 16,
+  'z-panel': 55,
+  'z-content': 60,
+  'z-popover': 60,
+  'z-dialog': 300,
+  'z-dock': 305,
+  'z-dialog-mask': 320,
+  'z-toast': 320,
+  'z-scrim': 329,
+  'z-top': 330,
+} as const
+
+/** 把 `Z_LAYERS` 渲染成 CSS 自定义属性（styles.ts 拼进令牌块，测试也读同一张表）。 */
+export function zLayerCss(): string {
+  return Object.entries(Z_LAYERS).map(([name, value]) => `--wb-${name}: ${value};`).join(' ')
 }
 
 /**

@@ -14,6 +14,9 @@
  * - 用户粘贴常被截断，导致引号不闭合。这种情况**不再整份拒绝**（旧实现会直接
  *   "CSV 引号未闭合"），而是按容错模式解析并给一条 warning，让数据尽量可用。
  */
+import { WASTE_MIN_CLICKS } from '../shared/trafficFilter.js'
+import { aggregateByKeyword } from '../shared/keywordAggregate.js'
+import { summarizeDecisions } from '../shared/keywordDecision.js'
 
 export interface TrafficRow {
   keyword: string
@@ -76,7 +79,7 @@ export function analyseTraffic(rows: TrafficRow[]): TrafficMetric[] {
     const cpc = row.clicks > 0 ? row.spend / row.clicks : null
     const acos = row.sales > 0 ? row.spend / row.sales : null
     const roas = row.spend > 0 ? row.sales / row.spend : null
-    const diagnosis = row.clicks >= 8 && row.orders === 0
+    const diagnosis = row.clicks >= WASTE_MIN_CLICKS && row.orders === 0
       ? '高点击无订单：优先检查相关性、Listing 与价格'
       : row.orders > 0 && (acos ?? 0) <= 0.3
         ? '有转化且 ACOS 较低：可进入人工扩量评估'
@@ -328,6 +331,8 @@ export function summarizeTrafficForAI(input: {
   }), { impressions: 0, clicks: 0, orders: 0, spend: 0, sales: 0 })
   const top = [...metrics].sort((a, b) => b.spend - a.spend).slice(0, 5)
   const waste = metrics.filter((row) => row.clicks >= 8 && row.orders === 0)
+  /** 本地口径（词级聚合 → 分层）：随交接一起给 agent，避免两套计数。 */
+  const localDistribution = summarizeDecisions(aggregateByKeyword(input.rows))
   return [
     '搜索词报表已导入工作台（derived 口径，账户数据来自本表格，未连接广告账户 API）',
     `dataset_id：${input.datasetId}`,
@@ -336,9 +341,16 @@ export function summarizeTrafficForAI(input: {
     `整体 ACOS：${totals.sales > 0 ? `${((totals.spend / totals.sales) * 100).toFixed(1)}%` : 'unknown（无销售额）'}；整体 CPC：${totals.clicks > 0 ? `$${(totals.spend / totals.clicks).toFixed(2)}` : 'unknown'}`,
     `花费 Top5：${top.map((row) => `${row.keyword}($${row.spend.toFixed(2)}/点击 ${row.clicks}/订单 ${row.orders}/ACOS ${row.acos === null ? '—' : `${(row.acos * 100).toFixed(1)}%`})`).join('；')}`,
     `高点击无订单：${waste.length > 0 ? waste.map((row) => row.keyword).join('、') : '无'}`,
+    /**
+     * 把**本地口径**一起交出去（T4）：agent 写回 aiSummary 时 distribution 必须与它一致，
+     * 否则同一份报表会出现"面板 7 条否词、结论 9 条"。工具侧还会再复算一次并点名。
+     */
+    `本地口径（shared/keywordDecision.ts）：否词 ${localDistribution.negative} / 加词 ${localDistribution.add} / 观察 ${localDistribution.watch} / 不动 ${localDistribution.none}`,
     '',
-    '请按搜索词 SOP 执行：先调用 workbench_read_search_terms 拉取**全部原始行**（不要只用这份摘要），再按投放单元级归因分层；',
+    '请按搜索词 SOP 执行：先调用 workbench_read_search_terms（dataset_id 同上）拉取**按词聚合**的完整视图（不要只用这份摘要），再按投放单元级归因分层；',
     '结论分 observed / derived / unknown；否词与加词只出人工确认清单，不要执行任何广告账户修改。',
-    '分层完成后调用 workbench_save_search_term_review 写回建议（dataset_id 同上），界面会显示你的判断。',
+    '词级建议写回 workbench_save_search_term_review（dataset_id 同上），界面会按词显示你的判断。',
+    '报表级结论写回 workbench_save_search_term_summary（dataset_id 同上）：rows / uniqueKeywords 用你读到的词级视图，totals.acos 用 0–1 的比率，',
+    'distribution 必须与上面的本地口径一致，negativeSpend 给否词词级花费合计，topRisks 取否词按花费前 5、topOpportunities 取加词按销售额前 5，evidence 标 observed / derived / unknown。',
   ].join('\n')
 }

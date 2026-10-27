@@ -13,6 +13,7 @@ import { Icon } from '../components/Icon.js'
 import { LocalDocModal } from '../components/LocalDocModal.js'
 import { Modal } from '../components/Modal.js'
 import { ModelPicker } from '../components/ModelPicker.js'
+import { Fold } from '../components/Fold.js'
 import { PersonaPicker } from '../components/PersonaPicker.js'
 import { SkillPicker } from '../components/SkillPicker.js'
 import { WorkspacePicker } from '../components/WorkspacePicker.js'
@@ -20,6 +21,7 @@ import { draftKindLabel, fmtTime } from '../format.js'
 import { MAX_QUICK_DOCUMENTS, MAX_QUICK_IMAGES, isQuickImageDraft } from '../quickAttachments.js'
 import { quickWorkspaceSourceLabel, shouldRememberQuickWorkspace } from '../quickWorkspaceDefault.js'
 import { TaskCreateModal, TaskEditModal } from '../views/TaskFormModal.js'
+import { personaSelectionLabel } from '../personaPicker.js'
 import { useI18n } from '../i18n.js'
 
 export function WorkbenchDialogs(props: WorkbenchAssembly): JSX.Element {
@@ -221,33 +223,37 @@ export function WorkbenchDialogs(props: WorkbenchAssembly): JSX.Element {
               用户反馈："快速录入弹框页面无法选择 SKill。"
               与共享提示词弹窗**同一个组件、同一份 selectedSkills**，所以这里选的技能
               会真的进提示词（`startAISession` 的 clarify 分支读的就是 selectedSkills）。 */}
-          <SkillPicker
-            catalog={skillCatalog}
-            loading={skillsLoading}
-            available={skillsAvailable}
-            problem={skillProblem}
-            selected={selectedSkills}
-            onToggle={toggleSkill}
-            onRetry={() => void loadSkills()}
-            disabled={busy}
-          />
+                <Fold title={t('技能')} meta={selectedSkills.length > 0 ? t('已选 {n} 项', { n: selectedSkills.length }) : t('未选')}>
+  <SkillPicker
+              catalog={skillCatalog}
+              loading={skillsLoading}
+              available={skillsAvailable}
+              problem={skillProblem}
+              selected={selectedSkills}
+              onToggle={toggleSkill}
+              onRetry={() => void loadSkills()}
+              disabled={busy}
+            />
+      </Fold>
 
           {/* ---------------- 角色选择（D13-B） ----------------
               与共享提示词弹窗**同一个组件、同一套选择逻辑**（需求 §6.3）。
               这样 10 个 mode 都有角色入口：9 个走提示词弹窗，澄清走这里（快速录入）。 */}
-          <PersonaPicker
-            value={quickPersona}
-            onChange={setQuickPersona}
-            disabled={busy}
-            /**
-             * P8 §9.2：与提示词弹窗**同一份目录数据**（`useWorkbenchExperts` 拥有），
-             * 本组件不再自持列表、不再自己拉 `/personas`。
-             */
-            personas={props.experts.pickerPersonas}
-            loading={props.experts.catalogLoading}
-            problem={props.experts.catalogError?.message ?? ''}
-            onRetry={() => void props.experts.actions.refreshCatalog()}
-          />
+                <Fold title={t('角色')} meta={t(personaSelectionLabel(quickPersona, props.experts.pickerPersonas))}>
+  <PersonaPicker
+              value={quickPersona}
+              onChange={setQuickPersona}
+              disabled={busy}
+              /**
+               * P8 §9.2：与提示词弹窗**同一份目录数据**（`useWorkbenchExperts` 拥有），
+               * 本组件不再自持列表、不再自己拉 `/personas`。
+               */
+              personas={props.experts.pickerPersonas}
+              loading={props.experts.catalogLoading}
+              problem={props.experts.catalogError?.message ?? ''}
+              onRetry={() => void props.experts.actions.refreshCatalog()}
+            />
+      </Fold>
 
           {/* ---------------- 工作区选择已上移到技能选择之前（2026-10-01） ----------------
               用户要求把「AI 会话工作区」这一组挪到技能/角色上面，所以这里不再重复渲染。

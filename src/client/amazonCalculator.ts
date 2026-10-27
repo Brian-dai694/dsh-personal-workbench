@@ -1,3 +1,5 @@
+import { CALCULATOR_FIELD_LABELS } from '../shared/calculatorScenario.js'
+
 export interface AmazonCalculatorInput {
   price: number
   unitCost: number
@@ -48,13 +50,22 @@ export interface AmazonBidResult {
 export function calculateAmazonBid(input: AmazonBidInput): AmazonBidResult {
   const errors: string[] = []
   for (const [field, value] of Object.entries(input)) {
-    if (!Number.isFinite(value)) errors.push(`${field} must be finite`)
-    else if (value < 0) errors.push(`${field} cannot be negative`)
+    if (!Number.isFinite(value)) errors.push(`${labelOf(field)}必须是有效数字`)
+    else if (value < 0) errors.push(`${labelOf(field)}不能为负`)
   }
   const highestCpc = errors.length === 0
     ? input.bid * (1 + input.placementPercent / 100) * input.maxMultiplier
     : Number.NaN
   return { valid: errors.length === 0, errors, highestCpc }
+}
+
+/**
+ * 字段的中文名：错误信息里不能用 price 这种内部键名 —— 用户看到的是中文界面，
+ * 一句 price cannot be negative 既看不懂也不知道该改哪个框。
+ * 名称的唯一来源是 shared/calculatorScenario.ts（与对比表共用，不另写一份）。
+ */
+function labelOf(field: string): string {
+  return (CALCULATOR_FIELD_LABELS as Record<string, string | undefined>)[field] ?? field
 }
 
 type RequiredCostField = 'unitCost' | 'freight' | 'fbaFee' | 'referralFee' | 'storageFee' | 'removalFee' | 'promotionCost' | 'otherCosts'
@@ -71,16 +82,16 @@ export function calculateAmazonEconomics(input: AmazonCalculatorInput): AmazonCa
   const errors: string[] = []
   for (const [field, value] of Object.entries(input)) {
     if (field === 'calibrationCpc' && value === undefined) continue
-    if (!Number.isFinite(value)) errors.push(`${field} must be finite`)
-    else if (value < 0) errors.push(`${field} cannot be negative`)
+    if (!Number.isFinite(value)) errors.push(`${labelOf(field)}必须是有效数字`)
+    else if (value < 0) errors.push(`${labelOf(field)}不能为负`)
   }
   for (const [field, max] of RATE_FIELDS) {
-    if (input[field] > max) errors.push(`${field} must be between 0 and ${max}`)
+    if (input[field] > max) errors.push(`${labelOf(field)}必须在 0 到 ${max * 100}% 之间`)
   }
   if (input.calibrationCpc !== undefined && (!Number.isFinite(input.calibrationCpc) || input.calibrationCpc < 0)) {
-    errors.push('calibrationCpc must be a finite non-negative amount')
+    errors.push(`${labelOf('calibrationCpc')}必须是有效的非负金额`)
   }
-  if (input.price <= 0) errors.push('price must be greater than zero')
+  if (input.price <= 0) errors.push('售价必须大于 0')
 
   const totalVariableCost = COST_FIELDS.reduce((sum, field) => sum + input[field], 0)
   const effectiveProfit = input.price

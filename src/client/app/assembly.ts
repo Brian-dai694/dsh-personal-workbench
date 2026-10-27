@@ -15,6 +15,8 @@ import type { useDayWorkspace } from '../hooks/useDayWorkspace.js'
 import type { useIdeas } from '../hooks/useIdeas.js'
 import type { useKnowledge } from '../hooks/useKnowledge.js'
 import type { useAmazonDatasets } from '../hooks/useAmazonDatasets.js'
+import type { useAbaKeywordSets } from '../hooks/useAbaKeywordSets.js'
+import type { useAdReportDatasets } from '../hooks/useAdReportDatasets.js'
 import type { useTaskData } from '../hooks/useTaskData.js'
 import type { useTaskDetailModel } from '../hooks/useTaskDetailModel.js'
 import type { useTaskForms } from '../hooks/useTaskForms.js'
@@ -26,6 +28,9 @@ import type { useWorkbenchDrafts } from '../hooks/useWorkbenchDrafts.js'
 import type { useWorkbenchFeedback } from '../hooks/useWorkbenchFeedback.js'
 import type { useWorkbenchExperts } from '../hooks/useWorkbenchExperts.js'
 import type { useWorkbenchNavigation } from '../hooks/useWorkbenchNavigation.js'
+import type { useOplogDayIndex } from '../hooks/useOplogDayIndex.js'
+import type { useKeywordPlans } from '../hooks/useKeywordPlans.js'
+import type { useCalculatorScenarios } from '../hooks/useCalculatorScenarios.js'
 import type { useWorkbenchQuickIntake } from '../hooks/useWorkbenchQuickIntake.js'
 import type { useWorkbenchReminders } from '../hooks/useWorkbenchReminders.js'
 import type { useWorkbenchSettings } from '../hooks/useWorkbenchSettings.js'
@@ -59,6 +64,22 @@ export interface WorkbenchAssembly {
   remindersApi: ReturnType<typeof useWorkbenchReminders>
   /** 草稿域（D17/P5-3）。 */
   draftsApi: ReturnType<typeof useWorkbenchDrafts>
+  /**
+   * 运营日志 × 日历：每天有几条日志的索引。
+   *
+   * 日历只画点、不拉正文，所以这里下发的是一份极小的「日期 → 条数」索引；
+   * 日志页写完之后调它的 `refresh()`，日历不会显示过期标记。
+   */
+  oplogIndex: ReturnType<typeof useOplogDayIndex>
+  /**
+   * 关键词库：已保存方案的唯一状态所有者。
+   *
+   * 关键词**生成**是纯函数（`buildKeywordPlan`）留在视图里；这里只管持久化，
+   * 所以视图拿到的是"库"和五个意图，不是第二套生成逻辑。
+   */
+  keywordPlans: ReturnType<typeof useKeywordPlans>
+  /** 测算方案库：已保存方案与对比选择的唯一所有者（数学仍在 amazonCalculator）。 */
+  calculatorScenarios: ReturnType<typeof useCalculatorScenarios>
   /** 知识域（D17/P1）。 */
   knowledge: ReturnType<typeof useKnowledge>
   /**
@@ -69,6 +90,20 @@ export interface WorkbenchAssembly {
    * 否则出现"表里有 12 行、AI 提示词里 3 行"这类不可核对的状态。
    */
   amazonData: ReturnType<typeof useAmazonDatasets>
+  /**
+   * ABA 词表域（T3）：已保存词表的列表 / 当前 / 保存 / 打开 / 导出 / 删除。
+   *
+   * 为什么提到装配层：关键词页的 ABA 面板原先自己在视图里发 7 条请求（D17 硬门）。
+   * 提到这里后，切视图不会把它重置成"刚导入"的状态（与其他域常量同一条纪律）。
+   */
+  abaKeywordSets: ReturnType<typeof useAbaKeywordSets>
+  /**
+   * 广告报表域（T3）：**非搜索词**类型（投放/活动/广告位/预算/份额）。
+   *
+   * 搜索词一路不在这里 —— 它读 `amazonData`，三页共用同一个 current。
+   * 类型上已排除 `search_term`，因此不存在覆盖共享 current 的路径。
+   */
+  adReportData: ReturnType<typeof useAdReportDatasets>
   /** 点子域（D17/P2）。 */
   ideas: ReturnType<typeof useIdeas>
   /** 反馈域（D17/P5-1）：toast 宿主与三个写口。 */

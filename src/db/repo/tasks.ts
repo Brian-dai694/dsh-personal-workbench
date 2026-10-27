@@ -229,3 +229,22 @@ export function updateTask(db: DatabaseSync, id: string, patch: TaskPatch, actor
   return next
 }
 
+
+/**
+ * 选品立项的**幂等锚点**（v1.26）：同一个 ASIN 只允许有一条未完成的立项任务。
+ *
+ * 判据存在 `tasks.extra.asin`（`extra` 列里的键），用 LIKE 直接查：
+ * 这里的数据量很小（几十条），没必要为此单开一列或一张关联表；
+ * 但**必须**在创建前查一次，否则用户点两下"立项"就会得到两个重复任务。
+ *
+ * 只匹配未完成/未取消/未归档的任务：上一个立项做完了，允许再立一次
+ * （第二轮做同一个品是完全正常的事）。
+ */
+export function findOpenTaskByAsin(db: DatabaseSync, asin: string): TaskRow | undefined {
+  const clean = asin.trim().toUpperCase()
+  if (clean === '') return undefined
+  const rows = db.prepare(`SELECT * FROM tasks
+    WHERE archived = 0 AND status_code NOT IN ('done', 'cancelled')
+      AND extra LIKE ?`).all(`%"asin":"${clean}"%`) as unknown as RawTaskRow[]
+  return rows.map((row) => parseTask(row, db)).find((task): task is TaskRow => task !== undefined)
+}

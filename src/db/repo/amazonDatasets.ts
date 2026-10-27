@@ -13,8 +13,18 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { SearchTermAction, SearchTermAnnotation, TrafficRow } from '../../client/amazonTrafficTools.js'
 import { SEARCH_TERM_ACTIONS } from '../../client/amazonTrafficTools.js'
 
-export const AMAZON_DATASET_KINDS = ['search_term'] as const
+export const AMAZON_DATASET_KINDS = ['search_term', 'targeting', 'campaign', 'placement', 'budget', 'impression_share'] as const
 export type AmazonDatasetKind = typeof AMAZON_DATASET_KINDS[number]
+
+/**
+ * 行形状统一用 `keyword` 承载「这条记录的主体」：
+ * 搜索词 = 客户搜索词，投放 = 投放词，广告活动 = 活动名。
+ * 多出来的 `campaign/adGroup/matchType/budget/status` 只有后两类报表才有，
+ * 存成可选字段而不是新建三张表 —— 三种报表的指标列是同一套。
+ */
+export function isAmazonDatasetKind(value: unknown): value is AmazonDatasetKind {
+  return typeof value === 'string' && (AMAZON_DATASET_KINDS as readonly string[]).includes(value)
+}
 
 export interface AmazonDatasetRow {
   id: string
@@ -23,11 +33,23 @@ export interface AmazonDatasetRow {
   period: string | null
   rows: TrafficRow[]
   annotations: SearchTermAnnotation[]
+  /**
+   * 报表级 AI 结论（schema 34）：整段 JSON，**整体读、整体替换**。
+   * `null` = 还没做过报表级结论（老行也是 null，不伪造空结论）。
+   */
+  aiSummary: AmazonDatasetSummaryPayload | null
   sourceCode: string
   sessionId: string | null
   createdAt: string
   updatedAt: string
 }
+
+/**
+ * 报表级结论的形状由分析口径决定（totals / distribution / topRisks / notes…），
+ * 存储层只保证"是一个 JSON 对象"，不在这里锁字段 —— 锁死了口径一改就要迁表。
+ * 结构与证据等级约定见 T9 agent SOP 第 5 节。
+ */
+export type AmazonDatasetSummaryPayload = Record<string, unknown>
 
 /** 列表项：不带整份行数据（大表不塞进列表响应）。 */
 export interface AmazonDatasetSummary {
@@ -49,6 +71,8 @@ interface RawDatasetRow {
   period: string | null
   rows_json: string
   annotations_json: string
+  /** schema 34 才有的列；老库迁移后为 NULL。 */
+  ai_summary: string | null
   source_code: string
   session_id: string | null
   created_at: string
@@ -74,6 +98,21 @@ function parseAnnotations(json: string): SearchTermAnnotation[] {
   } catch { return [] }
 }
 
+/**
+ * 读取报表级结论：坏 JSON / 不是对象 / 老行 NULL 一律当 `null`。
+ *
+ * 为什么容错到不抛错：这一列是 AI 写的，人可能手工改坏；
+ * 因为一条坏 JSON 让整份报表打不开，比丢一个结论严重得多。
+ */
+function parseAiSummary(json: string | null): AmazonDatasetSummaryPayload | null {
+  if (typeof json !== 'string' || json.trim() === '') return null
+  try {
+    const parsed: unknown = JSON.parse(json)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
+    return parsed as AmazonDatasetSummaryPayload
+  } catch { return null }
+}
+
 function toRow(raw: RawDatasetRow): AmazonDatasetRow {
   return {
     id: raw.id,
@@ -82,6 +121,7 @@ function toRow(raw: RawDatasetRow): AmazonDatasetRow {
     period: raw.period,
     rows: parseRows(raw.rows_json),
     annotations: parseAnnotations(raw.annotations_json),
+    aiSummary: parseAiSummary(raw.ai_summary ?? null),
     sourceCode: raw.source_code,
     sessionId: raw.session_id,
     createdAt: raw.created_at,
@@ -101,6 +141,9 @@ export interface CreateAmazonDatasetInput {
 export function createAmazonDataset(db: DatabaseSync, input: CreateAmazonDatasetInput): AmazonDatasetRow {
   if (input.title.trim() === '') throw new Error('title is required')
   if (input.rows.length === 0) throw new Error('rows must not be empty')
+  if (input.kindCode !== undefined && !isAmazonDatasetKind(input.kindCode)) {
+    throw new Error(`kindCode 非法：${String(input.kindCode)}（允许 ${AMAZON_DATASET_KINDS.join(' / ')}）`)
+  }
   const at = new Date().toISOString()
   const id = randomUUID()
   db.prepare(
@@ -186,6 +229,34 @@ export function saveSearchTermReview(db: DatabaseSync, id: string, reviews: Sear
   }
   db.prepare('UPDATE amazon_datasets SET annotations_json = ?, updated_at = ? WHERE id = ?')
     .run(JSON.stringify([...byKeyword.values()]), at, id)
+  const updated = getAmazonDataset(db, id)
+  if (updated === undefined) throw new Error('dataset update failed')
+  return updated
+}
+
+/**
+ * 写回报表级结论（**整份替换**，不是 merge）。
+ *
+ * 为什么整份替换：结论里 `totals` / `distribution` / `topRisks` 是**互相自洽的一组数**
+ * （否词条数、否词花费、总额都来自同一次分析）。逐字段 merge 会拼出"上一次的条数 +
+ * 这一次的花费"这种不可能同时成立的组合。
+ *
+ * `null` = 清空结论（回到"还没做过报表级结论"），与老行语义一致。
+ * 只动 `ai_summary`，不碰 `rows_json` / `annotations_json`。
+ */
+export function saveAmazonDatasetSummary(
+  db: DatabaseSync,
+  id: string,
+  summary: AmazonDatasetSummaryPayload | null,
+): AmazonDatasetRow {
+  const dataset = getAmazonDataset(db, id)
+  if (dataset === undefined) throw new Error('dataset not found')
+  if (summary !== null && (typeof summary !== 'object' || Array.isArray(summary))) {
+    throw new Error('summary 必须是 JSON 对象或 null')
+  }
+  const at = new Date().toISOString()
+  db.prepare('UPDATE amazon_datasets SET ai_summary = ?, updated_at = ? WHERE id = ?')
+    .run(summary === null ? null : JSON.stringify(summary), at, id)
   const updated = getAmazonDataset(db, id)
   if (updated === undefined) throw new Error('dataset update failed')
   return updated

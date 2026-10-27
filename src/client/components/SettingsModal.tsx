@@ -386,7 +386,7 @@ export function SettingsModal(props: SettingsModalProps): ReactNode {
                   <button className="wb-btn" onClick={onRequestNotifyPermission}>授权浏览器通知</button>
                 )}
                 {notifyPermission === 'granted' && <button className="wb-btn" onClick={onSendTestNotification}>发送测试通知</button>}
-                {notifyPermission === 'granted' && <span style={{ fontSize: 12, color: '#2E9B7B' }}>浏览器通知已授权</span>}
+                {notifyPermission === 'granted' && <span style={{ fontSize: 12, color: 'var(--wb-ok, #2E9B7B)' }}>浏览器通知已授权</span>}
               </div>
             </section>
           )}

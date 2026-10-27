@@ -37,7 +37,7 @@ import { probeExpertSkills, probeExpertSubagents, selectSpawnProvider } from './
 import { createExpertService, type ExpertService } from './experts/service.js'
 import { registerWorkbenchSkillProvider, type SkillRegistrarLike, type WorkbenchSkillRegistration } from './experts/skill-provider.js'
 import { expertGenerationTools, expertInvocationTools, summonExpertTool } from './experts/tools.js'
-import { amazonBidCalculatorTool, amazonCpcBreakevenTool, amazonKeywordCombinerTool, amazonKeywordPlannerTool, amazonKeywordStrategyTool, amazonSearchTermVolatilityTool, amazonTrafficAnalyzerTool, readSearchTermsTool, saveSearchTermReviewTool } from './amazon-tools.js'
+import { amazonBidCalculatorTool, amazonCpcBreakevenTool, amazonKeywordCombinerTool, amazonKeywordPlannerTool, amazonKeywordStrategyTool, amazonSearchTermVolatilityTool, amazonTrafficAnalyzerTool, readAsinJudgmentsTool, readSearchTermsTool, saveAsinJudgmentTool, saveSearchTermReviewTool, saveSearchTermSummaryTool } from './amazon-tools.js'
 
 export const name = 'personal-workbench'
 
@@ -545,8 +545,10 @@ function applyReady(ctx: Context, db: DatabaseSync, config: Config): void {
         submitTaskTool(db), proposeSubtasksTool(db), proposeDailyPlanTool(db), submitReportTool(db), submitKnowledgeTool(db),
         // Amazon 计算与运营工具直接注册到 DSH 对话；测算面板与 workbench_cpc_breakeven 共用本地成本模型。
         amazonBidCalculatorTool(), amazonCpcBreakevenTool(), amazonKeywordCombinerTool(), amazonKeywordStrategyTool(), amazonKeywordPlannerTool(), amazonSearchTermVolatilityTool(), amazonTrafficAnalyzerTool(),
-        // 搜索词报表的读写通道：面板导入 → agent 读原始行 → 建议写回面板（只写建议，不改广告账户）
-        readSearchTermsTool(db), saveSearchTermReviewTool(db),
+        // 搜索词报表的读写通道：面板导入 → agent 读原始行（含按词聚合视图）→ 词级建议 / 报表级结论写回面板（只写建议，不改广告账户）
+        readSearchTermsTool(db), saveSearchTermReviewTool(db), saveSearchTermSummaryTool(db),
+        // 选品判断的读写通道：技能结论落库 → 面板按结论筛选（只写判断，不改事实字段）
+        readAsinJudgmentsTool(db), saveAsinJudgmentTool(db),
         proposeIdeaClustersTool(db), submitIdeaTasksTool(db), updateTaskTool(db), updateProgressTool(db), requestCompletionTool(db), submitReviewTool(db), saveTaskMemoryTool(db),
         /**
          * 角色（persona）两个工具（D12/S11）：只按**执行上下文真实 sessionId** 的绑定读，

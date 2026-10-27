@@ -9,9 +9,11 @@
  * 既有判据锚的就是这些原文）。
  */
 import type { WorkbenchAssembly } from './assembly.js'
+import { useState } from 'react'
 import { SettingsModal } from '../components/SettingsModal.js'
 import { startOfWeek } from '../format.js'
 import { readNotificationCtor, requestNotificationPermission, sendSystemNotification } from '../notificationCapability.js'
+import { AsinView } from '../views/AsinView.js'
 import { CalendarView } from '../views/CalendarView.js'
 import { IdeasDetailPane } from '../views/IdeasDetailPane.js'
 import { IdeasListView } from '../views/IdeasListView.js'
@@ -19,14 +21,27 @@ import { KnowledgeDetailPane } from '../views/KnowledgeDetailPane.js'
 import { KnowledgeListView } from '../views/KnowledgeListView.js'
 import { TaskDetailPane } from '../views/TaskDetailPane.js'
 import { TaskListView } from '../views/TaskListView.js'
+import { OpsLogView } from '../views/OpsLogView.js'
 import { TodayPane } from '../views/TodayPane.js'
 import { AmazonToolsView } from '../views/AmazonToolsView.js'
 import { AmazonKeywordView } from '../views/AmazonKeywordView.js'
 import { AmazonTrafficView } from '../views/AmazonTrafficView.js'
+import { AmazonReportView } from '../views/AmazonReportView.js'
+import { InventoryView } from '../views/InventoryView.js'
+import { PaymentReconcileView } from '../views/PaymentReconcileView.js'
 import { AmazonTrafficDetailPane } from '../views/AmazonTrafficDetailPane.js'
 import { AmazonSopCard } from '../components/AmazonSopCard.js'
 
 export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
+  /**
+   * 日历 → 运营日志的「这一天」跳转意图。
+   *
+   * 为什么这份状态留在这里：它不属于任何一个域 —— 起因是日历格子上的点击，
+   * 消费方是运营日志页，而**同时渲染这两张视图的只有本组件**。塞进日期域会让
+   * `useDayWorkspace` 认识运营日志；塞进运营日志页则无法被日历写入。
+   * `seq` 是"同一天再点一次也要生效"的版本号（否则第二次点击没有可观察变化）。
+   */
+  const [oplogFocus, setOplogFocus] = useState<{ date: string; seq: number } | null>(null)
   const { openSessionInPanel, startAISession } = props.ai.actions
   const { busy } = props.busyApi
   const { bootstrap, childrenOf, dictOf, dicts, pendingMap, selected, taskKnowledge, tasks } = props.data
@@ -61,8 +76,8 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
     if (view === 'list' || view === 'today') return selected !== null
     if (view === 'knowledge') return knowledge.selected !== null
     if (view === 'ideas') return ideas.selectedIdea !== null || ideas.selectedCluster !== null
-    if (view === 'traffic') return true
-    return false // amazon / keywords：没有详情内容
+    if (view === 'traffic' || view === 'oplog' || view === 'asin') return true
+    return false // amazon / keywords / reports：没有详情内容
   })()
   return (
     <div className="wb-body" data-detail={detailOpen ? 'open' : 'collapsed'}>
@@ -216,6 +231,12 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
               onStartPlanAISession={(d) => void startAISession('plan', null, d)}
               readOnly={dayPanel.readOnly}
               day={dayPanel.day}
+              oplogDates={props.oplogIndex.dates}
+              onOpenOplogDate={(date) => {
+                setPicked(new Date(`${date}T00:00:00`))
+                setOplogFocus((prev) => ({ date, seq: (prev?.seq ?? 0) + 1 }))
+                setView('oplog')
+              }}
             />
           )}
 
@@ -223,18 +244,36 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
 
           {view === 'ideas' && <IdeasListView model={ideas} dictOf={dictOf} busy={busy} startAISession={startAISession} />}
 
-          {view === 'amazon' && <><AmazonToolsView onSendToAI={(text) => void startAISession('consult', null, text)} /><AmazonSopCard tool="profit" /></>}
+          {view === 'amazon' && <><AmazonToolsView onSendToAI={(text) => void startAISession('consult', null, text)} scenarios={props.calculatorScenarios} /><AmazonSopCard tool="profit" /></>}
 
-          {view === 'keywords' && <><AmazonKeywordView /><AmazonSopCard tool="keywords" /></>}
+          {view === 'keywords' && <><AmazonKeywordView model={props.keywordPlans} amazon={props.amazonData} aba={props.abaKeywordSets} onSendToAI={(text) => void startAISession('consult', null, text)} onOpenTraffic={(keyword) => { props.amazonData.actions.setCurrentKeyword(keyword.trim() === '' ? null : keyword); setView('traffic') }} /><AmazonSopCard tool="keywords" /></>}
 
           {view === 'traffic' && <AmazonTrafficView model={props.amazonData} />}
+
+          {view === 'reports' && <AmazonReportView amazon={props.amazonData} reports={props.adReportData} />}
+
+          {view === 'inventory' && <InventoryView />}
+
+          {view === 'payments' && <PaymentReconcileView />}
+
+          {view === 'oplog' && (
+            <OpsLogView
+              tasks={tasks}
+              onOpenTask={openTaskById}
+              onChanged={() => void props.oplogIndex.actions.refresh()}
+              focusDate={oplogFocus?.date}
+              focusSeq={oplogFocus?.seq ?? 0}
+            />
+          )}
+
+          {view === 'asin' && <AsinView />}
 
           {view === 'list' && <TaskListView model={taskList} dictOf={dictOf} dicts={dicts} selectedId={selected?.task.id} pending={pendingMap} childrenOf={childrenOf} onOpen={openTask} />}
         </div>
 
         <div className="wb-detail">
           {view === 'traffic'
-            ? <AmazonTrafficDetailPane model={props.amazonData} onSendToAI={(text) => void startAISession('consult', null, text)} />
+            ? <AmazonTrafficDetailPane model={props.amazonData} onSendToAI={(text) => void startAISession('consult', null, text)} onOpenKeyword={(keyword) => { props.amazonData.actions.setCurrentKeyword(keyword); setView('keywords') }} />
             : view === 'ideas'
             ? <IdeasDetailPane model={ideas} dictOf={dictOf} busy={busy} startAISession={startAISession} />
             : view === 'knowledge'

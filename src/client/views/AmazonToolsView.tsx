@@ -1,27 +1,33 @@
+/**
+ * Amazon 测算（v1.23）：成本盈亏 / 广告位 CPC + **方案库与多方案对比**。
+ *
+ * ## 为什么要方案库
+ * 以往参数只存在浏览器 `localStorage`：换机器就丢、不进备份、也不属于工作台的数据。
+ * 更关键的是没法回答"三个定价里哪个更稳" —— 只能反复改参数、记住上一次的结果。
+ * 现在的做法：参数可以存成命名方案（落库），并排对比最多四份、标出每份相对基准改了哪些字段。
+ *
+ * ## 三条纪律（不要放松）
+ * 1. **结论一律现算**：方案只存输入，`calculateAmazonEconomics` 是唯一的数学入口；
+ * 2. **非法输入不隐藏**：参数不合法的方案照样列出并标出错误数；
+ * 3. **不连接广告账户**：这里没有出价下发、没有预算修改，只有可复核的数字与建议。
+ */
 import { useMemo, useState } from 'react'
 import { calculateAmazonBid, calculateAmazonEconomics, type AmazonCalculatorInput } from '../amazonCalculator.js'
+import {
+  COMPARISON_METRICS, bestColumnId, buildComparison, describeDiffs, formatComparisonValue,
+} from '../calculatorCompare.js'
+import type { UseCalculatorScenariosResult } from '../hooks/useCalculatorScenarios.js'
+import { MAX_COMPARE } from '../hooks/useCalculatorScenarios.js'
+import { CALCULATOR_DEFAULTS } from '../../shared/calculatorScenario.js'
 
 const STORAGE_KEY = 'dsh-workbench-amazon-calculator-v1'
 type CalculatorMode = 'profit' | 'bid'
 
-const DEFAULTS: AmazonCalculatorInput = {
-  price: 39.99,
-  unitCost: 8,
-  freight: 3,
-  fbaFee: 6,
-  referralFee: 6,
-  storageFee: 0,
-  removalFee: 0,
-  promotionCost: 0,
-  returnRate: 0.03,
-  returnLoss: 2,
-  otherCosts: 0,
-  targetAcos: 0.25,
-  conversionRate: 0.1,
-  adOrderShare: 0.6,
-  marketCpc: 1.2,
-  calibrationCpc: undefined,
-}
+/**
+ * 默认参数来自共享模块（`shared/calculatorScenario.ts`）：对比表补齐老方案时用的
+ * 必须是**同一份**默认值，否则会出现「面板显示 $39.99、对比表里另一个数」。
+ */
+const DEFAULTS: AmazonCalculatorInput = { ...CALCULATOR_DEFAULTS, calibrationCpc: undefined }
 
 const COST_FIELDS: Array<{ key: keyof AmazonCalculatorInput; label: string; hint?: string; percent?: boolean }> = [
   { key: 'price', label: '售价', hint: 'USD / 件' },
@@ -48,7 +54,7 @@ function loadInput(): AmazonCalculatorInput {
 const money = (value: number | null) => value === null || !Number.isFinite(value) ? '—' : `$${value.toFixed(2)}`
 const percent = (value: number | null) => value === null || !Number.isFinite(value) ? '—' : `${(value * 100).toFixed(2)}%`
 
-export function AmazonToolsView({ onSendToAI }: { onSendToAI?: (text: string) => void }): JSX.Element {
+export function AmazonToolsView({ onSendToAI, scenarios: model }: { onSendToAI?: (text: string) => void; scenarios?: UseCalculatorScenariosResult } = {}): JSX.Element {
   const [input, setInput] = useState<AmazonCalculatorInput>(loadInput)
   const [mode, setMode] = useState<CalculatorMode>('profit')
   const [bid, setBid] = useState(0.8)
@@ -57,8 +63,22 @@ export function AmazonToolsView({ onSendToAI }: { onSendToAI?: (text: string) =>
   const [saved, setSaved] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) !== null } catch { return false }
   })
+  const [scenarioName, setScenarioName] = useState('')
+  const [scenarioNote, setScenarioNote] = useState('')
+  const [scenarioMsg, setScenarioMsg] = useState('')
   const result = useMemo(() => calculateAmazonEconomics(input), [input])
   const bidResult = useMemo(() => calculateAmazonBid({ bid, placementPercent, maxMultiplier }), [bid, placementPercent, maxMultiplier])
+
+  const scenarioList = model?.scenarios ?? []
+  const compareIds = model?.compareIds ?? []
+  const comparison = useMemo(() => {
+    if (compareIds.length === 0) return null
+    const picked = compareIds
+      .map((id) => scenarioList.find((item) => item.id === id))
+      .filter((item): item is NonNullable<typeof item> => item !== undefined)
+    if (picked.length === 0) return null
+    return buildComparison(picked, DEFAULTS)
+  }, [compareIds, scenarioList])
 
   function update(key: keyof AmazonCalculatorInput, raw: string): void {
     const value = raw === '' && key === 'calibrationCpc' ? undefined : raw === '' ? 0 : Number(raw)
@@ -72,6 +92,47 @@ export function AmazonToolsView({ onSendToAI }: { onSendToAI?: (text: string) =>
     } catch {
       setSaved(false)
     }
+  }
+
+  /** 保存到方案库；同名时先问，用户确认才覆盖（不静默替换）。 */
+  async function saveScenario(): Promise<void> {
+    if (model === undefined) return
+    const name = scenarioName.trim()
+    if (name === '') { setScenarioMsg('先给方案起个名字'); return }
+    const record = Object.fromEntries(
+      Object.entries(input).filter(([, value]) => typeof value === 'number' && Number.isFinite(value)),
+    )
+    const first = await model.actions.save({ name, input: record, note: scenarioNote })
+    if (first.conflictId !== null) {
+      if (!window.confirm(`已存在同名方案「${name}」，要用当前参数覆盖它吗？`)) {
+        setScenarioMsg('已取消覆盖：换个名字保存，或先删掉旧方案')
+        return
+      }
+      const forced = await model.actions.save({ name, input: record, note: scenarioNote, replace: true })
+      if (forced.scenario !== null) setScenarioMsg(`已覆盖方案「${forced.scenario.name}」`)
+      return
+    }
+    if (first.scenario !== null) {
+      setScenarioMsg(`已保存方案「${first.scenario.name}」`)
+      setScenarioName('')
+    }
+  }
+
+  async function loadScenario(id: string, name: string): Promise<void> {
+    if (model === undefined) return
+    const target = model.scenarios.find((item) => item.id === id)
+    if (target === undefined) return
+    setInput({ ...DEFAULTS, ...target.input })
+    setScenarioNote(target.note)
+    setScenarioName(target.name)
+    setScenarioMsg(`已载入「${name}」的参数（未改动库里那份）`)
+  }
+
+  async function removeScenario(id: string, name: string): Promise<void> {
+    if (model === undefined) return
+    if (!window.confirm(`删除测算方案「${name}」？删除后不可恢复。`)) return
+    const ok = await model.actions.remove(id)
+    if (ok) setScenarioMsg(`已删除「${name}」`)
   }
 
   function sendResult(): void {
@@ -163,6 +224,117 @@ export function AmazonToolsView({ onSendToAI }: { onSendToAI?: (text: string) =>
             <div className="wb-amazon-result-actions"><button className="wb-btn primary" type="button" disabled={!bidResult.valid || !onSendToAI} onClick={sendResult}>带入 AI 协助</button></div>
           </div>
         </div>
+      )}
+
+      {/* 方案库：只在"CPC 盈亏"模式下有意义（广告位出价是另一组参数） */}
+      {mode === 'profit' && (
+        <section className="wb-calc-scenarios" aria-label="测算方案库">
+          <header className="wb-calc-scenario-head">
+            <h3 className="wb-amazon-section-title">方案库（{scenarioList.length}）</h3>
+            <div className="wb-calc-scenario-save">
+              <input
+                className="wb-calc-scenario-name"
+                value={scenarioName}
+                placeholder="方案名，如「$39.99 标准成本」"
+                aria-label="方案名"
+                onChange={(event) => setScenarioName(event.target.value)}
+                onKeyDown={(event) => { if (event.key === 'Enter') void saveScenario() }}
+              />
+              <input
+                className="wb-calc-scenario-note"
+                value={scenarioNote}
+                placeholder="备注（可选）"
+                aria-label="方案备注"
+                onChange={(event) => setScenarioNote(event.target.value)}
+              />
+              <button className="wb-btn primary" type="button" disabled={model === undefined || model.busy} onClick={() => void saveScenario()}>存为方案</button>
+            </div>
+          </header>
+
+          {model !== undefined && model.error !== null && <div className="wb-amazon-warning" role="alert">方案库操作失败：{model.error}</div>}
+          {scenarioMsg !== '' && <div className="wb-amazon-note" role="status">{scenarioMsg}</div>}
+
+          {scenarioList.length === 0
+            ? <div className="wb-amazon-empty"><strong>还没有保存的方案</strong><span>把当前参数存成方案后，可以并排对比不同定价/成本假设。</span></div>
+            : (
+              <ul className="wb-calc-scenario-list">
+                {scenarioList.map((item) => {
+                  const checked = compareIds.includes(item.id)
+                  return (
+                    <li key={item.id} className={`wb-calc-scenario-item${checked ? ' on' : ''}`}>
+                      <label className="wb-calc-scenario-pick" title={checked ? '取消对比' : '加入对比'}>
+                        <input type="checkbox" checked={checked} onChange={() => model?.actions.toggleCompare(item.id)} />
+                      </label>
+                      <div className="wb-calc-scenario-meta">
+                        <b>{item.name}</b>
+                        <small>
+                          {item.input.price === undefined ? '售价未填' : `售价 $${item.input.price.toFixed(2)}`}
+                          {item.input.unitCost === undefined ? '' : ` · 采购 $${item.input.unitCost.toFixed(2)}`}
+                          {item.asin === null ? '' : ` · ${item.asin}`}
+                          {item.note === '' ? '' : ` · ${item.note}`}
+                        </small>
+                      </div>
+                      <div className="wb-calc-scenario-actions">
+                        <button className="wb-btn" type="button" disabled={model?.busy === true} onClick={() => void loadScenario(item.id, item.name)}>载入</button>
+                        <button className="wb-oplog-card-open" type="button" disabled={model?.busy === true} onClick={() => void removeScenario(item.id, item.name)}>删除</button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+
+          {compareIds.length > 0 && (
+            <div className="wb-calc-compare">
+              <header className="wb-calc-compare-head">
+                <h4>对比（{compareIds.length}/{MAX_COMPARE}）</h4>
+                <button className="wb-btn" type="button" onClick={() => model?.actions.clearCompare()}>清空对比</button>
+              </header>
+              {compareIds.length < 2
+                ? <p className="wb-amazon-footnote">再勾选一份方案就能并排对比（最多 {MAX_COMPARE} 份）。</p>
+                : comparison !== null && (
+                  <>
+                    {comparison.warnings.length > 0 && (
+                      <div className="wb-amazon-warning" role="alert">{comparison.warnings.map((line) => <div key={line}>{line}</div>)}</div>
+                    )}
+                    <div className="wb-amazon-table-wrap">
+                      <table className="wb-amazon-table wb-amazon-table-grid">
+                        <thead>
+                          <tr>
+                            <th className="text">指标</th>
+                            {comparison.columns.map((column) => <th key={column.id}>{column.name}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {COMPARISON_METRICS.map((metric) => {
+                            const bestId = bestColumnId(metric, comparison.columns)
+                            return (
+                              <tr key={metric.key}>
+                                <td className="text">{metric.label}</td>
+                                {comparison.columns.map((column) => (
+                                  <td key={column.id} className={bestId === column.id ? 'is-best' : undefined}>
+                                    {formatComparisonValue(metric.value(column), metric.format)}
+                                    {bestId === column.id && <span className="wb-calc-best" title="这一行里更优">优</span>}
+                                  </td>
+                                ))}
+                              </tr>
+                            )
+                          })}
+                          <tr>
+                            <td className="text">相对基准差异</td>
+                            {comparison.columns.map((column) => (
+                              <td key={column.id} className="text wb-calc-diff">{describeDiffs(column, comparison.columns[0].name)}</td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="wb-amazon-footnote">「优」只按数值方向标注（成本越低越好、贡献与利润越高越好），不代表经营结论 —— 转化率与广告后利润仍取决于真实投放数据（unknown）。</p>
+                  </>
+                )}
+            </div>
+          )}
+        </section>
       )}
     </section>
   )

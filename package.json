@@ -89,7 +89,7 @@
     "dev:install": "node scripts/dev-install.mjs",
     "check": "tsc --noEmit && node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\" && node scripts/build-info.mjs && tsc -p tsconfig.build.json && tsdown",
     "test": "pnpm build && node --test --test-concurrency=1 test/*.test.mjs",
-    "test:local": "node --test test/panelState.test.mjs test/capabilities.test.mjs test/clientInvariants.test.mjs",
+    "test:local": "node --test test/panelState.test.mjs test/capabilities.test.mjs test/clientInvariants.test.mjs test/amazonThreePageWiring.test.mjs test/keywordAnalysis.test.mjs",
     "prepare": "pnpm build"
   },
   "dependencies": {

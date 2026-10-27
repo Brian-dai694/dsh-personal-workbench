@@ -4,7 +4,7 @@
  */
 import type { DatabaseSync } from 'node:sqlite'
 
-export const SCHEMA_VERSION = 20
+export const SCHEMA_VERSION = 34
 
 export interface Migration {
   version: number
@@ -616,6 +616,285 @@ export const MIGRATIONS: Migration[] = [
         ) STRICT;
         CREATE INDEX idx_amazon_datasets_kind ON amazon_datasets(kind_code, created_at DESC);
       `)
+    },
+  },
+  {
+    version: 21,
+    name: 'oplog-entries',
+    up(db) {
+      /**
+       * 运营日志（2026-10-23 接入第 1 步）：承接旧「亚马逊运营日志 V5」的导出。
+       * content 只存**剥掉 HTML 的纯文本**——旧数据是富文本，直接渲染有 XSS 面；
+       * ASIN 与附件元信息存 JSON，不存文件字节（体积与备份成本都不值得）。
+       */
+      db.exec(`CREATE TABLE IF NOT EXISTS oplog_entries (
+        id TEXT PRIMARY KEY,
+        log_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content_text TEXT NOT NULL DEFAULT '',
+        asin_json TEXT NOT NULL DEFAULT '[]',
+        documents_json TEXT NOT NULL DEFAULT '[]',
+        shop_id TEXT,
+        site TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_oplog_created ON oplog_entries(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_oplog_type ON oplog_entries(log_type, created_at DESC);`)
+    },
+  },
+  {
+    version: 22,
+    name: 'oplog-images',
+    up(db) {
+      /** 旧日志的正文里内嵌截图（dataURL）。剥 HTML 会把图片一起剥掉，
+       *  所以单独存一列：正文只保留 [图片] 占位，图片本体在这里。 */
+      db.exec("ALTER TABLE oplog_entries ADD COLUMN images_json TEXT NOT NULL DEFAULT '[]'")
+    },
+  },
+  {
+    version: 23,
+    name: 'oplog-presentation',
+    up(db) {
+      /** 把旧应用的信息架构搬进来：店铺名、类型颜色、业务日期。
+       *  颜色与旧应用同一调色板，日期用于「今天/昨天/本周…」分组。 */
+      db.exec('ALTER TABLE oplog_entries ADD COLUMN shop_name TEXT')
+      db.exec('ALTER TABLE oplog_entries ADD COLUMN type_color TEXT')
+      db.exec('ALTER TABLE oplog_entries ADD COLUMN log_date TEXT')
+    },
+  },
+  {
+    version: 24,
+    name: 'asin-watchlist',
+    up(db) {
+      /** 选品收藏（逆向自「亚马逊选品收藏助手 v3.2.10」）：产品库 + 趋势采样。 */
+      db.exec(`CREATE TABLE IF NOT EXISTS asin_products (
+        asin TEXT PRIMARY KEY,
+        title TEXT NOT NULL DEFAULT '',
+        current_title TEXT, image_url TEXT, url TEXT, price REAL, rating REAL, reviews INTEGER, bsr INTEGER,
+        shop_id TEXT, shop_name TEXT, category TEXT, note TEXT,
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        added_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_asin_added ON asin_products(added_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_asin_category ON asin_products(category);
+      CREATE TABLE IF NOT EXISTS asin_snapshots (
+        id TEXT PRIMARY KEY, asin TEXT NOT NULL, captured_at TEXT NOT NULL,
+        price REAL, monthly_sales INTEGER, reviews INTEGER, rating REAL, bsr_major INTEGER, bsr_minor INTEGER
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_asin_snap ON asin_snapshots(asin, captured_at);`)
+    },
+  },
+  {
+    version: 25,
+    name: 'oplog-writable',
+    up(db) {
+      /** 类型字典（旧应用把类型+颜色存在 localStorage，这里落库并给 8 个默认值）。 */
+      db.exec(`CREATE TABLE IF NOT EXISTS oplog_types (
+        name TEXT PRIMARY KEY,
+        color TEXT NOT NULL,
+        sort INTEGER NOT NULL DEFAULT 0
+      ) STRICT`)
+      const seed = db.prepare('INSERT OR IGNORE INTO oplog_types (name, color, sort) VALUES (?, ?, ?)')
+      ;['Listing', '复盘', '库存', '销售', '广告', '促销', '事件', '其它'].forEach((name, index) => {
+        const colors = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14', '#6c757d']
+        seed.run(name, colors[index] ?? '#6c757d', index)
+      })
+      db.exec('ALTER TABLE oplog_entries ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0')
+    },
+  },
+  {
+    version: 26,
+    name: 'asin-v319-fields',
+    up(db) {
+      /** 对齐 v3.2.19 导出：多站点身份、deal/coupon/BSR/五点等次要字段，以及店铺表。 */
+      db.exec('ALTER TABLE asin_products ADD COLUMN site TEXT')
+      db.exec("ALTER TABLE asin_products ADD COLUMN extra_json TEXT NOT NULL DEFAULT '{}'")
+      db.exec('ALTER TABLE asin_products ADD COLUMN brand TEXT')
+      db.exec('ALTER TABLE asin_products ADD COLUMN seller TEXT')
+      db.exec('ALTER TABLE asin_products ADD COLUMN currency TEXT')
+      db.exec(`CREATE TABLE IF NOT EXISTS asin_stores (
+        id TEXT PRIMARY KEY,
+        seller_id TEXT, site TEXT, name TEXT NOT NULL, url TEXT, note TEXT,
+        watch INTEGER NOT NULL DEFAULT 0,
+        last_scanned_at TEXT,
+        products_count INTEGER NOT NULL DEFAULT 0
+      ) STRICT`)
+    },
+  },
+  {
+    version: 27,
+    name: 'asin-list-management',
+    up(db) {
+      db.exec('ALTER TABLE asin_products ADD COLUMN watch INTEGER NOT NULL DEFAULT 0')
+      db.exec('ALTER TABLE asin_products ADD COLUMN manual_order INTEGER')
+    },
+  },
+  {
+    version: 28,
+    name: 'oplog-task-link',
+    up(db) {
+      db.exec('ALTER TABLE oplog_entries ADD COLUMN task_id TEXT')
+      db.exec('CREATE INDEX IF NOT EXISTS idx_oplog_task ON oplog_entries(task_id)')
+    },
+  },
+  {
+    version: 29,
+    name: 'keyword-plans',
+    /**
+     * 关键词库（2026-10-24）：把「关键词规划」从一次性页面变成**可保存、可复用**的词库。
+     *
+     * 为什么不复用 `amazon_datasets`：那份表存的是**导入的原始报表行**（搜索词+曝光点击花费），
+     * 而这里是**我方生成的投放候选**（关键词+匹配方式+活动路由+否定词）。两者生命周期、
+     * 条数上限、导出格式都不同，塞进一张表会让"导入源"和"生成结果"混成一个概念。
+     *
+     * `rows_json` 存生成时的快照：生成规则将来改了，历史方案也不会被悄悄改写
+     * （与"计划项速度快照"同一条纪律）。
+     */
+    up(db) {
+      db.exec(`CREATE TABLE IF NOT EXISTS keyword_plans (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        seed TEXT NOT NULL DEFAULT '',
+        modifiers_json TEXT NOT NULL DEFAULT '[]',
+        match_types_json TEXT NOT NULL DEFAULT '["exact","phrase","broad"]',
+        negatives_json TEXT NOT NULL DEFAULT '[]',
+        rows_json TEXT NOT NULL DEFAULT '[]',
+        asin TEXT,
+        note TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_keyword_plans_updated ON keyword_plans(updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_keyword_plans_asin ON keyword_plans(asin);`)
+    },
+  },
+  {
+    version: 30,
+    name: 'asin-judgment',
+    /**
+     * 选品库升级为「判断库」（2026-10-24）。
+     *
+     * 背景：ASIN 表原来只存**事实**（价格/评分/BSR/标签），而判断（能不能做、VOC 痛点、
+     * 商标风险、覆盖多少词）跑完技能后只留在会话里 —— 下次要筛"哪些可做"就得翻聊天。
+     *
+     * 设计取舍：判断结果**整体存一个 JSON**（`judgment_json`），只把
+     * 需要**筛选/排序**的两个提成列（`verdict`、`score`）。理由：
+     * - 判断字段会随技能演进而增删，一列一迁移不划算；
+     * - 但要按结论筛列表，SQL 就得有列，不能全塞 JSON 里。
+     *
+     * `judged_source` 记来源技能/工具，回答"这条结论是谁给的"，避免人写的与 AI 写的混为一谈。
+     */
+    up(db) {
+      db.exec("ALTER TABLE asin_products ADD COLUMN verdict TEXT NOT NULL DEFAULT 'none'")
+      db.exec('ALTER TABLE asin_products ADD COLUMN score REAL')
+      db.exec("ALTER TABLE asin_products ADD COLUMN judgment_json TEXT NOT NULL DEFAULT '{}'")
+      db.exec('ALTER TABLE asin_products ADD COLUMN judged_at TEXT')
+      db.exec('ALTER TABLE asin_products ADD COLUMN judged_source TEXT')
+      db.exec('CREATE INDEX IF NOT EXISTS idx_asin_verdict ON asin_products(verdict)')
+    },
+  },
+  {
+    version: 31,
+    name: 'inventory-snapshots',
+    /**
+     * 库存补货看板（2026-10-24）：存"一次盘点"的输入，不存算出来的结论。
+     *
+     * 为什么不存结论：可售天数/断货日依赖**今天**与到货天数，存下来隔天就是错的；
+     * 存输入，每次打开按当时参数重算，才不会"看板上的断货日永远是导入那天算的"。
+     *
+     * `rows_json` 是用户导入的原始行（SKU/期初/到货/销量/在途），
+     * 与 `amazon_datasets` 同一条纪律：导入源与生成结果不混在一张表。
+     */
+    up(db) {
+      db.exec(`CREATE TABLE IF NOT EXISTS inventory_snapshots (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        counted_at TEXT NOT NULL,
+        window_days INTEGER NOT NULL,
+        lead_time_days INTEGER NOT NULL DEFAULT 0,
+        safety_days INTEGER NOT NULL DEFAULT 0,
+        rows_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_inventory_created ON inventory_snapshots(created_at DESC);`)
+    },
+  },
+    {
+    version: 32,
+    name: 'calculator-scenarios',
+    /**
+     * 测算方案（2026-10-24）：把「Amazon 测算」的参数从浏览器 localStorage 搬进库。
+     *
+     * 为什么必须搬：localStorage 换机器就丢、不进备份、也不属于"工作台的数据"。
+     * 而且不做持久化就没法做**多方案对比**（同一款货的三个定价/成本假设排在一起看）。
+     *
+     * 存的是**完整输入**（`input_json`），不存算出来的结论：结论由
+     * `calculateAmazonEconomics` 每次现算 —— 公式改了以后老方案不会继续显示旧结论。
+     *
+     * `asin` 是弱关联（不做外键）：选品库清理不该连带删掉用户辛苦做的测算。
+     */
+    up(db) {
+      db.exec(`CREATE TABLE IF NOT EXISTS calculator_scenarios (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        input_json TEXT NOT NULL DEFAULT '{}',
+        note TEXT NOT NULL DEFAULT '',
+        asin TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_calc_scenarios_updated ON calculator_scenarios(updated_at DESC);`)
+    },
+  },
+
+{
+    version: 33,
+    name: 'aba-keyword-sets',
+    /**
+     * ABA 词表（2026-10-24 用户要求）：把"表格导入 → 分层/判垄断 → 回填建议"落成数据。
+     *
+     * 为什么与 `keyword_plans` 分开：那张表存的是**我们生成的投放候选**（可编辑的方案），
+     * 这张存的是**市场原始证据**（ABA 导出的排名/搜索量/购买率/点击集中度）。
+     * 两者的可信度口径不同（后者是 observed，前者是 derived），混表会让"这是市场数据还是我们的建议"说不清。
+     *
+     * `annotations_json` 存 DSH/人工的回填（worth / 建议匹配 / 理由 / 证据等级），
+     * 读取时覆盖本地规则算出来的结论 —— 规则给基线，回填给结论。
+     */
+    up(db) {
+      db.exec(`CREATE TABLE IF NOT EXISTS aba_keyword_sets (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        period TEXT,
+        rows_json TEXT NOT NULL DEFAULT '[]',
+        annotations_json TEXT NOT NULL DEFAULT '[]',
+        source_code TEXT NOT NULL DEFAULT 'import',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_aba_sets_created ON aba_keyword_sets(created_at DESC);`)
+    },
+  },
+  {
+    version: 34,
+    name: 'amazon-dataset-ai-summary',
+    /**
+     * 报表级 AI 结论（2026-10-24）：词级建议已有 `annotations_json`，
+     * 但"整体 ACOS 多少、否词几条共烧多少钱、最该处理的三个词"这类**报表级**结论
+     * 之前只能留在会话里 —— 三页联动时另外两页读不到。
+     *
+     * 为什么不塞进 `annotations_json`：那里是**词级**建议数组（同一份报表里一个词一条），
+     * 混进一个报表级对象会让"每条建议都有 keyword"的前提失效，
+     * 现有写回/校验/UI 全部按那个前提写。
+     *
+     * 为什么整段存 JSON 而不是拆列：结论结构会随分析口径演进（distribution / notes /
+     * evidence…），一列一迁移不划算；这份数据只被整体读、整体替换，不做 SQL 筛选。
+     *
+     * **不迁移数据**：老行是 NULL，读取按 null 处理（"还没做过报表级结论"），
+     * 不伪造空结论 —— 空的 totals 会被误读成"报表总额为 0"。
+     */
+    up(db) {
+      db.exec('ALTER TABLE amazon_datasets ADD COLUMN ai_summary TEXT')
     },
   },
 ]

@@ -51,6 +51,24 @@ function listFiles(dir, base = dir) {
 
 const sha = (file) => createHash('sha256').update(readFileSync(file)).digest('hex')
 
+/**
+ * `build-info.json` 里有一个每次构建都会变的时间戳（`generatedAt`），
+ * 而装盘包是 `pnpm pack` 触发的**第二次**构建产出的 —— 因此这两份永远字节不等，
+ * 之前一直被误判成「装盘产物不是当前构建」。
+ *
+ * 真正代表构建身份的是 `buildId`（输入文件内容的哈希）与 `inputs` 数量；
+ * 时间戳不参与比较。这是"只认内容指纹"的口径在构建元数据上的落地。
+ */
+function buildIdentity(file) {
+  try {
+    const parsed = JSON.parse(readFileSync(file, 'utf8'))
+    return JSON.stringify({ buildId: parsed.buildId, inputs: parsed.inputs, version: parsed.version })
+  } catch {
+    return undefined
+  }
+}
+const BUILD_INFO = 'build-info.json'
+
 const report = { dev: {}, installed: {}, missing: [], extra: [], differing: [] }
 for (const file of listFiles(DEV)) report.dev[file] = sha(join(DEV, file))
 for (const file of listFiles(INSTALLED)) report.installed[file] = sha(join(INSTALLED, file))
@@ -58,7 +76,9 @@ for (const file of listFiles(INSTALLED)) report.installed[file] = sha(join(INSTA
 for (const [file, hash] of Object.entries(report.dev)) {
   const other = report.installed[file]
   if (other === undefined) report.missing.push(file)
-  else if (other !== hash) report.differing.push(file)
+  else if (file === BUILD_INFO) {
+    if (buildIdentity(join(DEV, file)) !== buildIdentity(join(INSTALLED, file))) report.differing.push(file)
+  } else if (other !== hash) report.differing.push(file)
 }
 for (const file of Object.keys(report.installed)) {
   if (report.dev[file] === undefined) report.extra.push(file)

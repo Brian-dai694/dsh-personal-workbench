@@ -15,7 +15,7 @@ import { seedDictionaries } from '../lib/db/seed.js'
 import { MIGRATIONS, SCHEMA_VERSION } from '../lib/db/schema.js'
 import {
   createAmazonDataset, deleteAmazonDataset, getAmazonDataset, getLatestAmazonDataset,
-  listAmazonDatasets, saveSearchTermReview,
+  listAmazonDatasets, saveAmazonDatasetSummary, saveSearchTermReview,
 } from '../lib/db/repo.js'
 
 function openMemoryDb() {
@@ -92,4 +92,58 @@ test('删除数据集后不再出现在列表与最近一份里', () => {
   assert.equal(getAmazonDataset(db, dataset.id), undefined)
   assert.equal(listAmazonDatasets(db).length, 0)
   assert.equal(getLatestAmazonDataset(db), undefined)
+})
+
+/**
+ * schema 34：报表级结论（`ai_summary`）。
+ *
+ * 这一列**必须整份替换**：结论里的条数、花费、总额来自同一次分析，
+ * 逐字段 merge 会拼出"上次的条数 + 这次的花费"这种不可能同时成立的组合。
+ */
+const SUMMARY_A = {
+  version: 1,
+  totals: { impressions: 1500, clicks: 18, orders: 2, spend: 9.5, sales: 45, acos: 0.2111 },
+  rows: 2,
+  uniqueKeywords: 2,
+  distribution: { negative: 0, add: 1, watch: 1 },
+  negativeSpend: 0,
+  notes: ['报表缺广告组，否词需按投放单元复核'],
+}
+const SUMMARY_B = { version: 1, rows: 2, uniqueKeywords: 1, notes: ['重新分析后的结论'] }
+
+test('报表级结论：整份替换，不碰行数据与词级建议', () => {
+  const db = openMemoryDb()
+  const dataset = createAmazonDataset(db, { title: 't', rows: ROWS })
+  assert.equal(dataset.aiSummary, null, '刚导入时没有报表级结论')
+  saveSearchTermReview(db, dataset.id, [{ keyword: 'mig gloves', action: 'watch', reason: '先观察' }])
+
+  const withA = saveAmazonDatasetSummary(db, dataset.id, SUMMARY_A)
+  assert.deepEqual(withA.aiSummary, SUMMARY_A)
+  assert.equal(withA.rows.length, 2, '写结论不得动 rows_json')
+  assert.equal(withA.annotations.length, 1, '写结论不得动词级建议')
+
+  // 第二次写：整份替换，A 里的 totals/distribution 不能残留
+  const withB = saveAmazonDatasetSummary(db, dataset.id, SUMMARY_B)
+  assert.deepEqual(withB.aiSummary, SUMMARY_B)
+  assert.equal('totals' in withB.aiSummary, false, '整份替换不能 merge 出旧字段')
+
+  // null = 清空结论（回到"还没做过"），与老行语义一致
+  assert.equal(saveAmazonDatasetSummary(db, dataset.id, null).aiSummary, null)
+  assert.throws(() => saveAmazonDatasetSummary(db, 'missing', SUMMARY_A), /dataset not found/)
+})
+
+test('老行与坏 JSON 都按 null 处理，不迁移数据也不抛错', () => {
+  const db = openMemoryDb()
+  const created = createAmazonDataset(db, { title: 't', rows: ROWS })
+  // 模拟 schema 34 之前写入的行：不指定 ai_summary，取列默认值 NULL
+  db.prepare(`INSERT INTO amazon_datasets
+    (id, kind_code, title, period, rows_json, annotations_json, source_code, session_id, created_at, updated_at)
+    VALUES (?, 'search_term', '老报表', NULL, ?, '[]', 'paste', NULL, ?, ?)`)
+    .run('legacy', JSON.stringify(ROWS), '2026-10-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z')
+  assert.equal(getAmazonDataset(db, 'legacy')?.aiSummary, null, '老行读出来是 null，不是空对象')
+
+  for (const broken of ['{oops', '[]', '"text"']) {
+    db.prepare('UPDATE amazon_datasets SET ai_summary = ? WHERE id = ?').run(broken, created.id)
+    assert.equal(getAmazonDataset(db, created.id)?.aiSummary, null, `坏值 ${broken} 应降级为 null`)
+  }
 })

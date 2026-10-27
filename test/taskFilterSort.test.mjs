@@ -109,14 +109,21 @@ test('isTaskDueOnDay excludes cancelled tasks from calendar markers', () => {
   assert.equal(isTaskDueOnDay(noDue, day), false)
 })
 
-test('task sorter: dueAt asc/desc uses dueAt, then completedAt for done tasks, nulls last', () => {
+test('task sorter: dueAt asc/desc 未完成按截止时间（null 最后），已完成/已取消整组沉底', () => {
   const early = task('a', { dueAt: '2024-01-01T00:00:00.000Z' })
   const late = task('b', { dueAt: '2024-06-01T00:00:00.000Z' })
   const none = task('c', { dueAt: null })
   const doneNoDue = task('d', { dueAt: null, statusCode: 'done', completedAt: '2024-02-01T00:00:00.000Z' })
+  const cancelled = task('e', { dueAt: null, statusCode: 'cancelled' })
 
-  assert.deepEqual([late, none, early, doneNoDue].sort(createTaskSorter('dueAt', 'asc')).map((t) => t.id), ['a', 'd', 'b', 'c'])
-  assert.deepEqual([early, none, late, doneNoDue].sort(createTaskSorter('dueAt', 'desc')).map((t) => t.id), ['b', 'd', 'a', 'c'])
+  // 契约：createTaskSorter 先按 CLOSED_STATUS 分组（未完成在前），再在组内比较 ——
+  // 否则默认「截止时间 ↑」会把最早的已完成任务顶到首屏（源码注释有理由）。
+  assert.deepEqual([late, none, early, doneNoDue].sort(createTaskSorter('dueAt', 'asc')).map((t) => t.id), ['a', 'b', 'c', 'd'])
+  assert.deepEqual([early, none, late, doneNoDue].sort(createTaskSorter('dueAt', 'desc')).map((t) => t.id), ['b', 'a', 'c', 'd'])
+
+  // 沉底组内部仍按有效时间升序：已完成用 completedAt；没有完成时间的已取消排最后。
+  const doneLater = task('f', { dueAt: null, statusCode: 'done', completedAt: '2024-03-01T00:00:00.000Z' })
+  assert.deepEqual([doneLater, doneNoDue, cancelled].sort(createTaskSorter('dueAt', 'asc')).map((t) => t.id), ['d', 'f', 'e'])
 })
 
 test('task sorter: dueAt uses effectiveDueAt when own dueAt is null', () => {

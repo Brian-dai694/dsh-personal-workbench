@@ -1,0 +1,6916 @@
+{
+ "source": {
+  "datasetId": "dae3827e-3751-494d-a625-b62a8ac2a5fa",
+  "title": "搜索词报表 2026/10/24 13:59:09",
+  "period": null,
+  "rows": 1243,
+  "words": 767,
+  "exportedAt": "2026-10-24T05:59:09.027Z",
+  "note": "按词聚合后的真实结果（keyword 保留首次出现的原词大小写）；金额收到分"
+ },
+ "words": [
+  {
+   "keyword": "tig cups",
+   "impressions": 3291,
+   "clicks": 55,
+   "orders": 4,
+   "spend": 56.84,
+   "sales": 115.87,
+   "rowCount": 44
+  },
+  {
+   "keyword": "tig cup kit",
+   "impressions": 916,
+   "clicks": 39,
+   "orders": 2,
+   "spend": 37.63,
+   "sales": 88.98,
+   "rowCount": 35
+  },
+  {
+   "keyword": "tig welding accessories",
+   "impressions": 1538,
+   "clicks": 35,
+   "orders": 4,
+   "spend": 34.73,
+   "sales": 165.5,
+   "rowCount": 30
+  },
+  {
+   "keyword": "tig consumables kit",
+   "impressions": 711,
+   "clicks": 20,
+   "orders": 0,
+   "spend": 26.33,
+   "sales": 0,
+   "rowCount": 14
+  },
+  {
+   "keyword": "tig welding cups",
+   "impressions": 494,
+   "clicks": 27,
+   "orders": 1,
+   "spend": 23.63,
+   "sales": 35.99,
+   "rowCount": 21
+  },
+  {
+   "keyword": "tig torch",
+   "impressions": 982,
+   "clicks": 23,
+   "orders": 0,
+   "spend": 23.31,
+   "sales": 0,
+   "rowCount": 19
+  },
+  {
+   "keyword": "tig kit",
+   "impressions": 1255,
+   "clicks": 18,
+   "orders": 1,
+   "spend": 20.32,
+   "sales": 50.14,
+   "rowCount": 16
+  },
+  {
+   "keyword": "b0bn82rmqg",
+   "impressions": 910,
+   "clicks": 17,
+   "orders": 0,
+   "spend": 19.55,
+   "sales": 0,
+   "rowCount": 9
+  },
+  {
+   "keyword": "jumbo tig cups",
+   "impressions": 126,
+   "clicks": 21,
+   "orders": 2,
+   "spend": 15.53,
+   "sales": 77.58,
+   "rowCount": 18
+  },
+  {
+   "keyword": "tig torch parts",
+   "impressions": 195,
+   "clicks": 10,
+   "orders": 1,
+   "spend": 11.41,
+   "sales": 45.04,
+   "rowCount": 9
+  },
+  {
+   "keyword": "tig welding",
+   "impressions": 249,
+   "clicks": 10,
+   "orders": 1,
+   "spend": 10.76,
+   "sales": 39.94,
+   "rowCount": 8
+  },
+  {
+   "keyword": "tig cup",
+   "impressions": 46,
+   "clicks": 9,
+   "orders": 0,
+   "spend": 9.37,
+   "sales": 0,
+   "rowCount": 9
+  },
+  {
+   "keyword": "b0g1b6mynx",
+   "impressions": 473,
+   "clicks": 8,
+   "orders": 0,
+   "spend": 7.75,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "tig torch cups",
+   "impressions": 65,
+   "clicks": 7,
+   "orders": 0,
+   "spend": 7.68,
+   "sales": 0,
+   "rowCount": 7
+  },
+  {
+   "keyword": "tig accessories",
+   "impressions": 137,
+   "clicks": 7,
+   "orders": 0,
+   "spend": 6.79,
+   "sales": 0,
+   "rowCount": 7
+  },
+  {
+   "keyword": "furick tig cups",
+   "impressions": 82,
+   "clicks": 7,
+   "orders": 0,
+   "spend": 6.74,
+   "sales": 0,
+   "rowCount": 6
+  },
+  {
+   "keyword": "tig gas lens",
+   "impressions": 98,
+   "clicks": 7,
+   "orders": 0,
+   "spend": 6.63,
+   "sales": 0,
+   "rowCount": 7
+  },
+  {
+   "keyword": "tig gas lens kit",
+   "impressions": 53,
+   "clicks": 8,
+   "orders": 0,
+   "spend": 6.41,
+   "sales": 0,
+   "rowCount": 6
+  },
+  {
+   "keyword": "tig torch accessories",
+   "impressions": 32,
+   "clicks": 7,
+   "orders": 0,
+   "spend": 6.41,
+   "sales": 0,
+   "rowCount": 6
+  },
+  {
+   "keyword": "tig consumables",
+   "impressions": 56,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 6.4,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "tig welding consumables",
+   "impressions": 39,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 6.24,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "tig welding kit",
+   "impressions": 89,
+   "clicks": 8,
+   "orders": 1,
+   "spend": 6.04,
+   "sales": 46.99,
+   "rowCount": 8
+  },
+  {
+   "keyword": "tig torch kit",
+   "impressions": 259,
+   "clicks": 6,
+   "orders": 0,
+   "spend": 6,
+   "sales": 0,
+   "rowCount": 5
+  },
+  {
+   "keyword": "antorcha tig",
+   "impressions": 104,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 5.84,
+   "sales": 0,
+   "rowCount": 5
+  },
+  {
+   "keyword": "tig welding practice kit",
+   "impressions": 71,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 5.5,
+   "sales": 0,
+   "rowCount": 5
+  },
+  {
+   "keyword": "tig welding cups kit",
+   "impressions": 13,
+   "clicks": 6,
+   "orders": 1,
+   "spend": 5.35,
+   "sales": 39.94,
+   "rowCount": 5
+  },
+  {
+   "keyword": "tig cups jumbo",
+   "impressions": 66,
+   "clicks": 10,
+   "orders": 3,
+   "spend": 5.28,
+   "sales": 128.02,
+   "rowCount": 10
+  },
+  {
+   "keyword": "b0dk1slsyl",
+   "impressions": 33,
+   "clicks": 10,
+   "orders": 0,
+   "spend": 5.21,
+   "sales": 0,
+   "rowCount": 10
+  },
+  {
+   "keyword": "tig welder",
+   "impressions": 412,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 5.09,
+   "sales": 0,
+   "rowCount": 5
+  },
+  {
+   "keyword": "jumbo tig cup kit",
+   "impressions": 29,
+   "clicks": 7,
+   "orders": 0,
+   "spend": 4.93,
+   "sales": 0,
+   "rowCount": 6
+  },
+  {
+   "keyword": "stubby tig cup kit",
+   "impressions": 23,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 4.63,
+   "sales": 0,
+   "rowCount": 5
+  },
+  {
+   "keyword": "glass tig cups",
+   "impressions": 34,
+   "clicks": 6,
+   "orders": 0,
+   "spend": 4.56,
+   "sales": 0,
+   "rowCount": 5
+  },
+  {
+   "keyword": "tig torch gas lens kit",
+   "impressions": 26,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 4.41,
+   "sales": 0,
+   "rowCount": 5
+  },
+  {
+   "keyword": "b0clrpjvg7",
+   "impressions": 47,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 4.21,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "clear tig cups",
+   "impressions": 14,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 4.08,
+   "sales": 0,
+   "rowCount": 5
+  },
+  {
+   "keyword": "tig cups kit",
+   "impressions": 11,
+   "clicks": 5,
+   "orders": 0,
+   "spend": 4.07,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "miller tig cups",
+   "impressions": 13,
+   "clicks": 4,
+   "orders": 0,
+   "spend": 3.96,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "b08fyf3cbd",
+   "impressions": 27,
+   "clicks": 4,
+   "orders": 0,
+   "spend": 3.56,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig",
+   "impressions": 103,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 3.5,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "tig rig kit",
+   "impressions": 19,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 3.32,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "tig welding torch",
+   "impressions": 39,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 3.32,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "tig gas cups",
+   "impressions": 22,
+   "clicks": 4,
+   "orders": 0,
+   "spend": 3.21,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "tig rig",
+   "impressions": 43,
+   "clicks": 4,
+   "orders": 0,
+   "spend": 3.18,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "tig nozzles",
+   "impressions": 14,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 3.08,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "b0c4tjvptv",
+   "impressions": 13,
+   "clicks": 4,
+   "orders": 0,
+   "spend": 3.06,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "17 tig torch consumables",
+   "impressions": 16,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 3.05,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "tig tungsten",
+   "impressions": 46,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 3.04,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "gas lenses for tig welding 3/32",
+   "impressions": 10,
+   "clicks": 3,
+   "orders": 1,
+   "spend": 3.02,
+   "sales": 52.99,
+   "rowCount": 3
+  },
+  {
+   "keyword": "12 tig cup",
+   "impressions": 9,
+   "clicks": 4,
+   "orders": 0,
+   "spend": 3,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "17 or 26 tig torch cup assortment glass",
+   "impressions": 9,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 3,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding cap",
+   "impressions": 184,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 3,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "welding",
+   "impressions": 5,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.94,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "yeswelder tig cups",
+   "impressions": 11,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.86,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "miller tig torch",
+   "impressions": 16,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.84,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "17 series tig torch consumables",
+   "impressions": 18,
+   "clicks": 5,
+   "orders": 1,
+   "spend": 2.81,
+   "sales": 46.99,
+   "rowCount": 3
+  },
+  {
+   "keyword": "clear tig welding cups",
+   "impressions": 15,
+   "clicks": 4,
+   "orders": 0,
+   "spend": 2.79,
+   "sales": 0,
+   "rowCount": 4
+  },
+  {
+   "keyword": "tig practice kit",
+   "impressions": 10,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.65,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig feeder tool",
+   "impressions": 14,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.64,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "weldcraft a-150 tig torch cups",
+   "impressions": 6,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.63,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "water cooled tig torch kit",
+   "impressions": 14,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.63,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "epic tig cup",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 2.62,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "epic tig cup kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 2.62,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 tig torch consumables",
+   "impressions": 38,
+   "clicks": 5,
+   "orders": 1,
+   "spend": 2.6,
+   "sales": 39.94,
+   "rowCount": 5
+  },
+  {
+   "keyword": "wp-26 tig torch consumables",
+   "impressions": 17,
+   "clicks": 4,
+   "orders": 1,
+   "spend": 2.47,
+   "sales": 52.99,
+   "rowCount": 4
+  },
+  {
+   "keyword": "tig gun",
+   "impressions": 16,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.42,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "miller tig torch with dinse",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.4,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch cup",
+   "impressions": 16,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.25,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "20 series tig torch cups",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.22,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig torch 12 cup",
+   "impressions": 10,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.21,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "17 tig torch gas lens kit",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 2.2,
+   "sales": 52.99,
+   "rowCount": 2
+  },
+  {
+   "keyword": "20 tig torch consumables",
+   "impressions": 9,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.2,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ac tig welder",
+   "impressions": 16,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.2,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ceramic cup tig",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck worldwide tig torch",
+   "impressions": 19,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.2,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ck20 tig torch consumables",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.2,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "stubby tig torch kit",
+   "impressions": 11,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "stuby tig torch kit",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 2.18,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo cups tig",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.16,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ceramic tig cups",
+   "impressions": 5,
+   "clicks": 3,
+   "orders": 1,
+   "spend": 2.13,
+   "sales": 30.59,
+   "rowCount": 3
+  },
+  {
+   "keyword": "jumbo tig cups 3/32",
+   "impressions": 9,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.12,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "b07dn8y7c1",
+   "impressions": 16,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 2.12,
+   "sales": 39.94,
+   "rowCount": 2
+  },
+  {
+   "keyword": "jumbo tig kit",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.11,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig glass cup kit",
+   "impressions": 34,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.09,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "weldcraft tig torches",
+   "impressions": 8,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.09,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "water cooled tig torch",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.08,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "welding cups",
+   "impressions": 16,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.07,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "ceramic alumina tig welding cups",
+   "impressions": 8,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 2.06,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "b0d95rbppl",
+   "impressions": 9,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.06,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "100 pcs tig welding torch kit",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.04,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "gas lens wp 17 v tig",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.04,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "riverweld tig gas lens kit 17gl 54n for wp-17 wp-18 wp-26⁠",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.04,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig jumbo cup kit",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b001psgrki",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 2.01,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "1/8 gas lenses for tig welding",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 2,
+   "sales": 52.99,
+   "rowCount": 2
+  },
+  {
+   "keyword": "20 water cooled tig supplies",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "b0gcm9rcvb",
+   "impressions": 15,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ceramic tig cups 4",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "clear tig cup kit",
+   "impressions": 11,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jazzy tig cups",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo gas lens tig 1/8",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "miller tig welder",
+   "impressions": 8,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 2,
+   "sales": 45.04,
+   "rowCount": 2
+  },
+  {
+   "keyword": "pack of welding cups tig 3/32",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup kit'",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 2,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas nozzle kit 1/8",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig kit universal",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig nozzle",
+   "impressions": 14,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-17 tig torch parts",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 2,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig welding cup kit accessories",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.96,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-17 tig cups",
+   "impressions": 4,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 1.9,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "tig finger",
+   "impressions": 10,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.9,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "b07k7jc2d1",
+   "impressions": 27,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.89,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp20 tig torch consumables",
+   "impressions": 5,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 1.88,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "wp26 tig torch consumables",
+   "impressions": 6,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 1.88,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "furick tig cup kit",
+   "impressions": 19,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.87,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ck9 tig torch cups",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 1.84,
+   "sales": 45.04,
+   "rowCount": 2
+  },
+  {
+   "keyword": "clear tig nozzle",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 1.84,
+   "sales": 46.99,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ceramic gas lens tig cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.83,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "nova 18 tig cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.82,
+   "sales": 51.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch o rings",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.81,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "welding accessories",
+   "impressions": 26,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.81,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig jumbo cup",
+   "impressions": 15,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 1.8,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "tig cups pyrex",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.72,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig jumbo cups",
+   "impressions": 10,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 1.71,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "tig torch consumables",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.71,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "10 tig cup",
+   "impressions": 12,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 1.69,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "b07z9947ht",
+   "impressions": 11,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 1.69,
+   "sales": 30.59,
+   "rowCount": 2
+  },
+  {
+   "keyword": "b08h4j1269",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.69,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "welding accessories kit",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.69,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "wp17 tig consumables kit 1/16 gas lens",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.65,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "26 series tig torch accessories",
+   "impressions": 5,
+   "clicks": 3,
+   "orders": 1,
+   "spend": 1.64,
+   "sales": 45.04,
+   "rowCount": 3
+  },
+  {
+   "keyword": "ceramic tig cup kit",
+   "impressions": 14,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.63,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "radnor tig torch",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.62,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "17 series tig cups",
+   "impressions": 3,
+   "clicks": 3,
+   "orders": 1,
+   "spend": 1.61,
+   "sales": 46.99,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig cups #5",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.59,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig cup jumbo",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.58,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b07lf6lfyt",
+   "impressions": 16,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.51,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "miller tig welding accessories",
+   "impressions": 10,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.51,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig ceramic cups",
+   "impressions": 21,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 1.5,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "miller tig consumables kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.5,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder consumables",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.46,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig gas lens kits",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 1.43,
+   "sales": 46.99,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig welding torch kit",
+   "impressions": 8,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.41,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ck17 tig torch consumables",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 1.4,
+   "sales": 52.99,
+   "rowCount": 2
+  },
+  {
+   "keyword": "stubby ceramic cups tig welding",
+   "impressions": 9,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.38,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "glass welding kit",
+   "impressions": 3,
+   "clicks": 3,
+   "orders": 0,
+   "spend": 1.34,
+   "sales": 0,
+   "rowCount": 3
+  },
+  {
+   "keyword": "wp 17 tig torch consumables",
+   "impressions": 6,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.33,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig parts kit",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.32,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "lincoln tig 175 welder torch parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.32,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig kit 3/32",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.32,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch 20f kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.32,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch with gas valve",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.32,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welders",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.32,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding machine",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.32,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "extra long tig cup",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.26,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "furick glass tig cups",
+   "impressions": 8,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.24,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ceramic tig cup set",
+   "impressions": 16,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.23,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig welding ceramic cups",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.22,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "20 series tig torch consumables",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig kits",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.21,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "100pcs tig torch consumables kit wp-17/18/26 alumina nozzle gas lens",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.21,
+   "sales": 51.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "#20 tig welding kit",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "35-50 tig torch",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "collets tig",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "forney 9fv tig torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "handle for radnor 17 air cooled tig torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig gas lens kit 17 18 26",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.2,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller 215 tig kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "remotes for tig welding",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig 200p",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cooler",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig feeder",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas lens collet body",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch switch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch wp-26",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding tungsten",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yeswelder tig torch wp-17v",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "medium tig cup kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.19,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b019e4dkgi",
+   "impressions": 11,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.17,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "gas lenses for tig welding",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.16,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "air cooled tig torch parts",
+   "impressions": 11,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.13,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "outfit 20 style tig consumable kit",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.11,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "100 piece tig welding torch kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "10n46 #8 tig cup 17 18 26",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "18 series tig torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "3/32 tig ceramics cup set #8 gas lens",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "3/32 tig torch kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "9 and 20 tig torch kit",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "alumina nozzles tig torch glass #12",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "andeli welding consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck worldwide tig nozzles",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "deep cups for tig welding",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass torch kit for tig welding",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig torch cup",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "kit de copas de soldar tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "larger tig cup kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller tig torch kit",
+   "impressions": 18,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller w-375 glass cups tig",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "porcelain tig cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "square wave tig 200 consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "stainless steel tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "stubby kitfor tig torch wps17",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.1,
+   "sales": 45.04,
+   "rowCount": 1
+  },
+  {
+   "keyword": "stubby tig torch cup kit",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig #5 cup",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup gaskets",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.1,
+   "sales": 36.05,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups 250 amp torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.1,
+   "sales": 45.04,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups air cooled (hw17) cup sizes needed: #4, #5, #6, #7, #8",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups and gas lens ck17 fx",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas lens 17/18/26",
+   "impressions": 8,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig kit 3 series",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.1,
+   "sales": 51.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig kits 9 gas lens to 17 torch",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig p9 torch consumables parts kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig rig white cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch big cup",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch ceramic",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch cup fv 17",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch kit jumpo.",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch stubby gas lens kits 20 siers",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding clear cups for weld pro welder",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding consumables for size 18 torch with large cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welder cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldpro 200 amp clear tig welding cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp 17 tig torch consumables #14 monster",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-9/20/25 series tig welding torch consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp18 watercooled tig torch water hose adapters",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp26 flex head tig torch kit",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17/18/26-style tig consumable system",
+   "impressions": 14,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.09,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller w-350 tig torch consumables",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.09,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup sets",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.09,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig welding cups",
+   "impressions": 7,
+   "clicks": 3,
+   "orders": 1,
+   "spend": 1.08,
+   "sales": 30.59,
+   "rowCount": 3
+  },
+  {
+   "keyword": "26f tig torch",
+   "impressions": 11,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.08,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "accessories for welders",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.08,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ceramic tig welding tip",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.08,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "furick stubby gas lens kit for #17, #18, #26 torches",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.08,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig accessories yobel",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.08,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig consumables kit #20 torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.08,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding nozzles",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.08,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 tig",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.07,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig welding cup",
+   "impressions": 15,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "b004hf868m",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b00jv8nvgw",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b00jv8oaoe",
+   "impressions": 12,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b018q6tcvw",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b07rc24m8g",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.06,
+   "sales": 30.59,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b08m387ptq",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b096bjlbjn",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0989m21t8",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b09qbwsl29",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0b32wjbg7",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0b4wpffgn",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0c6x2bnpb",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.06,
+   "sales": 42.62,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0cjdwdsbl",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0cllypxv8",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0cm6kgzdm",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0cs8795sd",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0d41gppbv",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0f8y7xwkh",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0fq5dh31x",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0fzj9ft9c",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0gt4djttr",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0gvy4y82k",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gloves",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.06,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17fv tig torch cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "301876 miller tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "aluminum tig welding consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "eastwood tig consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass cups tig wp26",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig cup kit 10",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "med gas lens assortment cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "number 12 tig torch cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "size 12 cup tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "standard tig kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "stubby tig gas lens",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup pack",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup set",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups 26 series",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig kit jumbo",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder cup #5",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.05,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding tig cups for a wp-26fv",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.05,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp26 lens and cup set",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.05,
+   "sales": 51.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig filters",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.04,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch parts kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.04,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch tip measuring gauge",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.04,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yes welder tig welding accessories",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.04,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "1/8 inch collet jumbo cup tig",
+   "impressions": 10,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 1.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo 10 glass tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "pyrex tig cup kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "standard tig ceramic cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1.03,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig ceramic cups and nozzles",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig water cooled consumable",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "titanium unlimited tig parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yeswelder 123 pcs tig welding torch stubby gas lens glass cup kit for wp-17/18/26",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.03,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller tig nozzle",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.02,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig practice",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.02,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding glass cups wp20",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.02,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldcraft a-150 air torch (wp-17) consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1.01,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "#12 tig cups",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "1/8 tig collet",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "100 pc tig torch consumables kits",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 51.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "100 tig consumable torch patience for tooliom",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "14-35 welding tips",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "16 furick tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17 collet torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17 series gas lens",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17 series tig torch gas lens jumbo",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17 tig torch",
+   "impressions": 11,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 35.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17/18/26 tig cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17fv tig kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "2 series glasstic torch consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "200 amp tig consumable",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "2000 dyna transmission rebuild kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "26 style tig torch",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "26 tig torch connector",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "26 tig torch cups",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "28 consumable pack for a tig rig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "2a8 tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "9f tig rig parts",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "9fv tig torch parts",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "air-cooled tig welding torches",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "aluminum tig kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "aluminum tig welding cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "amplified tig rig accessories",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "andeli",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "argon gas for tig welding",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "automatic glass for welding 12",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b008jay3bu",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b00i4z4ehs",
+   "impressions": 13,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0156sk848",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b018g8zsea",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b01fllalwe",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b072hs632v",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b07mq3rj7r",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b07vjjlkn6",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b08gzctpz8",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0c2bqhxr9",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0c3z1bnpf",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0c9c7xdkc",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0c9c9p4lj",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0cxncmxpk",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0d3pn32jf",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0d6883ynm",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0d7s1nq51",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0f9w6dz1j",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0fd9t7vsy",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0fh2swcsh",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0fvvbtng8",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "bestarc mig145 tig tungsten accessories kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "boquilla para tig 12",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "butane lighter repair parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "buzz around scooter parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ceramic cup size 12 welding gear",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ceramic nozzle for tig",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck 17 consumable tig",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck 17 tig torch consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 45.04,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck 18 tig torch consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck flex loc water cooled tig torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck worldwide standard tig cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck17 gas lens kit",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck17 superflex tig torch consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck17 tig cups",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck26 tig torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "clear tig cups for vulcan welder",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "clear tig welding cups for miller",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "collet tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "compact hulk welding tig kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "cup and gas lenses and insulators for tig rigs",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "cutting torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "demi tas cup set",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "eastwood tig 200 torch gas lenses",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "er309l tig filler 3/32",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "everlast typhoon welding consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "field tig torches",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "furick 17 torch kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "furick bbw #16 tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "gas lens cups",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "gas lens tig cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "gas nozzles for tig welder",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass tig cups with diffuser",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "gtaw gas lens kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "hobart handler tig torch",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig cup kit 1/8”",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "kit for pta db sr wp 9 20 tig welding torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "kyoto tools",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "long head tig torch kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "lotos tig welder consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "lotos tig welder nozzles",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "lotus tig torch",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "micro tig torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "mig welding nozzle cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller 375 tig consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller a-150 tig torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller a200f tig torch accessories",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 45.04,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller air cooled tig torch",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller syncrowave tig cups and",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller syncrowave tig welding collet set",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller tig torch a150 long back cap",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller tig torch accessories",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller tig torches",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "miller water cooled tig torch consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "mini tig cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "mini tig rig cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "mini tig tough welding",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "o2 armor nose filters for welding",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ptw 18 tig consumable kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "purple 26 tig rig torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "radnor tig cups",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "radnor tig kits",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "radnor tig part #8 glass cup",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "radnor™ 17fv-12-r 150 amp air cooled tig torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "scratch start tig kit",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "series 20 tig torch consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "size 26 tig consumables 1/8",
+   "impressions": 10,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "small tig welding gun",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "small tig welding nozzle accessories",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "soldador tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "sr 17 tig flex head torch",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "sr wp tig kits",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "sr-26f tig consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "sssnider tig",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "sunglasses repair kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tib torch cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig 1/8 gas lens",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig 8 cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig bits set",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig caps",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig ceramic cup for model 17",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig ceramic nozzle",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig collet set",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig consumable",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig consumables kit 9fv",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup aet",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup set stainless steel",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup wp 17",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups for 2.4 cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups for aluminum",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig electrodes",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig filter 8",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig fupa cup",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas lens 1/8",
+   "impressions": 16,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas lens 2.4 45v26 kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas lens for esab sr-b 26",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas lens kit f17",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig glass lens kit jumbo 17v",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig glasses kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig lens wp 17",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig power hose",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig rig accessories",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig rig parts wp17",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig size cup 12",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig sticks",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig stubby torch kits",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig tip",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig tips wp 26",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch 14mm thread",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch 9fv parts",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch adapter",
+   "impressions": 24,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch amp control",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch consumable kits",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch consumables tungsten electrodes",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch head",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch hose",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch jumbo cups size 26",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch pen",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch qq150",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torches with standard set-up - size 1/8",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig tungsten assorted",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig tungsten kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder accessories",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder coolant",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder for aluminum",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder parts",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding 3/32 combi",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding accessories jumbo cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding arsenal kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding ceramic",
+   "impressions": 8,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding consumables kit ck torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding cups 12",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding glass cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding jumbo cup kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding large dia. gas lens",
+   "impressions": 12,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding parts cases",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding rod",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding series 17/18 consumables",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding size 17 torch accessories",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding stubby gas lens kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding tools",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig whips",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig white torch",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig wire",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "titanium 200 welder parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "torch tails for tig welding",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 39.94,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tungsten tig copas",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "vulcan 150 tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "vulcan tig torch sr17",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "water cooled tig set",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weld cap",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weld craft super cool 18 number 12 cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weld craft tig torches",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldcraft tig torch",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldcraft tig torch parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldcraft wp17 tig torch consumables 3/32",
+   "impressions": 9,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding consumables for tig torch w250",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding glasses",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding nozzles",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding project kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding starter kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding supplies and accessories",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding tig hood",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding tig torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding tip set",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding tools",
+   "impressions": 13,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp 20 tig torch parts",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp 9 20 25 tig kit",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-17, wp-18 or wp-26 torch accessories",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-17/18/26 tig torch consumables kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 1,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-26",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-26fv tig torch",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 stubby gas lens kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "xxl tig cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yes welder tig consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yes welder tig parts",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yeswelder 71pcs tig welding torch stubby gas lens #12 glass cup kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yeswelder tig consumables",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yz 85 sprocket parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 1,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "pyrex tig cup",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.99,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "pyrex tig cup #5 #6",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.99,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "87 piece tig welding accessories kit",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.98,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "1/8th tig set up pack",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.98,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "original tig glass",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.98,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig pottery",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.98,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 tig cup kit",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.98,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck worldwide tig torch accessories",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.97,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding stuff",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.97,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "26 series tig torch consumables",
+   "impressions": 9,
+   "clicks": 2,
+   "orders": 1,
+   "spend": 0.96,
+   "sales": 40.53,
+   "rowCount": 2
+  },
+  {
+   "keyword": "tig 17 cup kit",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.96,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "falcon pipes",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.96,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "everlast 102i consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.95,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass joint mouthpiece",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.95,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding gas lenses 3/32 for tig torch w250",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.95,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding glasses set",
+   "impressions": 10,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.94,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b00s4jtzw8",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.94,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0f6jrxlm8",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.94,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "size 26 tig consumables",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.94,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldcraft wp17",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.92,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas 24 cup",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.92,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp9 gas lens cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.92,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "26 series tig torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.9,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "mini tig torch flex head",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.9,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch m14 x 1.5",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.9,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b08gz93rj3",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.89,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck 18 tig torch cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.88,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "pack of cups and filters for 1/8 tig gun",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.88,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b008jaxt0g",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b00gjvt6sq",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b01n3y5qwd",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b07kgkjytd",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b07vmz646h",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0bp1ld97b",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0c2bglcm4",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0cp597s29",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0ddq1lwr8",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "nova 26 tig torch",
+   "impressions": 8,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "profax tig torch",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.87,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ceramic tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.86,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig cups 3/32 ceramica",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.86,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups assortment clear",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.86,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "100 pieces tig torch consumables",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.85,
+   "sales": 51.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "radioactive titanium gas",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.85,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-18 tig torch consumables",
+   "impressions": 3,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "#5 water cooled tig cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "10 12 cups tig jumbo",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "13n tig consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "26 series tig size 16 cup set up",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b08644b4ls",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ceramic cup #8 with filters for welding",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck worldwide gas lens kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.84,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "edge welding cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "kit tig caja",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch consumables kit wp-/26 alumina nozzle gas lens",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldmonger tig pro kit for #17, 18, 26 style torches",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.84,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0d2vyr6by",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.82,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "mill tig welder torch cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.82,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup 3/32",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.82,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "er312 tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.81,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo cup tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.81,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch cup kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.81,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding cups gas lens",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.81,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldcraft tig cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.81,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 gas lens kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.81,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig accessories kit",
+   "impressions": 8,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.8,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "ac dc tig welder with foot pedal",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.8,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0c12xrlmt",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.8,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck worldwide cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.8,
+   "sales": 30.59,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig stubby cup",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.8,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig v26 consumables",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.8,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "lincoln tig 205",
+   "impressions": 2,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.79,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding tig cups",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.79,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": ".02 tig consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.79,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b01ezlz7so",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.79,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "large gas lens tig cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.79,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding helmet",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.79,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass tig ceramics",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.78,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b013kzcj7i",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.77,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig cup kit 3/32",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.77,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas cup",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.76,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "glass tig welding cups",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.76,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding gas lens",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.76,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "200 amp tig torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.75,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo stubby tig cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.75,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig ck20",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.75,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding starter kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.75,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding gas lens kit",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.74,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "furick cup kit for 17 torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.73,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp 20 tig torch consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.73,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yes welder ck17 screened diffuser",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.73,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b073ftdcnk",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.72,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "maxstar tig welding accessories",
+   "impressions": 10,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.72,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yeswelder tig tips",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.72,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.71,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding cup",
+   "impressions": 8,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.71,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "mini tig torch kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "screens for #12 tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig collets",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup assortment",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig rig parts",
+   "impressions": 28,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welders for aluminum ac dc",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "water cooled tig cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding flower kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 tig torch consumables 3/32",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.7,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "3/32 welding cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.69,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "furick welding cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.69,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig for welding",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.69,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder miller",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.69,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding consumables kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.69,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding cups no 5",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.69,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding stickers",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.69,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp 9 20 25 tig welding torch consumables",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.69,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding girl torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.68,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "3/32 tig kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.67,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "air cooled tig torch 200a",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.67,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "size 8 tig cup",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.67,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig 12 nozzle",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.67,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig gas lenz kit",
+   "impressions": 12,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.67,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding torches",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.67,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-20 tig torch consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.67,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig supplies",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.66,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp9 tig torch consumables",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.66,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding torch ceramic cups",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.65,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weld monger tig kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.65,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp 17 tig torch",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.65,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-17",
+   "impressions": 5,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.64,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "lincoln tig torch kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.64,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig kit 17 and 26",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.64,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding consumables storage box",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.64,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding tools and accessories",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.64,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b00jmg5dak",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.63,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b00jv8l5pq",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.63,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b079v4fcrh",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.63,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0btksgnh9",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.63,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0c2c54fzc",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.63,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0csk5qsjd",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.63,
+   "sales": 35.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0dpzzwy19",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.63,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b0fc1jbl3c",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.63,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder cups",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.63,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-17v tig kit",
+   "impressions": 4,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.6,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "air cooled tig torch kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.6,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "clear pyrex tig cup 17 series",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.6,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "gas lens kit for #17, #18, #26 torches jumbo",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.6,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder parts for torch",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.6,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp26 tig kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.6,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck 17 tig torch cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.59,
+   "sales": 40.53,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding parts kit",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.59,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "12 tig welding cup",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.58,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig weld cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.58,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glasses welding kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.57,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig attachment",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.56,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups 3/32",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.56,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "ck worldwide tig torch parts",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.55,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "furick cup 12",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.54,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig stubby gas lens kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.54,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "#12 welding cup",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.53,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b09cmtg1gd",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.53,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups size 10",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.53,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig pyrex cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.53,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch consumables kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.53,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding cup kit wp-17 wp-18 wp-26",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.53,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding torch accessories wp 17/18/26 number 7 tops",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.53,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "#10 tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.52,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "9 tig torch cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.52,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch gas lens",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.52,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "18 tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.5,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig torch kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.5,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "style 17 tig torch consumables",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.5,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-20 tig torch kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.5,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "#10 glass tig cup",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.49,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "heavy hitter tig rig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.49,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17 f consumables 45v26 gas lens collet body 3/32",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.48,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "full tig torch kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.48,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "complete set for tig welding guns",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.47,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig cup set",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.47,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "small tig torch kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.46,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "yobel tig consumable",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.45,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig glass cup",
+   "impressions": 7,
+   "clicks": 2,
+   "orders": 0,
+   "spend": 0.43,
+   "sales": 0,
+   "rowCount": 2
+  },
+  {
+   "keyword": "cup for tig torch",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.43,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch back cap",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.43,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b086qp3hw7",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.42,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-26 tig torch consumables gas lens",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.42,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo 12 tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.41,
+   "sales": 46.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch cups gas lens",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.41,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "17 series tig torch cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.4,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "stubby tig kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.4,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup 10",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.4,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding cup equipment",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.4,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig lens nozzles",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.39,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "b08mpy943x",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.38,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "gas lens for a glass tig cup",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.38,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig glass lens kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.38,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldcraft wp-17",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.38,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "stubby tig cup",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.36,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding torch accessories wp 17/18/26 number 7 cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.35,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding size kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.34,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "kit tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.3,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup gas lens kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.3,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig kit with gloves",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.3,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp-17v tig torch kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.3,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 tig cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.3,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "weldcraft wp-20",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.29,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 tig torch",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.29,
+   "sales": 52.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups large",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.28,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welder gas lens cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.28,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welder parts to put glasses",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.28,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding consumables gas lens kits",
+   "impressions": 4,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.27,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig plastic piece",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.26,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass tig kits",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.23,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig ceramic cup kit",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.23,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "fupa tig cup kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.22,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo tig torch cup kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.22,
+   "sales": 29.74,
+   "rowCount": 1
+  },
+  {
+   "keyword": "large tig cup kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.22,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cup kit 10",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.22,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch glass cup kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.22,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding cup 24",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.22,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding torch accessories kit wp-17",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.22,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 tig torch parts",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.22,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "#4 tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.21,
+   "sales": 27.4,
+   "rowCount": 1
+  },
+  {
+   "keyword": "clear tig cup set",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass tig cup kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass welding cup",
+   "impressions": 7,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo cup kit tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "normal tig cups",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "short tig cups",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig big cup kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig clear cups",
+   "impressions": 11,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.21,
+   "sales": 39.94,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding kits cups",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding cup kit",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 tig torch cups",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.21,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "26 series tig consumables",
+   "impressions": 5,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "cup kit tig",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "glass tig cup set",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "jumbo ceramic cups tig",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig consumables kit 17 18 26",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig consumables kit box",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig setup kit",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig torch cup 10",
+   "impressions": 2,
+   "clicks": 1,
+   "orders": 1,
+   "spend": 0.2,
+   "sales": 35.99,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig welding cup kit",
+   "impressions": 3,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "welding tig cup",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "wp17 consumables",
+   "impressions": 6,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.2,
+   "sales": 0,
+   "rowCount": 1
+  },
+  {
+   "keyword": "tig cups for pipe",
+   "impressions": 1,
+   "clicks": 1,
+   "orders": 0,
+   "spend": 0.08,
+   "sales": 0,
+   "rowCount": 1
+  }
+ ]
+}

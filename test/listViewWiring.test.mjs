@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs'
  * 但会让功能悄悄退化"的点 —— 本项目规范要求「政策要变成会失败的测试，不要写成注释」。
  */
 import { read, assertClientCount, countInClient } from './_clientSources.mjs'
+import { zIndexOf, zInRule } from './zLayers.mjs'
 
 const indexSource = read('src/client/index.tsx')
 /**
@@ -208,8 +209,9 @@ test('组件：菜单与网格是两个并列的东西，且用 fixed 定位（�
    * 与面板是同层兄弟，z-index 低于 55 就会被面板里的卡片盖住 —— 看得见、点到的却是卡片。
    * 实测 z-index:40 时 `elementFromPoint` 命中的是 `.wb-idea-card2`。
    */
-  const menuZ = Number((rule[0].match(/z-index:(\d+)/) ?? [, '0'])[1])
-  const hostZ = Number((css.match(/\.wb-panel-host \{[^}]*z-index:\s*(\d+)/) ?? [, '0'])[1])
+  const menuZ = zInRule(rule[0])
+  const hostZ = zIndexOf(css, '.wb-panel-host')
+  assert.ok(hostZ !== null, 'styles.ts 里找不到 .wb-panel-host 的 z-index')
   assert.ok(menuZ > hostZ, `菜单 z-index(${menuZ}) 必须高于面板宿主(${hostZ})，否则会被面板内容盖住`)
 })
 
@@ -352,8 +354,9 @@ test('标签区：单行 + 「更多」浮层，且**不再只渲染前 12 个**
   const rule = css.match(/\.wb-tagmenu \{[^}]*\}/)
   assert.ok(rule !== null, 'styles.ts 有 .wb-tagmenu 规则')
   assert.match(rule[0], /position:fixed/, 'fixed')
-  const menuZ = Number((rule[0].match(/z-index:(\d+)/) ?? [, '0'])[1])
-  const hostZ = Number((css.match(/\.wb-panel-host \{[^}]*z-index:\s*(\d+)/) ?? [, '0'])[1])
+  const menuZ = zInRule(rule[0])
+  const hostZ = zIndexOf(css, '.wb-panel-host')
+  assert.ok(hostZ !== null, 'styles.ts 里找不到 .wb-panel-host 的 z-index')
   assert.ok(menuZ > hostZ, `标签浮层 z-index(${menuZ}) 必须高于面板宿主(${hostZ})`)
   assert.match(css, /\.wb-kb-tags \{[^}]*flex-wrap:nowrap/, '标签区必须单行（不再 wrap 占多行）')
 })

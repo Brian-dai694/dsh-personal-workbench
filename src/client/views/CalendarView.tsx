@@ -12,12 +12,15 @@
  * - `calMode` / `cursor` / `picked` 都是**日期域 state**（`useDayWorkspace`），这里只读写注入的动作。
  */
 import { DayPanel, type DayPanelProps } from '../components/DayPanel.js'
+import { Icon } from '../components/Icon.js'
 import { sameDay, startOfDay } from '../format.js'
 import { interactiveProps } from '../a11y.js'
 import { isTaskDueOnDay } from '../taskFilterSort.js'
 import type { Task } from '../viewTypes.js'
 
 export type CalendarViewProps = {
+  oplogDates?: string[]
+  onOpenOplogDate?: (day: string) => void
   calMode: 'week' | 'month'
   cursor: Date
   /** 渲染期的"现在"（今日高亮与"今天"按钮用）。 */
@@ -43,11 +46,21 @@ export type CalendarViewProps = {
   day: string
 }
 
+/** 日历格子用的本地日期键（YYYY-MM-DD）；不能用 toISOString，那是 UTC 会错一天。 */
+function dayKey(date: Date): string {
+  const pad = (n: number): string => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 export function CalendarView(props: CalendarViewProps): JSX.Element {
   const {
     calMode, cursor, now, picked, weekDays, monthGrid, tasks, dayPanelProps,
     onMoveWeek, onMoveMonth, onToday, onPick, onCalModeChange, onStartPlanAISession, readOnly, day,
+    oplogDates = [], onOpenOplogDate,
   } = props
+  /** 每天有几条运营日志：格子上的第二枚点。数据来自注入（视图不发 HTTP）。 */
+  const oplogCountByDate = new Map<string, number>()
+  for (const date of oplogDates) oplogCountByDate.set(date, (oplogCountByDate.get(date) ?? 0) + 1)
 
   return (
     <>
@@ -68,10 +81,16 @@ export function CalendarView(props: CalendarViewProps): JSX.Element {
         <div className="wb-week">
           {weekDays.map((d) => {
             const n = tasks.filter((t) => isTaskDueOnDay(t, d)).length
+            const logs = oplogCountByDate.get(dayKey(d)) ?? 0
             return (
               <div key={d.toISOString()} className={`wb-day ${sameDay(d, now) ? 'today' : ''} ${sameDay(d, picked) ? 'selected' : ''}`} onClick={() => onPick(startOfDay(d))} {...interactiveProps(() => onPick(startOfDay(d)), { pressed: sameDay(d, picked) })}>
                 <div className="wb-day-date" style={{ fontSize: 12, color: '#999' }}>{d.getMonth() + 1}/{d.getDate()}</div>
                 {n > 0 && <div className="wb-chip" style={{ background: '#4f8ef7', marginTop: 4 }}>{n} 个任务</div>}
+                {logs > 0 && (
+                  <button type="button" className="wb-day-log" onClick={(e) => { e.stopPropagation(); onOpenOplogDate?.(dayKey(d)) }} title={`${logs} 条运营日志`}>
+                    <Icon name="file" size={11} />{logs} 条日志
+                  </button>
+                )}
               </div>
             )
           })}
@@ -79,12 +98,22 @@ export function CalendarView(props: CalendarViewProps): JSX.Element {
       )}
       {calMode === 'month' && (
         <div className="wb-month">
-          {monthGrid.map((d) => (
-            <div key={d.toISOString()} className={`wb-mday ${d.getMonth() !== cursor.getMonth() ? 'other' : ''} ${sameDay(d, now) ? 'today' : ''} ${sameDay(d, picked) ? 'selected' : ''}`} onClick={() => onPick(startOfDay(d))} {...interactiveProps(() => onPick(startOfDay(d)), { pressed: sameDay(d, picked) })}>
-              <div className="wb-mday-date" style={{ fontSize: 12 }}>{d.getDate()}</div>
-              {tasks.some((t) => isTaskDueOnDay(t, d)) && <div className="wb-chip" style={{ background: '#4f8ef7', marginTop: 2 }}>•</div>}
-            </div>
-          ))}
+          {monthGrid.map((d) => {
+            const logs = oplogCountByDate.get(dayKey(d)) ?? 0
+            return (
+              <div key={d.toISOString()} className={`wb-mday ${d.getMonth() !== cursor.getMonth() ? 'other' : ''} ${sameDay(d, now) ? 'today' : ''} ${sameDay(d, picked) ? 'selected' : ''}`} onClick={() => onPick(startOfDay(d))} {...interactiveProps(() => onPick(startOfDay(d)), { pressed: sameDay(d, picked) })}>
+                <div className="wb-mday-date" style={{ fontSize: 12 }}>{d.getDate()}</div>
+                <div className="wb-mday-dots">
+                  {tasks.some((t) => isTaskDueOnDay(t, d)) && <div className="wb-chip" style={{ background: '#4f8ef7', marginTop: 2 }}>•</div>}
+                  {logs > 0 && (
+                    <button type="button" className="wb-mday-log" onClick={(e) => { e.stopPropagation(); onOpenOplogDate?.(dayKey(d)) }} title={`${logs} 条运营日志`} aria-label={`${logs} 条运营日志`}>
+                      <i aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 

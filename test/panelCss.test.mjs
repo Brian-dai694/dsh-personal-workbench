@@ -27,8 +27,9 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { VIEW_ATTR } from '../lib/client/constants.js'
 import {
   OFFICIAL_MAIN_SLOT, OFFICIAL_OVERLAY_SLOT, OFFICIAL_PANEL_LIST_SLOT,
-  panelContainerCss, registeredTokenNames, toWorkbenchTokens, tokenLayerCss,
+  panelContainerCss, registeredTokenNames, toWorkbenchTokens, tokenLayerCss, Z_LAYERS,
 } from '../lib/client/entryContract.js'
+import { zIndexOf as zIndexOfToken } from './zLayers.mjs'
 
 const OWN_ATTR = { view: VIEW_ATTR, official: 'data-x-official', active: 'data-x-active' }
 
@@ -53,6 +54,8 @@ test('样式表里用到的每个 --wb-* 都必须"有定义 或 带兜底值"�
   const defined = new Set([
     '--wb-font',
     ...registeredTokenNames().map((n) => `--wb-${n}`),
+    // 层级令牌由 zLayerCss() 在运行时从 Z_LAYERS 渲染，源码里没有字面定义 —— 从表里补进来
+    ...Object.keys(Z_LAYERS).map((n) => `--wb-${n}`),
     ...[...styles.matchAll(/(--wb-[a-z0-9-]+)\s*:/gi)].map((m) => m[1]),
     '--wb-sidebar-w',
   ])
@@ -74,6 +77,29 @@ test('未登记的 dsw 令牌保持原样改写（不静默改错）', () => {
   assert.equal(toWorkbenchTokens('color: var(--dsw-alias-label-primary, #eee);'),
     'color: var(--wb-label-primary);')
   assert.equal(toWorkbenchTokens('font: var(--dsw-font-family, system-ui);'), 'font: var(--wb-font);')
+})
+
+/**
+ * 守卫：**样式表引用了的每个 `--dsw-alias-*` 都必须在 `TOKENS` 里登记**。
+ *
+ * `toWorkbenchTokens()` 对没登记的别名是"保持原样"（宁可原样也不静默改错）——
+ * 于是那处的回退值就成了唯一真实取值，宿主令牌一改名/不在作用域里，它直接生效。
+ * 而历史回退值大多是**纯深色**（`rgba(255,255,255,.12)`、`rgba(255,255,255,.04)`），
+ * 浅色主题下等于不可见 —— 和 v1.14.5「工作台一片漆黑」是同一个成因，只是更隐蔽。
+ *
+ * 2026-10-27 实测抓到两处漏网：`border-l2`（`.wb-recall-log` 上边框）、
+ * `bg-layer-3`（召回日志卡片底色），回退值都是纯深色。补登记后加这条把它们钉住。
+ */
+test('样式表引用的每个 --dsw-alias-* 都必须已登记（漏登记 = 回退值硬编码生效）', () => {
+  const raw = readFileSync(new URL('../src/client/styles.ts', import.meta.url), 'utf8')
+  // 先剥注释：文档里会举例写 `var(--dsw-alias-xxx, …)`，那不是真实引用
+  const styles = raw.replace(/\/\*[\s\S]*?\*\//g, '')
+  const registered = new Set(registeredTokenNames())
+  const used = new Set([...styles.matchAll(/var\(\s*--dsw-alias-([a-z0-9-]+)/gi)].map((m) => m[1]))
+  const unregistered = [...used].filter((name) => !registered.has(name)).sort()
+  assert.deepEqual(unregistered, [],
+    `这些 --dsw-alias-* 被样式表引用但没登记进 entryContract.ts 的 TOKENS，\n` +
+    `宿主令牌缺失时只能用写死的回退值（多为纯深色，浅色主题下不可见）：\n  - ${unregistered.join('\n  - ')}`)
 })
 
 test('门控 CSS 必须放行"官方路径 + 已激活"时的面板内容（按 VIEW_ATTR，不是按类名）', () => {
@@ -196,10 +222,8 @@ test('借会话绑定只允许出现在 sessionRef.ts（业务代码不许直接
  */
 test('层级：文档/目录弹窗必须盖得住打开它的对话框，且 portal 到 body', () => {
   const styles = readFileSync(new URL('../src/client/styles.ts', import.meta.url), 'utf8')
-  const zIndexOf = (selector) => {
-    const match = new RegExp(`\\${selector}\\s*\\{[^}]*z-index:\\s*(-?\\d+)`, 's').exec(styles)
-    return match === null ? null : Number(match[1])
-  }
+  // round7：z-index 已收成 var(--wb-z-*) 令牌，解析器统一在 test/zLayers.mjs
+  const zIndexOf = (selector) => zIndexOfToken(styles, selector)
   const mask = zIndexOf('.wb-modal-mask')
   const overlay = zIndexOf('.wb-overlay')
   const scrim = zIndexOf('.wb-model-scrim')

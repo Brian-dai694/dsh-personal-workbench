@@ -9,6 +9,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { zIndexOf, zInRule } from './zLayers.mjs'
 import {
   buildQuickIntakePrompt, isQuickAttachmentFile, isQuickDocumentFile, isQuickImageFile,
   MAX_QUICK_DOCUMENTS, MAX_QUICK_IMAGES, partitionQuickFiles, quickAttachmentSummary,
@@ -342,8 +343,9 @@ test('回归 v1.15.2：浮层样式不许退回"就地 absolute 朝上开"', () 
   assert.match(rule[1], /max-height:/, '要留一个量不到时的兜底高度')
   assert.match(rule[1], /box-sizing:\s*border-box/,
     'max-height 必须按整块菜单算（content-box 时 border+padding 会额外顶出 14px，实测会在矮窗口里再被挤出视口）')
-  assert.match(styles, /\.wb-model-scrim \{[^}]*z-index:\s*3\d\d/, '点外面关掉的层要在弹窗（300）之上')
-  assert.match(rule[1], /z-index:\s*3\d\d/, '浮层要压住 .wb-overlay（300）')
+  // round7：z-index 收成 var(--wb-z-*) 令牌，用解析器读（正则抠数字会抓空 → 断言被绕过）
+  assert.ok(zIndexOf(styles, '.wb-model-scrim') > 300, '点外面关掉的层要在弹窗（300）之上')
+  assert.ok(zInRule(rule[1]) > 300, '浮层要压住 .wb-overlay（300）')
 })
 
 // ---------------------------------------------------------------------------

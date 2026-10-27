@@ -226,7 +226,7 @@ for (const { file: stale } of staleCandidates.slice(KEEP)) {
   console.log(`  （清理旧开发包 ${stale}）`)
 }
 
-const addCommand = `dsh plugin --profile ${PROFILE} add "file:${tgzPath.split('\\').join('/')}"` // 路径可能含空格（如 Desktop/Work Space），必须带引号
+const addCommand = `dsh plugin --profile ${PROFILE} add "${tgzPath}"` // CLI 接受原生 Windows 路径；不要将空格 percent-encode，否则会按字面找文件
 
 // ── 4. 装进 profile（仅 --apply）──────────────────────────────────────────
 if (!APPLY) {
@@ -288,11 +288,24 @@ const beforeInstalled = installedVersions(Object.keys(beforeDeps))
  */
 const previousSpec = typeof beforeDeps[PLUGIN] === 'string' ? beforeDeps[PLUGIN] : null
 const rollbackCommand = previousSpec !== null
-  ? `dsh plugin --profile ${PROFILE} add "${previousSpec}"`
+  ? `dsh plugin --profile ${PROFILE} add ${JSON.stringify(previousSpec)}`
   : `（此前 profile 未声明本插件）恢复 ${profilePkgPath}.bak-devinstall-${backupStamp} 后 pnpm install`
 
-const status = runVisible(addCommand)
-if (status !== 0) fail(`dsh plugin add 退出码 ${status} —— profile 可能已被改动，用上面的 .bak 回退`)
+/**
+ * 装盘：先走 `dsh plugin add`；它失败时退回**直接 pnpm add**。
+ *
+ * 2026-10-24 实测：某些 dsh 发行版的 `plugin add` 会把 `.tgz` 当成**目录**，
+ * 在 pnpm 之前就报 `Bundle package.json not found: <tgz>\package.json` ——
+ * 这时 profile 一行都没改，直接换 pnpm 装同一个包是等价且可验证的
+ * （`dsh plugin add` 本来就是 pnpm 的原样转发器）。
+ * 顺序保持不变：先官方入口，失败才兜底，且兜底会打印原因，不静默换路。
+ */
+let status = runVisible(addCommand)
+if (status !== 0) {
+  console.log(`\n  ⚠️ dsh plugin add 退出码 ${status} —— 退回直接 pnpm add（同一个包、同一个 profile）`)
+  status = runVisible(`pnpm add "file:${tgzPath.split('\\').join('/')}" --dir "${PROFILE_DIR}"`)
+  if (status !== 0) fail(`pnpm add 也失败（退出码 ${status}）—— profile 可能已被改动，用上面的 .bak 回退`)
+}
 
 // ── 5. 写盘后复检：只允许目标插件这一处变化 + 不能有 BOM ────────────────────
 step(5, '写盘后复检：零增量 diff + 编码（BOM 会让 DSH 整个起不来）')

@@ -8,14 +8,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { WORKBENCH_BUILD_ID } from '../buildId.js'
-import type { AmazonDatasetRow, AmazonDatasetSummary } from '../../db/repo/amazonDatasets.js'
+import type { AmazonDatasetKind, AmazonDatasetRow, AmazonDatasetSummary } from '../../db/repo/amazonDatasets.js'
 import type { TrafficRow } from '../amazonTrafficTools.js'
+import { buildLocalAdvice } from '../trafficAdvice.js'
+import { buildAbaLookup, type AbaLookupEntry } from '../trafficAbaJoin.js'
+import type { AbaAnnotation, AbaKeywordRow } from '../../shared/abaKeywordTable.js'
 
 export interface ImportDatasetInput {
   title: string
   period: string | null
   rows: TrafficRow[]
   sourceCode?: string
+  /**
+   * 报表类型。搜索词页不传（服务端默认 search_term，与列表查询口径一致）；
+   * 报表分析页的其余类型走各自的 hook，不经过这里 —— 避免覆盖本 hook 的 current。
+   */
+  kindCode?: AmazonDatasetKind
 }
 
 export interface UseAmazonDatasetsActions {
@@ -34,6 +42,20 @@ export interface UseAmazonDatasetsActions {
   /** 切到某个已导入的数据集（含 AI 最新写回的建议）。 */
   select: (id: string) => Promise<void>
   remove: (id: string) => Promise<void>
+  /**
+   * 用**本地规则**给当前数据集生成建议（离线，不需要 AI 会话），写回后刷新。
+   *
+   * 放在 hook 而不是视图：视图不许发 HTTP（D17 结构硬门），
+   * 而这条链路要 PATCH 数据集、再把新建议读回来。
+   */
+  generateLocalAdvice: (options?: { limit?: number; thresholds?: { wasteMinClicks: number; goodAcos: number } }) => Promise<number>
+  /**
+   * 选中一个词（「当前词」）。
+   *
+   * 这轮只做状态：流量分析 / 关键词 / 报表分析三页读同一个值，但**不接跳转**
+   * （跨页定位留给 T5）。传空串等价于清空。
+   */
+  setCurrentKeyword: (keyword: string | null) => void
   clearError: () => void
 }
 
@@ -53,6 +75,16 @@ export interface UseAmazonDatasetsResult {
   staleServer: string | null
   /** 接口整体不可用（例如服务端还没有这个路由）：视图据此隐藏"导入"这类会 404 的操作。 */
   updateFailed: boolean
+  /** ABA 词表查表（搜索词 ↔ 市场分层）：视图只读这个结果，不在视图里发请求。 */
+  abaLookup: Map<string, AbaLookupEntry>
+  abaSource: string
+  /**
+   * 「当前词」：三页共享的选中项（T3）。
+   *
+   * 为什么挂在这个域：它和 `current`（当前数据集）是同一件事的两种粒度 ——
+   * 先选报表、再选报表里的某个词。分开两个所有者会出现"数据集切了、词还留着上一张表"。
+   */
+  currentKeyword: string | null
   actions: UseAmazonDatasetsActions
 }
 
@@ -66,6 +98,8 @@ export function useAmazonDatasets(): UseAmazonDatasetsResult {
   const [error, setError] = useState<string | null>(null)
   const [staleServer, setStaleServer] = useState<string | null>(null)
   const [updateFailed, setUpdateFailed] = useState(false)
+  /** 当前词（T3）：只存一个词，不存"来自哪一页"—— 页面归属是 T5 的事。 */
+  const [currentKeyword, setCurrentKeywordState] = useState<string | null>(null)
   /** 卸载后不许再 setState（与插件其他域同一条纪律）。 */
   const alive = useRef(true)
   /** 当前数据集 id 的即时读数：refresh 要用它判断"要不要自动载入"，但不能进依赖（否则自激）。 */
@@ -134,6 +168,7 @@ export function useAmazonDatasets(): UseAmazonDatasetsResult {
           period: input.period,
           rows: input.rows,
           sourceCode: input.sourceCode ?? 'paste',
+          ...(input.kindCode === undefined ? {} : { kindCode: input.kindCode }),
         }),
       })
       if (!alive.current) return null
@@ -173,6 +208,12 @@ export function useAmazonDatasets(): UseAmazonDatasetsResult {
 
   const clearError = useCallback(() => setError(null), [])
 
+  /** 选中/清空当前词。空串归一成 null，避免"有值但空白"这种第三种状态。 */
+  const setCurrentKeyword = useCallback((keyword: string | null): void => {
+    const next = keyword === null ? '' : keyword.trim()
+    setCurrentKeywordState(next === '' ? null : next)
+  }, [])
+
   const parseUpload = useCallback(async (file: File): Promise<string> => {
     const lower = file.name.toLowerCase()
     if (/\.(csv|tsv|txt)$/.test(lower)) return await file.text()
@@ -192,6 +233,59 @@ export function useAmazonDatasets(): UseAmazonDatasetsResult {
     return res.tsv
   }, [])
 
+  /**
+   * 本地规则建议：算（纯函数）→ PATCH 写回 → 重新读回整份数据集。
+   *
+   * 只覆盖前 `limit` 个词（按花费降序），因为 1,000+ 行的报表里
+   * 后面全是 1 次点击的词，给它们写建议只会把界面淹没。
+   */
+  const generateLocalAdvice = useCallback(async (options: { limit?: number; thresholds?: { wasteMinClicks: number; goodAcos: number } } = {}): Promise<number> => {
+    const target = current
+    if (target === null) return 0
+    setBusy(true)
+    setError(null)
+    try {
+      const advice = buildLocalAdvice(target.rows, { limit: options.limit ?? 200, thresholds: options.thresholds })
+      if (advice.length === 0) return 0
+      await api(`/api/workbench/amazon/datasets/${encodeURIComponent(target.id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ reviews: advice }),
+      })
+      await select(target.id)
+      return advice.length
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      return 0
+    } finally {
+      setBusy(false)
+    }
+  }, [current, select])
+
+  /**
+   * ABA 词表查表：读已保存的词表（最多 3 份）压成"词 → 市场判断"。
+   * 同样放在 hook：视图不许发 HTTP。
+   */
+  const [abaLookup, setAbaLookup] = useState<Map<string, AbaLookupEntry>>(new Map())
+  const [abaSource, setAbaSource] = useState('')
+  useEffect(() => {
+    void (async () => {
+      try {
+        const list = await api<{ sets: Array<{ id: string; title: string }> }>('/api/workbench/aba-keywords')
+        const sets = list.sets ?? []
+        if (sets.length === 0) return
+        const details = await Promise.all(sets.slice(0, 3).map(async (item) => {
+          const detail = await api<{ set: { title: string; rows: AbaKeywordRow[]; annotations: AbaAnnotation[] } }>(`/api/workbench/aba-keywords/${encodeURIComponent(item.id)}`)
+          return detail.set
+        }))
+        setAbaLookup(buildAbaLookup(details.map((set) => ({ title: set.title, rows: set.rows, annotations: set.annotations }))))
+        setAbaSource(sets.length === 1 ? sets[0].title : `${sets[0].title} 等 ${sets.length} 份`)
+      } catch {
+        /** ABA 关联是增强项：读不到就让视图不显示这一列，不影响报表本身。 */
+      }
+    })()
+  }, [])
+
   useEffect(() => { void refresh() }, [refresh])
 
   return {
@@ -201,6 +295,9 @@ export function useAmazonDatasets(): UseAmazonDatasetsResult {
     error,
     staleServer,
     updateFailed,
-    actions: { refresh, importRows, parseUpload, select, remove, clearError },
+    abaLookup,
+    abaSource,
+    currentKeyword,
+    actions: { refresh, importRows, parseUpload, select, remove, generateLocalAdvice, setCurrentKeyword, clearError },
   }
 }

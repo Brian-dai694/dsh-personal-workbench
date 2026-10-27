@@ -8,6 +8,24 @@ import type { DatabaseSync } from 'node:sqlite'
 import { appendEvent } from './task-primitives.js'
 import { getTask, listTasks, listChildren, updateTask } from './tasks.js'
 import { nowIso, type TaskPatch, type TaskRow } from '../repo.js'
+import { appendAsinLaunchOutcome } from './asin.js'
+
+/**
+ * 回写「立项任务完成」到选品库（v1.28）。
+ *
+ * 只对带 `extra.asin` 锚点的任务生效 —— 那是"由选品库立项"的唯一标记。
+ * 失败必须**静默**：回写只是附带的痕迹，不能因为它把任务完成本身弄失败
+ * （用户在验收时点了通过，任务就该完成）。
+ */
+function writeBackAsinOutcome(db: DatabaseSync, taskId: string, at: string): void {
+  try {
+    const task = getTask(db, taskId)
+    if (task === undefined) return
+    const asin = typeof task.extra.asin === 'string' ? task.extra.asin : ''
+    if (asin === '') return
+    appendAsinLaunchOutcome(db, asin, task.id, task.title, at)
+  } catch { /* 回写失败不影响任务完成 */ }
+}
 
 
 function isClosedStatus(statusCode: string): boolean {
@@ -76,6 +94,8 @@ export function completeTaskCascade(db: DatabaseSync, taskId: string, actor = 'u
   try {
     completeTaskCascadeInTx(db, taskId, actor, at)
     db.exec('COMMIT')
+    /** 选品立项的任务完成后回写一条事实到商品备注（幂等；无 ASIN 锚点则无操作）。 */
+    writeBackAsinOutcome(db, taskId, at)
     return getTask(db, taskId)
   } catch (error) {
     db.exec('ROLLBACK')
@@ -103,6 +123,8 @@ export function updateTaskWithCompletion(
       completeTaskCascadeInTx(db, id, actor, at)
     }
     db.exec('COMMIT')
+    /** 手工把任务改成 done 与"验收通过"走同一条回写（否则两条路径行为不一致）。 */
+    if (patch.statusCode === 'done') writeBackAsinOutcome(db, id, at)
     return getTask(db, id)
   } catch (error) {
     db.exec('ROLLBACK')

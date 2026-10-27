@@ -23,6 +23,12 @@ import { makeKnowledgeRoutes } from './routes/knowledge.js'
 import { makeKnowledgeRecallRoutes } from './knowledgeRecallRoute.js'
 import type { KnowledgeRecallManager } from '../knowledge-recall.js'
 import { makeModelModalityRoutes, type LlmModalityProbe } from './routes/model-modalities.js'
+import { makeAsinRoutes } from './routes/asin.js'
+import { makeInventoryRoutes } from './routes/inventory.js'
+import { makeOplogRoutes } from './routes/oplog.js'
+import { makeKeywordPlanRoutes } from './routes/keyword-plans.js'
+import { makeCalculatorScenarioRoutes } from './routes/calculator-scenarios.js'
+import { makeAbaKeywordRoutes } from './routes/aba-keywords.js'
 import { makePlanRoutes } from './routes/plans.js'
 import { makePersonaRoutes, type PersonaRouteOptions } from './routes/personas.js'
 import { makeQuickAttachmentRoutes } from './routes/quick-attachments.js'
@@ -423,6 +429,12 @@ export function makeRoutes(db: DatabaseSync, deps: WorkbenchRouteDeps = {}): Web
     ...makeIdeaClusterRoutes(db),
     ...makeKnowledgeRoutes(db),
     ...makeAmazonDatasetRoutes(db),
+    ...makeOplogRoutes(db),
+    ...makeAsinRoutes(db),
+    ...makeInventoryRoutes(db),
+    ...makeKeywordPlanRoutes(db),
+    ...makeCalculatorScenarioRoutes(db),
+    ...makeAbaKeywordRoutes(db),
     ...makeAiSessionRoutes(db),
     ...makeReportRoutes(db),
     ...makePlanRoutes(db),

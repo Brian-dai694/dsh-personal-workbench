@@ -40,11 +40,12 @@ export function KnowledgeDraftBody({ draftId, payload }: KnowledgeDraftBodyProps
             marginBottom: 8,
             padding: '6px 8px',
             borderRadius: 6,
-            // 配色沿用既有警示横幅口径（`.wb-banner.completion` 用的 #f5b83d）。
+            // 配色沿用警示语义：走 --wb-warn 令牌，不再抄一份 #f5b83d 的字面值
+            // （2026-10-27：字面色已在 styles.ts 里收敛成令牌，内联样式抄字面等于绕过语义层）。
             // 文字用 inherit：弹窗自身已有主题化的正文色，写死颜色会在另一套主题下失去对比度。
             color: 'inherit',
-            background: 'color-mix(in srgb, #f5b83d 14%, transparent)',
-            borderLeft: '3px solid #f5b83d',
+            background: 'color-mix(in srgb, var(--wb-warn, #f5b83d) 14%, transparent)',
+            borderLeft: '3px solid var(--wb-warn, #f5b83d)',
           }}
         >
           {notice}

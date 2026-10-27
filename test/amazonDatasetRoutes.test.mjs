@@ -11,11 +11,15 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import { readFileSync } from 'node:fs'
 import { openWorkbenchDb } from '../lib/db/database.js'
 import { seedDictionaries } from '../lib/db/seed.js'
 import { makeRoutes } from '../lib/api/routes.js'
-import { readSearchTermsTool, saveSearchTermReviewTool } from '../lib/amazon-tools.js'
+import { readSearchTermsTool, saveSearchTermReviewTool, saveSearchTermSummaryTool } from '../lib/amazon-tools.js'
 import { buildFakeCfb, buildXls, buildXlsx } from './_xlsxFixture.mjs'
+
+/** 真实报表行（本地 DB 导出后摘出来的），用来验"按词聚合"在工具层真的生效。 */
+const GOLDEN = JSON.parse(readFileSync(new URL('./fixtures/keyword-aggregate.golden.json', import.meta.url), 'utf8'))
 
 const ROWS = [
   { keyword: 'tig torch cup', impressions: 1200, clicks: 18, orders: 2, spend: 9.5, sales: 45 },
@@ -133,8 +137,7 @@ test('非法建议动作被拒且不留脏数据；未知数据集返回 needs_d
   })
 })
 
-test('导入非法行整体拒绝（不做部分导入）', async () => {
-  await withServer(async ({ request }) => {
+test('导入非法行整体拒绝（不做部分导入）', async () => {  await withServer(async ({ request }) => {
     const bad = await request('POST', '/api/workbench/amazon/datasets', {
       title: 't',
       rows: [{ keyword: 'ok', impressions: 1, clicks: 1, orders: 0, spend: 0, sales: 0 }, { keyword: '', impressions: 1, clicks: 1, orders: 0, spend: 0, sales: 0 }],
@@ -143,6 +146,158 @@ test('导入非法行整体拒绝（不做部分导入）', async () => {
     assert.match(bad.body.error, /不合法的行/)
     const list = await request('GET', '/api/workbench/amazon/datasets')
     assert.equal(list.body.datasets.length, 0, '拒绝时不得留下半份数据')
+  })
+})
+
+/**
+ * schema 34：报表级结论走 `PATCH { summary }`，`GET` 回 `aiSummary`。
+ * 老数据集（导入后没做过结论）必须是 `null`，不能是空对象 —— 空 totals 会被读成"总额 0"。
+ * `summary` 与 `reviews` 可以同一次提交（词级建议 + 报表级结论），互不覆盖。
+ */
+const SUMMARY = {
+  version: 1,
+  totals: { impressions: 1500, clicks: 18, orders: 2, spend: 9.5, sales: 45, acos: 0.2111 },
+  rows: 2,
+  uniqueKeywords: 2,
+  distribution: { negative: 1, add: 0, watch: 1 },
+  negativeSpend: 0,
+  notes: ['报表缺广告组/匹配类型，否词需按投放单元复核'],
+}
+
+test('PATCH summary：整份替换、GET 回 aiSummary、非法形状被拒', async () => {
+  await withServer(async ({ request }) => {
+    const created = await request('POST', '/api/workbench/amazon/datasets', { title: 't', rows: ROWS })
+    const id = created.body.dataset.id
+    const path = `/api/workbench/amazon/datasets/${id}`
+    assert.equal(created.body.dataset.aiSummary, null, '刚导入时 aiSummary 必须是 null')
+
+    const written = await request('PATCH', path, { summary: SUMMARY })
+    assert.equal(written.status, 200)
+    assert.deepEqual(written.body.dataset.aiSummary, SUMMARY)
+
+    const reread = await request('GET', path)
+    assert.deepEqual(reread.body.dataset.aiSummary, SUMMARY)
+    assert.equal(reread.body.dataset.rows.length, 2, '写结论不得动行数据')
+
+    // 整份替换：上一次的 totals / notes 不能残留
+    const next = { version: 1, rows: 2, uniqueKeywords: 1 }
+    const replaced = await request('PATCH', path, { summary: next })
+    assert.deepEqual(replaced.body.dataset.aiSummary, next)
+    assert.equal('totals' in replaced.body.dataset.aiSummary, false)
+
+    // 词级建议与报表级结论可以同一次提交，互不覆盖
+    const both = await request('PATCH', path, {
+      reviews: [{ keyword: 'mig gloves', action: 'negative_exact', reason: '300 曝光 0 点击' }],
+      summary: SUMMARY,
+    })
+    assert.equal(both.status, 200)
+    assert.equal(both.body.dataset.annotations.length, 1)
+    assert.deepEqual(both.body.dataset.aiSummary, SUMMARY)
+
+    // 非法形状：数组 / 字符串 / 空对象一律 400，且不破坏已有结论
+    for (const bad of [[], 'x', {}]) {
+      const rejected = await request('PATCH', path, { summary: bad })
+      assert.equal(rejected.status, 400, `summary=${JSON.stringify(bad)} 应被拒绝`)
+    }
+    assert.deepEqual((await request('GET', path)).body.dataset.aiSummary, SUMMARY, '被拒的写入不得留下脏数据')
+
+    // 空 body：既不传 reviews 也不传 summary
+    assert.equal((await request('PATCH', path, {})).status, 400)
+    // 未知数据集
+    assert.equal((await request('PATCH', '/api/workbench/amazon/datasets/nope', { summary: SUMMARY })).status, 404)
+  })
+})
+
+/**
+ * T7 · 工具层：`workbench_read_search_terms` 必须带**按词聚合视图**。
+ *
+ * 用黄金夹具里的真实行（tig cups 44 行 / tig torch 19 行）—— 报表里没有任何一行
+ * 到 8 点击，只有按词合并后 `tig torch` 才是 23 点击 0 单。agent 自己聚合就会出现
+ * 两套口径，所以聚合必须由工具给。
+ */
+test('read 工具返回按词聚合视图：词级行数与合计来自真实行', async () => {
+  await withServer(async ({ db, request }) => {
+    const cups = GOLDEN.cases.find((item) => item.name === '重复词合并').input
+    const torch = GOLDEN.cases.find((item) => item.name === '无单词合并').input
+    const created = await request('POST', '/api/workbench/amazon/datasets', { title: 'T7 聚合', rows: [...cups, ...torch] })
+    assert.equal(created.status, 201)
+    const datasetId = created.body.dataset.id
+
+    const out = await readSearchTermsTool(db).execute({ dataset_id: datasetId, limit: 5, keyword_limit: 10 }, {})
+    assert.match(out, new RegExp(`dataset_id=${datasetId}`), '必须回显 dataset_id')
+    assert.match(out, /原始行数：63；唯一词：2/, '1243 行报表里这两个词各占 44 / 19 行')
+    assert.match(out, /按词聚合（derived/)
+
+    // 聚合行 = 7 列（逐行明细是 11 列），按花费降序：56.84 > 23.31
+    const aggregateLines = out.split('\n').filter((line) => line.startsWith('tig ') && line.split(' | ').length === 7)
+    assert.deepEqual(aggregateLines, [
+      'tig cups | 3291 | 55 | 4 | $56.84 | $115.87 | 44',
+      'tig torch | 982 | 23 | 0 | $23.31 | $0.00 | 19',
+    ])
+
+    // keyword_limit 只截聚合视图，不影响合计与逐行明细
+    const capped = await readSearchTermsTool(db).execute({ dataset_id: datasetId, limit: 5, keyword_limit: 1 }, {})
+    assert.match(capped, /已显示词：1/)
+    assert.equal(capped.split('\n').filter((line) => line.startsWith('tig ') && line.split(' | ').length === 7).length, 1)
+  })
+})
+
+test('summary 工具：写回 ai_summary（整份替换、金额收到分、dataset_id 回显与校验）', async () => {
+  await withServer(async ({ db, request }) => {
+    const created = await request('POST', '/api/workbench/amazon/datasets', { title: 'T7 结论', rows: ROWS })
+    const datasetId = created.body.dataset.id
+    const path = `/api/workbench/amazon/datasets/${datasetId}`
+    const tool = saveSearchTermSummaryTool(db)
+
+    const summary = {
+      version: 1,
+      dataset_id: datasetId,
+      totals: { impressions: 1500, clicks: 18, orders: 2, spend: 9.5000000001, sales: 45, acos: 0.2111 },
+      rows: 2,
+      uniqueKeywords: 2,
+      distribution: { negative: 1, add: 0, watch: 1 },
+      negativeSpend: 97.92999999999999,
+      topRisks: [{ keyword: 'tig torch', clicks: 23, orders: 0, spend: 23.309999999999999, reason: '23 次点击 0 单' }],
+      topOpportunities: [{ keyword: 'tig cups', orders: 4, acos: 0.21, sales: 115.8700000001 }],
+      notes: ['报表缺广告组，否词需按投放单元复核'],
+      evidence: 'derived',
+      session_id: 'session-1',
+    }
+    const out = await tool.execute({ dataset_id: datasetId, summary }, {})
+    assert.match(out, /已写回工作台/)
+    assert.match(out, new RegExp(`dataset_id=${datasetId}`), '必须回显 dataset_id')
+    assert.match(out, /否词 1 · 加词 0 · 观察 1/)
+    assert.match(out, /否词花费 \$97\.93/)
+    // 本地真实分层是 negative 0 / add 1（tig torch cup ACOS 21%）/ watch 1 —— 与 agent 给的不一致要出声
+    assert.match(out, /distribution 与本地复算不一致/)
+
+    const reread = await request('GET', path)
+    const stored = reread.body.dataset.aiSummary
+    assert.equal(stored.dataset_id, datasetId)
+    assert.equal(stored.totals.spend, 9.5, '金额在写回边界收到分')
+    assert.equal(stored.negativeSpend, 97.93)
+    assert.equal(stored.topRisks[0].spend, 23.31)
+    assert.equal(stored.topOpportunities[0].sales, 115.87)
+    assert.equal(reread.body.dataset.rows.length, 2, '写结论不得动行数据')
+
+    // 整份替换：第二次写不带 totals，旧 totals 不能残留；distribution 缺失时由本地口径补全
+    const second = await tool.execute({ dataset_id: datasetId, summary: { rows: 2 } }, {})
+    assert.match(second, /未提供的字段/)
+    assert.match(second, /distribution 缺失，已按本地口径补全/)
+    const replaced = (await request('GET', path)).body.dataset.aiSummary
+    assert.equal('totals' in replaced, false)
+    assert.deepEqual(replaced.distribution, { negative: 0, add: 1, watch: 1, none: 0 }, '本地补全的分层与真实行一致')
+
+    // summary.dataset_id 与参数不一致：拒绝（不许把 A 报表的结论写到 B 上）
+    assert.match(await tool.execute({ dataset_id: datasetId, summary: { ...summary, dataset_id: 'other' } }, {}), /invalid_input/)
+    // summary 缺 dataset_id：自动回填参数值
+    const { dataset_id: _omitted, ...withoutId } = summary
+    await tool.execute({ dataset_id: datasetId, summary: withoutId }, {})
+    assert.equal((await request('GET', path)).body.dataset.aiSummary.dataset_id, datasetId)
+    // 非法入参
+    assert.match(await tool.execute({ dataset_id: datasetId, summary: [] }, {}), /invalid_input/)
+    assert.match(await tool.execute({ dataset_id: '', summary }, {}), /invalid_input/)
+    assert.match(await tool.execute({ dataset_id: 'nope', summary }, {}), /invalid_input/)
   })
 })
 
@@ -195,5 +350,48 @@ test('parse-file：xlsx → TSV；旧版 xls 返回可操作提示', async () =>
     })
     assert.equal(textRes.status, 200)
     assert.equal(textRes.body.format, 'text')
+  })
+})
+
+/**
+ * 回归（2026-10-22）：请求体上限必须按端点区分。
+ *
+ * 旧实现三处都吃 `readJsonBody` 的默认 256KB，于是：
+ * - 几百 KB 的 CSV 经 base64 后进不了 `parse-file`，`MAX_FILE_BASE64`(10MB) 形同虚设；
+ * - 几千行搜索词 rows（本身就数百 KB）同样进不了 `POST /`；
+ * - 两者都被拒成 `400 invalid JSON body`，文案指向"JSON 不合法"，与真实原因（太大）不符。
+ *
+ * 实测（本机 1.17.0）：98KB 可进处理逻辑，293KB 直接 `400 invalid JSON body`。
+ */
+test('大报表不再被 256KB 默认上限误杀；超限明确回 413', async () => {
+  await withServer(async ({ request }) => {
+    // 1) 约 300KB 的 CSV → base64 约 400KB，旧实现必然 400 invalid JSON body
+    const csv = 'keyword,clicks,orders,spend,sales\n' + 'tig torch cup padded,1,0,0.5,0\n'.repeat(9000)
+    const bigText = await request('POST', '/api/workbench/amazon/datasets/parse-file', {
+      filename: 'big.csv',
+      base64: Buffer.from(csv, 'utf8').toString('base64'),
+    })
+    assert.equal(bigText.status, 200, '几百 KB 的文本 CSV 应能通过 parse-file')
+    assert.equal(bigText.body.format, 'text')
+
+    // 2) 4000 行 rows JSON 约 400KB，旧实现同样被拒
+    const rows = Array.from({ length: 4000 }, (_, i) => ({
+      keyword: `keyword-${i}`,
+      impressions: 100,
+      clicks: 2,
+      orders: 0,
+      spend: 0.5,
+      sales: 0,
+    }))
+    const created = await request('POST', '/api/workbench/amazon/datasets', { title: '大报表', rows })
+    assert.equal(created.status, 201, '几百 KB 的 rows 应能导入')
+    assert.equal(created.body.dataset.rows.length, 4000)
+
+    // 3) 真正超限：PATCH 上限 1MB，1.2MB 的体在读体前就被 413 拦下
+    const tooLarge = await request('PATCH', `/api/workbench/amazon/datasets/${created.body.dataset.id}`, {
+      summary: { blob: 'x'.repeat(1200 * 1024) },
+    })
+    assert.equal(tooLarge.status, 413, '超限应是 413，不是 400 invalid JSON body')
+    assert.equal(tooLarge.body.code, 'too-large')
   })
 })

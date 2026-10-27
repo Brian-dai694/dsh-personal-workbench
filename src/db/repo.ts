@@ -151,7 +151,7 @@ export {
 
 // 任务域已抽到 repo/tasks.ts
 import { createTask, getTask, listTasks, listChildren, updateTask } from './repo/tasks.js'
-export { createTask, getTask, listTasks, listChildren, updateTask, taskIdProblem } from './repo/tasks.js'
+export { createTask, findOpenTaskByAsin, getTask, listTasks, listChildren, updateTask, taskIdProblem } from './repo/tasks.js'
 
 // 状态聚合与级联已抽到 repo/status.ts
 import {
@@ -261,9 +261,54 @@ export type {
 
 // Amazon 报表数据集域（v1.18）：搜索词报表的导入 / 读取 / AI 建议写回
 export {
-  AMAZON_DATASET_KINDS, createAmazonDataset, getAmazonDataset, getLatestAmazonDataset,
-  listAmazonDatasets, saveSearchTermReview, deleteAmazonDataset,
+  AMAZON_DATASET_KINDS, createAmazonDataset, getAmazonDataset, getLatestAmazonDataset, isAmazonDatasetKind,
+  listAmazonDatasets, saveAmazonDatasetSummary, saveSearchTermReview, deleteAmazonDataset,
 } from './repo/amazonDatasets.js'
 export type {
-  AmazonDatasetKind, AmazonDatasetRow, AmazonDatasetSummary, CreateAmazonDatasetInput, SearchTermReviewInput,
+  AmazonDatasetKind, AmazonDatasetRow, AmazonDatasetSummary, AmazonDatasetSummaryPayload,
+  CreateAmazonDatasetInput, SearchTermReviewInput,
 } from './repo/amazonDatasets.js'
+
+export {
+  createOplogEntry,
+  deleteOplogEntry,
+  deleteOplogType,
+  getOplogEntry,
+  importOplogEntries,
+  listOplogTypes,
+  listOplogTaskOptions,
+  listOplogDayIndex,
+  oplogKpiCounts,
+  setOplogPinned,
+  updateOplogEntry,
+  upsertOplogType,
+  listOplogEntries,
+  oplogFacets,
+} from './repo/oplog.js'
+export type { OplogDraft, OplogEntry, OplogFacets, OplogFilter, OplogImportSummary, OplogKpiCounts, OplogTaskOption, OplogDayIndexEntry, OplogType } from './repo/oplog.js'
+
+export { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinJudgments, listAsinProducts, listAsinStoreSummaries, listAsinStores, setAsinStoreWatch, queryAsinPage, setAsinJudgment, setAsinWatch, trendsFor } from './repo/asin.js'
+export type { AsinBatchAction, AsinBatchResult, AsinStoreSummary } from './repo/asin.js'
+export type { AsinFacets, AsinFilter, AsinImportSummary, AsinJudgment, AsinJudgmentInput, AsinPage, AsinTrendPoint, AsinVerdict } from './repo/asin.js'
+
+// 库存补货看板（migration 31）：只存盘点输入，结论现算
+export { createInventorySnapshot, deleteInventorySnapshot, getInventorySnapshot, getLatestInventorySnapshot, listInventorySnapshots } from './repo/inventory.js'
+export type { CreateInventorySnapshotInput, InventorySnapshot, InventorySnapshotSummary } from './repo/inventory.js'
+
+export {
+  createKeywordPlan, deleteKeywordPlan, getKeywordPlan, listKeywordPlans, updateKeywordPlan,
+} from './repo/keywordPlans.js'
+export type {
+  KeywordMatchCode, KeywordPlan, KeywordPlanInput, KeywordPlanRow, KeywordPlanSummary,
+} from './repo/keywordPlans.js'
+
+export {
+  createCalculatorScenario, deleteCalculatorScenario, findCalculatorScenarioByName,
+  getCalculatorScenario, listCalculatorScenarios, updateCalculatorScenario,
+} from './repo/calculatorScenarios.js'
+export type { CalculatorScenario, CalculatorScenarioInput } from './repo/calculatorScenarios.js'
+
+export {
+  createAbaKeywordSet, deleteAbaKeywordSet, getAbaKeywordSet, listAbaKeywordSets, setAbaAnnotations,
+} from './repo/abaKeywordSets.js'
+export type { AbaKeywordSet, AbaKeywordSetSummary } from './repo/abaKeywordSets.js'

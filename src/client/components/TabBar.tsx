@@ -89,6 +89,8 @@ export function TabBar({ tabs, selected, onSelect, ariaLabel = '分类' }: {
           aria-selected={isTabActive(selected, tab.code)}
           className={`wb-tab ${isTabActive(selected, tab.code) ? 'on' : ''}`}
           data-tab={tab.code}
+          // 0 计数页签置灰（仍可点）：一排「0」会把真正的分类淹掉
+          data-empty={tab.count === 0 ? 'true' : undefined}
           // Ctrl/Cmd 是"多选"的修饰键：从事件里读，不让调用方各自判断
           onClick={(e) => onSelect(tab.code, e.ctrlKey || e.metaKey)}
         >

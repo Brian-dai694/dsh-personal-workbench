@@ -13,26 +13,51 @@ import { Icon } from '../components/Icon.js'
 import { useI18n } from '../i18n.js'
 
 /**
- * 广告组（第四轮 A1）：测算 / 关键词 / 流量分析 从 8 个一级页签收成 1 个父项。
+ * 亚马逊组（原「广告组」，2026-10-24 用户要求改名）：测算 / 关键词 / 流量分析 从 8 个一级页签收成 1 个父项。
  *
  * 三条约束：
  * 1. **`view` 联合类型不动** —— 仍是原样 8 个值，只是入口少了两个；
  * 2. 父项常驻显示当前子项名（`广告 · 关键词`），否则收起后用户以为功能没了；
  * 3. 记住上次进入的子项（`localStorage`，纯客户端偏好，不写工作台设置、不写库）。
+ *
+ * round7：8 个子页签**分两组**，各占一个独立的分段控件（比"一条 8 格长条"好扫），
+ * 并给每项配语义图标 —— 原先 3 个 `chart`、2 个 `list`、2 个 `search` 复用同一图形，
+ * 图标等于没有信息量（"选品"和"关键词"长得一样）。
  */
-type AdView = 'amazon' | 'keywords' | 'traffic'
-const AD_VIEWS: ReadonlyArray<{ key: AdView; label: string; icon: 'chart' | 'search' | 'trend' }> = [
-  { key: 'amazon', label: '测算', icon: 'chart' },
-  { key: 'keywords', label: '关键词', icon: 'search' },
-  { key: 'traffic', label: '流量分析', icon: 'trend' },
+type AdView = 'amazon' | 'keywords' | 'traffic' | 'reports' | 'inventory' | 'payments' | 'oplog' | 'asin'
+
+/** 组内同一工作节奏，组间是不同节奏：① 看广告与流量，② 看商品与经营。 */
+const AD_GROUPS: ReadonlyArray<{
+  label: string
+  views: ReadonlyArray<{ key: AdView; label: string; icon: string }>
+}> = [
+  {
+    label: '广告分析',
+    views: [
+      { key: 'amazon', label: '测算', icon: 'calculator' },
+      { key: 'keywords', label: '关键词', icon: 'search' },
+      { key: 'traffic', label: '流量分析', icon: 'trend' },
+      { key: 'reports', label: '报表分析', icon: 'report' },
+    ],
+  },
+  {
+    label: '商品与经营',
+    views: [
+      { key: 'asin', label: '选品', icon: 'target' },
+      { key: 'inventory', label: '库存', icon: 'package' },
+      { key: 'payments', label: '付款对账', icon: 'receipt' },
+      { key: 'oplog', label: '运营日志', icon: 'journal' },
+    ],
+  },
 ]
+const AD_VIEWS = AD_GROUPS.flatMap((group) => group.views)
 const AD_LAST_KEY = 'wb-ad-last-view'
 const AD_DEFAULT: AdView = 'amazon'
 
 function readLastAdView(): AdView {
   try {
     const saved = globalThis.localStorage?.getItem(AD_LAST_KEY)
-    if (saved === 'amazon' || saved === 'keywords' || saved === 'traffic') return saved
+    if (saved === 'amazon' || saved === 'keywords' || saved === 'traffic' || saved === 'reports' || saved === 'inventory' || saved === 'payments' || saved === 'oplog' || saved === 'asin') return saved
   } catch {
     // localStorage 被禁用（隐私模式/宿主限制）时退回默认，不影响功能
   }
@@ -69,9 +94,9 @@ export function WorkbenchHeader(props: WorkbenchAssembly): JSX.Element {
           <button
             className={`wb-seg ${inAds ? 'on' : ''}`}
             data-ad-parent
-            title={t('广告：测算 / 关键词 / 流量分析')}
+            title={t('亚马逊：广告分析（测算 / 关键词 / 流量分析 / 报表分析）· 商品与经营（选品 / 库存 / 付款对账 / 运营日志）')}
             onClick={() => setView(lastAd)}
-          ><Icon name="chart" />{inAds ? `${t('广告')} · ${t(adView.label)}` : t('广告')}</button>
+          ><Icon name="chart" />{inAds ? `${t('亚马逊')} · ${t(adView.label)}` : t('亚马逊')}</button>
         </div>
         <div style={{ flex: 1 }} />
         {pendingCount > 0 && (
@@ -87,16 +112,24 @@ export function WorkbenchHeader(props: WorkbenchAssembly): JSX.Element {
     </div>
     {inAds && (
       <div className="wb-h wb-h-sub" data-ad-subtabs>
-        <div className="wb-segmented wb-sub-segmented">
-          {AD_VIEWS.map((entry) => (
-            <button
-              key={entry.key}
-              className={`wb-seg ${view === entry.key ? 'on' : ''}`}
-              data-ad-tab={entry.key}
-              onClick={() => { writeLastAdView(entry.key); setView(entry.key) }}
-            ><Icon name={entry.icon} />{t(entry.label)}</button>
-          ))}
-        </div>
+        {AD_GROUPS.map((group) => (
+          <div
+            key={group.label}
+            className="wb-segmented wb-sub-segmented"
+            data-ad-group={group.label}
+            role="group"
+            aria-label={t(group.label)}
+          >
+            {group.views.map((entry) => (
+              <button
+                key={entry.key}
+                className={`wb-seg ${view === entry.key ? 'on' : ''}`}
+                data-ad-tab={entry.key}
+                onClick={() => { writeLastAdView(entry.key); setView(entry.key) }}
+              ><Icon name={entry.icon} />{t(entry.label)}</button>
+            ))}
+          </div>
+        ))}
       </div>
     )}
     </>
