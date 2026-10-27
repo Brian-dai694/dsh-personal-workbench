@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openWorkbenchDb } from '../../lib/db/database.js'
 import { KnowledgeRecallManager } from '../../lib/knowledge/recall.js'
-import { formatRelevance, RECALL_DEFAULTS } from '../../lib/shared/knowledgeRecall.js'
+import { formatRelevance, RECALL_DEFAULTS } from '../../lib/knowledge/recall-pure.js'
 
 const SOURCE = join(process.env.USERPROFILE ?? process.env.HOME ?? '', '.dsh', 'workbench', 'workbench.db')
 if (!existsSync(SOURCE)) { console.error(`找不到工作台库 ${SOURCE}`); process.exit(2) }

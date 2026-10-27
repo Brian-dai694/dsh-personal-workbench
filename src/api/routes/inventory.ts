@@ -7,6 +7,8 @@
  * - `DELETE /:id` 删除
  *
  * 只存输入、不存结论：可售天数与断货日由界面按"今天 + 到货天数"现算。
+ *
+ * 响应信封（2026-10-27，决策 2）：一律走 `apiOk` / `apiError`。
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
@@ -14,7 +16,7 @@ import type { InventoryRow } from '../../shared/inventoryForecast.js'
 import {
   createInventorySnapshot, deleteInventorySnapshot, getInventorySnapshot, getLatestInventorySnapshot, listInventorySnapshots,
 } from '../../db/repo.js'
-import { isLoopbackRequest, readJsonBody, writeJson } from './helpers.js'
+import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
 
 const PREFIX = '/api/workbench/inventory'
 
@@ -44,26 +46,25 @@ export function makeInventoryRoutes(db: DatabaseSync): WebRoute[] {
       kind: 'prefix',
       path: PREFIX,
       handler: async (req, res) => {
-        if (!isLoopbackRequest(req)) return writeJson(res, 403, { error: 'forbidden: loopback-only' })
+        if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
         const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
         const method = req.method ?? 'GET'
 
         if (segments.length === 0) {
           if (method === 'GET') {
-            return writeJson(res, 200, {
-              ok: true,
+            return apiOk(res, {
               latest: getLatestInventorySnapshot(db) ?? null,
               snapshots: listInventorySnapshots(db),
             })
           }
           if (method === 'POST') {
             const body = await readJsonBody(req, 2 * 1024 * 1024)
-            if (body === undefined) return writeJson(res, 400, { error: 'invalid JSON body' })
+            if (body === undefined) return apiError(res, 400, 'invalid JSON body')
             const rows = Array.isArray(body.rows) ? body.rows.map(readRow) : []
             const valid = rows.filter((row): row is InventoryRow => row !== null)
             if (Array.isArray(body.rows) && valid.length !== body.rows.length) {
-              return writeJson(res, 400, { error: 'rows 中存在不合法的行（SKU 为空或数字字段非法）' })
+              return apiError(res, 400, 'rows 中存在不合法的行（SKU 为空或数字字段非法）')
             }
             try {
               const snapshot = createInventorySnapshot(db, {
@@ -74,25 +75,26 @@ export function makeInventoryRoutes(db: DatabaseSync): WebRoute[] {
                 safetyDays: typeof body.safetyDays === 'number' ? body.safetyDays : 0,
                 rows: valid,
               })
-              return writeJson(res, 201, { ok: true, snapshot, snapshots: listInventorySnapshots(db) })
+              /** 创建资源 → 201（语义正确，不为"统一"退回 200）。 */
+              return apiOk(res, { snapshot, snapshots: listInventorySnapshots(db) }, 201)
             } catch (error) {
-              return writeJson(res, 400, { error: error instanceof Error ? error.message : String(error) })
+              return apiError(res, 400, error instanceof Error ? error.message : String(error))
             }
           }
-          return writeJson(res, 405, { error: 'method not allowed' })
+          return apiError(res, 405, 'method not allowed')
         }
 
         const id = segments[0]!
         if (method === 'GET' && segments.length === 1) {
           const snapshot = getInventorySnapshot(db, id)
-          return writeJson(res, snapshot === undefined ? 404 : 200, snapshot === undefined ? { error: 'snapshot not found' } : { ok: true, snapshot })
+          return snapshot === undefined ? apiError(res, 404, 'snapshot not found') : apiOk(res, { snapshot })
         }
         if (method === 'DELETE' && segments.length === 1) {
           return deleteInventorySnapshot(db, id)
-            ? writeJson(res, 200, { ok: true })
-            : writeJson(res, 404, { error: 'snapshot not found' })
+            ? apiOk(res)
+            : apiError(res, 404, 'snapshot not found')
         }
-        return writeJson(res, 405, { error: 'method not allowed' })
+        return apiError(res, 405, 'method not allowed')
       },
     },
   ]

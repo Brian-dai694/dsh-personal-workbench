@@ -249,3 +249,16 @@ export function findOpenTaskByAsin(db: DatabaseSync, asin: string): TaskRow | un
       AND extra LIKE ?`).all(`%"asin":"${clean}"%`) as unknown as RawTaskRow[]
   return rows.map((row) => parseTask(row, db)).find((task): task is TaskRow => task !== undefined)
 }
+
+/**
+ * 任务 id → 展示用状态（已归档的统一写成 `archived`）。
+ *
+ * 唯一实现：日期面板的计划行（`api/routes/plans.ts`）与 bootstrap 统计
+ * （`api/routes.ts`）都要回答"这一条计划项的任务还在不在、什么状态"，
+ * 两处各写一遍 SQL/映射就会出现"一边有、一边没有"的口径漂移。
+ */
+export function taskStatusIndex(db: DatabaseSync): Map<string, string> {
+  const rows = db.prepare('SELECT id, status_code, archived FROM tasks').all() as unknown as
+    Array<{ id: string; status_code: string; archived: number }>
+  return new Map(rows.map((row) => [row.id, row.archived === 1 ? 'archived' : row.status_code]))
+}

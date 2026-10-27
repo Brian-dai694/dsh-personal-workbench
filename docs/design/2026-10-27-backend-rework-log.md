@@ -142,14 +142,85 @@ src/
 
 ---
 
-## 6. 回滚方式
+## 6. 第二轮（同日追加）：把边界变成测试 + api 层 SQL 清零
+
+### 6.1 架构护栏：`test/architecture.test.mjs`（8 条规则）
+
+边界写在文档里会烂，写成断言才会活得久。8 条规则，其中 4 条带**棘轮白名单**（只许减少）：
+
+| 规则 | 断言 | 结果 |
+| --- | --- | --- |
+| R2 | 非 `client/` 文件不得 import `client/` | 0 违规 |
+| R4a | `db/repo/*` 不得回导门面 | 0 违规 |
+| R4b | 门面 `db/repo.ts` 无实现（逐行判定，多行 `export {}` 放行） | 通过 |
+| R1 | `shared/` 必须双端共用（shared→shared **传递闭包**后判定） | 5 条历史遗留，棘轮 |
+| R5 | `client/` 不得运行时依赖宿主；type-only 单独登记 | 0 运行时 / 6 条 type-only |
+| R6 | `src/` 根只允许 `index.ts` | 通过 |
+| R7 | `db.prepare(` 只许在 `db/` | 28 处 / 8 文件，棘轮 |
+| R8 | `shared/` 不得 import `node:*` | 0 违规 |
+
+> 写完立刻就抓到两件事：① `shared/quickAttachments`、`shared/taskFolder` 被词法漏判成"单端"
+> （多行 import 的 `[^'\n]` 假设），改成跨行匹配后恢复正常；② `shared/trafficFilter`
+> 在批次 C 之后**已经变成双端共用**（Amazon 工具下沉后宿主也用上了），白名单要删。
+
+### 6.2 `shared/knowledgeRecall.ts` → `knowledge/recall-pure.ts`
+
+它是知识召回的三层里唯一**纯函数**的一层（词频/阈值/注入文本），只被 `knowledge/{recall,recall-log,tools}` 使用，
+却住在 `shared/` —— 按 R1 判定为"仅宿主"。搬到 `knowledge/` 后 `shared/` 只剩真正的双端模块。
+同步 14 处导入（src / test / scripts）与一处探针脚本的字符串路径。
+
+### 6.3 api 层 SQL 清零（7 处 → 0）
+
+| 原位置 | 收口到 |
+| --- | --- |
+| `api/routes.ts:447`（health schema_version） | `readMeta(db, 'schema_version')` |
+| `api/routes.ts`（bootstrap 计划状态表） | `repo.taskStatusIndex()` —— 与 plans 路由**共用一份** |
+| `api/routes/plans.ts`（同上，各写一份） | `repo.taskStatusIndex()` |
+| `api/routes/helpers.ts`（报告用事件区间） | `repo.listTaskEventsInRange()`（camelCase 一次转完） |
+| `api/routes/drafts.ts` ×2（直接 UPDATE 草稿状态） | `repo.setDraftStatus()` —— 绕过的正是唯一写入口 |
+| `api/routes/asin.ts`（立项取产品摘要） | `repo.getAsinTaskSource()` |
+| `api/routes/reminders.ts`（提醒存在性） | `repo.reminderExists()` |
+
+三处顺带消掉了"同一语义两处实现"：计划状态表现在计划路由与 bootstrap 共用一份；
+草稿确认不再绕过 `setDraftStatus`（它才是带时间戳/事件语义的唯一写入口）。
+
+**验证**：`tsc` 0 error；`pnpm build` 0；`node --test test/*.test.mjs` **1544 项全绿**；
+`test/architecture.test.mjs` 8/8 通过。
+
+**剩余越层 SQL：28 处 / 8 文件**（`reminder/draft-notify.ts` 10、`knowledge/recall-log.ts` 8、
+`memory/review-memory.ts` 2、`reminder/config.ts` 2、`reminder/scheduler.ts` 2、`knowledge/recall.ts` 2、
+`tools/workbench.ts` 1、`experts/install.ts` 1 的 PRAGMA）—— 全部登记在 R7 白名单里，只许减少。
+
+---
+
+## 7. ⚠️ 并行施工提示（2026-10-27 11:04–11:08 实测）
+
+本轮进行期间，**同一个工作树**上还有另一条线在改（时间戳证据）：
+
+| 文件 | 时间 | 内容 |
+| --- | --- | --- |
+| `src/api/http.ts` | 11:04 | 新增 `apiOk` / `apiError` 统一响应信封（rebaseline §7 决策 2） |
+| `src/api/routes/{aba-keywords,amazon-datasets,calculator-scenarios,inventory,keyword-plans,oplog}.ts` | 11:05 | 7 个 Amazon 路由改走信封 |
+| `test/apiEnvelope.test.mjs` | 11:06 | 信封的新测试 |
+| `src/client/styles.ts` | 11:08 | 样式改动（与本轮无关） |
+| `docs/design/2026-10-27-architecture-rebaseline.md` | 11:08 | 决策 2 的结论回写 |
+
+两条线在 `api/routes/{asin,drafts,helpers,plans,reminders,routes}.ts` **同文件交错**，
+但双方都是用锚定字符串替换 + 追加，实测**两边的改动都还在**（`asin.ts` 同时有 `apiOk` 与 `getAsinTaskSource`），
+tsc 与全量测试在合并后的树上通过。
+
+**结论**：同一棵树上并行改代码时，任何 `读-改-写` 脚本都必须锚定唯一字符串并断言命中次数；
+本轮 1 次 MISS 就是这么发现的（`product.judgment_json` 缩进不一致）。
+
+
+## 8. 回滚方式
 
 三批各自一次提交，互不依赖：
 
 ```powershell
 git revert 0a2d666   # 批次 A：断环
 git revert 46ef287   # 批次 B：收编散件
-git revert <batchC>  # 批次 C：下沉 shared
+git revert 021652f   # 批次 C：下沉 shared
 pnpm build           # lib/ 是忽略目录，重新构建即可
 ```
 

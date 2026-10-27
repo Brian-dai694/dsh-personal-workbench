@@ -28,7 +28,7 @@ import { KnowledgeRecallManager } from '../../lib/knowledge/recall.js'
 import { listRecallLog } from '../../lib/knowledge/recall-log.js'
 import { listKnowledge, listTasks } from '../../lib/db/repo.js'
 import { linkTaskSession } from '../../lib/db/repo/task-sessions.js'
-import { echoQuery, formatRecallText, RECALL_DEFAULTS } from '../../lib/shared/knowledgeRecall.js'
+import { echoQuery, formatRecallText, RECALL_DEFAULTS } from '../../lib/knowledge/recall-pure.js'
 
 const args = process.argv.slice(2)
 const flag = (name, fallback = undefined) => {

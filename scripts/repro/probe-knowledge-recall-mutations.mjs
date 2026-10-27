@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const CORE = join(ROOT, 'lib', 'shared', 'knowledgeRecall.js')
+const CORE = join(ROOT, 'lib', 'knowledge', 'recall-pure.js')
 const MANAGER = join(ROOT, 'lib', 'knowledge', 'recall.js')
 const LOG = join(ROOT, 'lib', 'knowledge', 'recall-log.js')
 const REPO_KNOWLEDGE = join(ROOT, 'lib', 'db', 'repo', 'knowledge.js')

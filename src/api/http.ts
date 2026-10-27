@@ -54,6 +54,47 @@ export function writeJson(res: ServerResponse, status: number, body: unknown): v
   res.end(JSON.stringify(body))
 }
 
+/**
+ * 统一**成功**信封：`{ ok: true, ...payload }`（2026-10-27，决策 2）。
+ *
+ * ## 为什么要收口，而不是让每个 handler 自己写 `{ ok: true, ... }`
+ *
+ * 收口前 `/api/workbench/*` 的响应有**两套写法**：核心域手写 `{ ok: true, ... }`，
+ * Amazon 域（7 个路由文件）返回**裸对象**。实测 134 个 `writeJson` 调用点里：
+ * 成功响应 14 处带 `ok`、**17 处不带**；错误响应 1 处带、**82 处不带**。
+ *
+ * 「同一语义两处实现」是本项目最大的 bug 类别（见本文件头注释），所以这里不逐个补字段，
+ * 而是让信封**结构上不可能漏**：成功一律走 `apiOk`、失败一律走 `apiError`。
+ *
+ * ## 为什么这是**纯增量**改动（不是破坏性变更）
+ *
+ * 客户端 `client/api.ts` 只读 **HTTP 状态码**（`res.ok`）与 **`body.error`**，
+ * **从不读 `body.ok`**（全仓实测：客户端 14 处 `.ok` 读的都是专家草稿 / 会话驱动等别的载荷）。
+ * 所以补 `ok` 字段不会影响任何现有消费者；它存在是为了让信封可被测试断言。
+ *
+ * @param res - 响应对象。
+ * @param payload - 附加字段（展开到顶层，保持既有字段名不变）。
+ * @param status - HTTP 状态码，缺省 200。**创建类接口应显式传 201**（语义正确，不要为"统一"退回 200）。
+ */
+export function apiOk(res: ServerResponse, payload: Record<string, unknown> = {}, status = 200): void {
+  writeJson(res, status, { ok: true, ...payload })
+}
+
+/**
+ * 统一**错误**信封：`{ ok: false, error, ...extra }`（2026-10-27，决策 2）。
+ *
+ * `error` 保持在**顶层**：客户端 `client/api.ts:84` 读的就是 `body.error`，
+ * 嵌套一层（如 `{ ok:false, error:{ message } }`）会让现有全部错误提示变成 `HTTP 4xx（path）`。
+ *
+ * @param res - 响应对象。
+ * @param status - HTTP 状态码（4xx / 5xx）。
+ * @param error - 面向用户的中文可读文案。
+ * @param extra - 附加字段（如 `code`、`existingId`），展开到顶层。
+ */
+export function apiError(res: ServerResponse, status: number, error: string, extra?: Record<string, unknown>): void {
+  writeJson(res, status, { ok: false, error, ...extra })
+}
+
 export async function readJsonBody(req: IncomingMessage, maxBytes = 256 * 1024): Promise<Record<string, unknown> | undefined> {
   const chunks: Buffer[] = []
   let size = 0

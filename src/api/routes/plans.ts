@@ -15,7 +15,7 @@
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
 import {
-  addDailyPlanItem, deleteDailyPlan, getDailyPlan, updateDailyPlan, updateDailyPlanItem,
+  addDailyPlanItem, deleteDailyPlan, getDailyPlan, taskStatusIndex, updateDailyPlan, updateDailyPlanItem,
   type DailyPlanRow, type ManualPlanItemInput,
 } from '../../db/repo.js'
 import { isLoopbackRequest, pathSegments, PERIOD_DATE_RE, PLANS_PREFIX, readJsonBody, writeJson } from './helpers.js'
@@ -41,8 +41,7 @@ export function localDayRange(date: string): { startMs: number; endMs: number } 
  */
 function planResponse(db: DatabaseSync, plan: DailyPlanRow | undefined): Record<string, unknown> {
   if (plan === undefined) return { ok: true, plan: null }
-  const rows = db.prepare('SELECT id, status_code, archived FROM tasks').all() as unknown as Array<{ id: string; status_code: string; archived: number }>
-  const statusOf = new Map(rows.map((row) => [row.id, row.archived === 1 ? 'archived' : row.status_code]))
+  const statusOf = taskStatusIndex(db)
   return {
     ok: true,
     plan: {

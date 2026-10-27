@@ -8,13 +8,15 @@
  * - `DELETE /:id`            删除
  *
  * 只读写本地 SQLite；不连接广告账户、不创建投放。
+ *
+ * 响应信封（2026-10-27，决策 2）：一律走 `apiOk` / `apiError`，不再手写 `{ ok: … }`。
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
 import {
   createAbaKeywordSet, deleteAbaKeywordSet, getAbaKeywordSet, listAbaKeywordSets, setAbaAnnotations,
 } from '../../db/repo.js'
-import { isLoopbackRequest, readJsonBody, writeJson } from './helpers.js'
+import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
 import { writeAbaComparisonCsv } from '../../lib/abaExport.js'
 import { getLatestAmazonDataset } from '../../db/repo.js'
 
@@ -26,25 +28,25 @@ export function makeAbaKeywordRoutes(db: DatabaseSync): WebRoute[] {
       kind: 'prefix',
       path: PREFIX,
       handler: async (req, res) => {
-        if (!isLoopbackRequest(req)) return writeJson(res, 403, { error: 'forbidden: loopback-only' })
+        if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
         const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
         const method = req.method ?? 'GET'
         const id = segments[0] === undefined ? '' : decodeURIComponent(segments[0])
 
         if (method === 'GET' && segments.length === 0) {
-          return writeJson(res, 200, { sets: listAbaKeywordSets(db) })
+          return apiOk(res, { sets: listAbaKeywordSets(db) })
         }
 
         if (method === 'GET' && segments.length === 1) {
           const set = getAbaKeywordSet(db, id)
-          return set === null ? writeJson(res, 404, { error: '词表不存在' }) : writeJson(res, 200, { set })
+          return set === null ? apiError(res, 404, '词表不存在') : apiOk(res, { set })
         }
 
         if (method === 'POST' && segments.length === 0) {
           // 一张 ABA 词表可能上万行，256KB 不够
           const body = await readJsonBody(req, 8 * 1024 * 1024)
-          if (body === undefined) return writeJson(res, 413, { error: '请求体不是合法 JSON 或过大（上限 8MB）' })
+          if (body === undefined) return apiError(res, 413, '请求体不是合法 JSON 或过大（上限 8MB）')
           try {
             const set = createAbaKeywordSet(db, {
               title: typeof body.title === 'string' ? body.title : 'ABA 词表',
@@ -52,9 +54,9 @@ export function makeAbaKeywordRoutes(db: DatabaseSync): WebRoute[] {
               rows: body.rows,
               sourceCode: typeof body.sourceCode === 'string' ? body.sourceCode : 'import',
             })
-            return writeJson(res, 200, { ok: true, set })
+            return apiOk(res, { set })
           } catch (error) {
-            return writeJson(res, 400, { error: error instanceof Error ? error.message : String(error) })
+            return apiError(res, 400, error instanceof Error ? error.message : String(error))
           }
         }
 
@@ -64,7 +66,7 @@ export function makeAbaKeywordRoutes(db: DatabaseSync): WebRoute[] {
          */
         if (method === 'POST' && segments.length === 2 && segments[1] === 'export') {
           const set = getAbaKeywordSet(db, id)
-          if (set === null) return writeJson(res, 404, { error: '词表不存在' })
+          if (set === null) return apiError(res, 404, '词表不存在')
           const latest = getLatestAmazonDataset(db, 'search_term')
           const map = new Map<string, { clicks: number; orders: number; spend: number; sales: number }>()
           for (const row of latest?.rows ?? []) {
@@ -72,24 +74,31 @@ export function makeAbaKeywordRoutes(db: DatabaseSync): WebRoute[] {
           }
           try {
             const result = writeAbaComparisonCsv(set, { get: (keyword: string) => map.get(keyword.trim().toLowerCase()) })
-            return writeJson(res, 200, { ok: true, path: result.path, rows: result.rows, dataset: latest?.title ?? null })
+            return apiOk(res, { path: result.path, rows: result.rows, dataset: latest?.title ?? null })
           } catch (error) {
-            return writeJson(res, 500, { error: error instanceof Error ? error.message : String(error) })
+            return apiError(res, 500, error instanceof Error ? error.message : String(error))
           }
         }
 
         if (method === 'PATCH' && segments.length === 2 && segments[1] === 'annotations') {
           const body = await readJsonBody(req, 2 * 1024 * 1024)
-          if (body === undefined) return writeJson(res, 413, { error: '请求体不是合法 JSON 或过大' })
+          if (body === undefined) return apiError(res, 413, '请求体不是合法 JSON 或过大')
           const set = setAbaAnnotations(db, id, body.annotations)
-          return set === null ? writeJson(res, 404, { error: '词表不存在' }) : writeJson(res, 200, { ok: true, set })
+          return set === null ? apiError(res, 404, '词表不存在') : apiOk(res, { set })
         }
 
         if (method === 'DELETE' && segments.length === 1) {
-          return writeJson(res, deleteAbaKeywordSet(db, id) ? 200 : 404, { ok: true })
+          /**
+           * ⚠️ 信封修正（批次 3）：原实现是
+           * `writeJson(res, deleted ? 200 : 404, { ok: true })` —— 删不掉时回的是
+           * **404 状态码 + `ok: true`**，两个字段互相矛盾，客户端据 `ok` 判断就会误判成功。
+           * 统一信封后必须拆成两条：删成功 `apiOk`，没找到 `apiError(404, …)`。
+           */
+          if (!deleteAbaKeywordSet(db, id)) return apiError(res, 404, '词表不存在')
+          return apiOk(res)
         }
 
-        return writeJson(res, 404, { error: 'not found' })
+        return apiError(res, 404, 'not found')
       },
     },
   ]

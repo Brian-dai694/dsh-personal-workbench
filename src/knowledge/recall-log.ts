@@ -18,7 +18,7 @@
  * 无上限增长会在几个月后变成"性能问题 + 用户看不懂的巨表"。
  */
 import type { DatabaseSync } from 'node:sqlite'
-import type { RecallOutcome } from '../shared/knowledgeRecall.js'
+import type { RecallOutcome } from './recall-pure.js'
 
 /** 日志表保留的最大行数（超出按时间丢弃最旧的）。 */
 export const KEEP_ROWS = 2000

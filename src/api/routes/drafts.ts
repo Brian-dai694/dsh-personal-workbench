@@ -4,7 +4,7 @@
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
-import { abandonDraft, addTaskMemory, appendEvent, completeTaskCascade, confirmDailyPlanDraft, confirmIdeaClusterDraft, confirmIdeaTaskDraft, confirmKnowledgeDraft, confirmReportDraft, confirmSubtaskPlanDraft, confirmTaskDraft, createDraft, createTaskReview, deferDraft, getDictionary, getDraft, getDraftBySession, getLatestActiveDraft, getTask, isDeferrableDraftKind, linkTaskSession, listDeferredDrafts, resumeDraft, updateDraft, updateTaskWithCompletion } from '../../db/repo.js'
+import { abandonDraft, addTaskMemory, appendEvent, completeTaskCascade, setDraftStatus, confirmDailyPlanDraft, confirmIdeaClusterDraft, confirmIdeaTaskDraft, confirmKnowledgeDraft, confirmReportDraft, confirmSubtaskPlanDraft, confirmTaskDraft, createDraft, createTaskReview, deferDraft, getDictionary, getDraft, getDraftBySession, getLatestActiveDraft, getTask, isDeferrableDraftKind, linkTaskSession, listDeferredDrafts, resumeDraft, updateDraft, updateTaskWithCompletion } from '../../db/repo.js'
 import { DRAFTS_PREFIX, isLoopbackRequest, pathSegments, publicTask, readJsonBody, writeJson } from './helpers.js'
 import { writeReviewToTeamMemory, teamMemoryAvailable, type TeamMemoryService } from '../../memory/review-memory.js'
 import type { ExpertService } from '../../experts/service.js'
@@ -239,8 +239,7 @@ export function makeDraftRoutes(
               if (existingReviewId === null) {
                 updateDraft(db, id, { ...draft.payload, reviewId })
               }
-              const now = new Date().toISOString()
-              db.prepare('UPDATE task_drafts SET status_code = ?, updated_at = ? WHERE id = ?').run('confirmed', now, id)
+              setDraftStatus(db, id, 'confirmed')
               /**
                * v1.14.0：复盘确认时**顺带**把结论写进团队记忆库（否则复盘只活在本机）。
                *
@@ -279,8 +278,7 @@ export function makeDraftRoutes(
               if (summary !== '') {
                 addTaskMemory(db, { taskId, kind: 'summary', content: summary, sourceSessionId: sessionId })
               }
-              const now = new Date().toISOString()
-              db.prepare('UPDATE task_drafts SET status_code = ?, updated_at = ? WHERE id = ?').run('confirmed', now, id)
+              setDraftStatus(db, id, 'confirmed')
               return writeJson(res, 200, { ok: true, task: publicTask(completedTask ?? getTask(db, taskId)!) })
             }
             return writeJson(res, 400, { error: `unknown draft kind ${draft.kindCode}` })

@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openWorkbenchDb } from '../../../lib/db/database.js'
 import { KnowledgeRecallManager } from '../../../lib/knowledge/recall.js'
-import { formatRelevance } from '../../../lib/shared/knowledgeRecall.js'
+import { formatRelevance } from '../../../lib/knowledge/recall-pure.js'
 
 const SOURCE = join(process.env.USERPROFILE ?? process.env.HOME ?? '', '.dsh', 'workbench', 'workbench.db')
 if (!existsSync(SOURCE)) { console.log('SKIP: 找不到线上工作台库'); process.exit(2) }

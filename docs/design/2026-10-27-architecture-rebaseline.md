@@ -31,7 +31,8 @@
 | **1 断环（D2）** | ✅ 完成 | `0a2d666 refactor(db): 断开门面与 17 个领域模块的循环依赖（R4）`。**已实测验证**：`repo/*` 回导门面 **0 处**；`repo.ts` 从 314 → **199 行** 且 `export function` **0 个**（真成纯 re-export） |
 | **5 域目录收编** | ✅ 完成 | `46ef287 refactor(src): 收编根目录散件到 knowledge/ tools/ amazon/ memory/ core/`。**已实测验证**：`src/` 根散件 **8 → 1**（只剩 `index.ts`）；新增 `amazon/ core/ knowledge/ memory/ tools/` 五个目录 |
 | **2 收回共享（D1）** | 🔶 **进行中（未提交）** | 工作树 38 个改动；`src/shared/taskFolder.ts` 已出现在 shared 侧（10:59:35）、`tsconfig.build.json` 已改（10:59:14）；`node --test` 正在跑 |
-| **3 Amazon 路由对齐（信封）** | ⬜ 未开始 | 实测 `api/http.ts` **无** `apiOk`/`apiError`；Amazon 7 文件仍有 **22 处**成功响应缺 `ok`；7 处内联 `pathname.slice` 与 7 个 `const PREFIX` 仍在 |
+| **3a 信封收口（决策 2）** | ✅ **代码完成（本会话）** | `api/http.ts` 新增 `apiOk()` / `apiError()`；7 个 Amazon 路由文件 **134 处**响应全部改走收口函数，源码零手写 `{ok:…}`；新增 `test/apiEnvelope.test.mjs`（债务棘轮基线 = 278）。**验证**：`tsc --noEmit` 0 error；定向 10 文件 **72/72 通过**；**全量测试未能取得可信结果**（见下方竞态说明） |
+| **3b 路径收敛（D3）** | ⬜ 未开始 | 7 处内联 `pathname.slice` 与 7 个 `const PREFIX` 仍在。**刻意与 3a 分开**：它要处理各文件自己的 `decodeURIComponent` 语义，混进信封批次会让"纯机械"的承诺失效 |
 | **4 域解耦（D3）** | ⬜ 未开始 | `db/repo/status.ts:12` 仍 `import { appendAsinLaunchOutcome } from './asin.js'`；`tasks.ts:244` `findOpenTaskByAsin` 仍在 |
 | **6 拆大文件（D5）** | ⬜ 未开始 | 仍 **23 个**文件 >600 行、**17 个** >800 行；`client/index.tsx` 仍 2092 行 |
 | **7 安全护栏（D6）** | ⬜ 未开始 | `api/routes/knowledge.ts` 无白名单逻辑 |
@@ -60,8 +61,22 @@
 `client/` 从 135 → 129 文件是同一动作的另一面。**这不是涨了，是搬运途中。**
 批次 2 完成后应复核 R1（`shared/` 只放双端共用）是否真的成立 —— 搬运最容易把新的单端模块塞进去。
 
-> ⚠️ **协作风险**：两条会话同时改同一工作副本时，任何结构性改动都会互相污染（尤其 `tsconfig.build.json`、
-> `shared/` 与 `api/http.ts`）。本文后续批次**应由单一会话串行执行**，不要并行开工。
+> ⚠️ **协作风险（已实际发生）**：两条会话同时改同一工作副本时，任何结构性改动都会互相污染
+> （尤其 `tsconfig.build.json`、`shared/` 与 `api/http.ts`）。本文后续批次**应由单一会话串行执行**。
+>
+> 2026-10-27 11:03–11:08 的实况：本会话在批次 2 提交后接手 3a（改 `http.ts` / `helpers.ts` / 7 个 Amazon 路由），
+> 同时另一会话并行推进批次 4（`db/repo/status.ts`、`tasks.ts`、`asin.ts`）与知识目录收编（`shared/knowledgeRecall.ts` → `knowledge/recall-pure.ts`）。
+> **两者改动的文件集合无重叠**，所以没有代码级冲突；但 **`pnpm build` 第一步是 `rmSync('lib')`**，
+> 对方在 11:07:13 / 11:08:07 连续两次重建，把 `lib` 清空并重写得比本会话的测试窗口更快，
+> 于是本会话那次全量测试（627 例、70 例失败）**全部是 `ERR_MODULE_NOT_FOUND` 造成的假失败**，不是断言失败。
+>
+> **教训（值得写进 SOP）**：`lib/` 是被 `rmSync` 重建的共享产物，**不是可安全并发读取的稳定输入**。
+> 两条会话并行时，任何"构建 + 跑测试"的动作都必须独占窗口；否则得到的红绿结果不可信。
+> 正确的验收命令（窗口空闲时一次跑完）：
+>
+> ```powershell
+> pnpm build; node --test --test-concurrency=1 test/*.test.mjs
+> ```
 
 ---
 
@@ -287,9 +302,18 @@ C 域在客户端已占 **72%**（views 13 文件 3,733 行 vs 本体 9 文件 1
 | 规则 | 内容 | 现有违反 | 守卫 |
 |---|---|---|---|
 | **R1** | `shared/` 只放**双端都 import** 的模块 | 7 个错位（D4） | 新增 `test/architecture.test.mjs`：扫描 `shared/*` 的引用方，仅单端引用即失败 |
-| **R2** | 宿主产物不得含浏览器 UI；宿主不得 import `client/` 的 UI/渲染相关模块 | `tsconfig.build.json` 白名单含 ~40 个 client 文件；4 处运行期反向依赖（D1） | 构建后断言 `lib/client/{components,views,app}` **不存在**；新增 import 方向断言 |
+| **R2** | **宿主运行期模块图不得依赖 `client/`**；`lib/client/**` 允许存在，但每一份都必须有**测试直接从 `lib/` 导入**作为存在理由 | 原状态：4 处运行期反向依赖（D1）。批次 2 后宿主已 **0 处** import `client/` | 断言「宿主侧源码 import `client/` 的数量 = 0」；**不要**断言 `lib/client/**` 不存在（见下方更正） |
 | **R3** | 域之间不直接 import，只经 `shared/` 类型或回调注入 | `status.ts→asin.ts`、`tasks.ts:findOpenTaskByAsin`、`asin.ts→createTask`（D3） | 按域建 import 白名单表，测试断言 |
 | **R4** | `db/repo.ts` 只 re-export，且 `repo/*` 不得回导门面 | 17 处回导 + 140 行实现 + 43 处绕过（D2） | `test/architecture.test.mjs`：禁 `repo/*` import `../repo.js`；门面文件禁 `function`/`const ...=` 定义 |
+
+> **R2 更正（2026-10-27 批次 2 后实测）**：本文初稿写的守卫是「断言 `lib/client/{components,views,app}` 不存在」，
+> **这条是错的，已作废**。实测：**46 个 client 模块被 `test/` 与 `scripts/` 从 `lib/client/…js` 直接导入**
+> （含 6 个 UI 组件 `CapacityRulePanel`/`DayPanel`/`IdeaCardGrid`/`KnowledgeList`/`TabBar`/`TagFilter`
+> 与 1 个 view `AmazonTrafficDetailPane`）。它们进 `lib` 是**测试的正当需求**，不是遗留脏产物。
+> 删掉白名单里那 16 个 `.tsx` 会直接把测试弄红。
+>
+> 因此 R2 的正确判据只能是「**宿主源码不 import `client/`**」（批次 2 后实测 **0 处**），
+> 而不是「产物里没有 client 代码」。产物里该有什么，由**测试的导入清单**决定，不由目录名决定。
 
 ### 4.3 目标目录（只列要动的部分）
 

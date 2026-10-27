@@ -4,7 +4,7 @@
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
-import { acknowledgeReminder, listQueue, resetReminder, writeMeta } from '../../db/repo.js'
+import { acknowledgeReminder, listQueue, reminderExists, resetReminder, writeMeta } from '../../db/repo.js'
 import { isLoopbackRequest, pathSegments, readJsonBody, writeJson } from './helpers.js'
 
 export interface ReminderRouteDeps {
@@ -98,8 +98,7 @@ export function makeReminderRoutes(db: DatabaseSync, deps: ReminderRouteDeps = {
         }
         // 用户点「知道了」：写 acknowledged_at 作为终态（与 fired_at 分离，便于重新武装）
         if (segments.length === 2 && segments[1] === 'ack' && method === 'POST') {
-          const row = db.prepare('SELECT id FROM task_reminders WHERE id = ?').get(segments[0]) as { id: string } | undefined
-          if (row === undefined) return writeJson(res, 404, { error: 'reminder not found' })
+          if (!reminderExists(db, segments[0])) return writeJson(res, 404, { error: 'reminder not found' })
           acknowledgeReminder(db, segments[0])
           return writeJson(res, 200, { ok: true })
         }

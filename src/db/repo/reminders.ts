@@ -166,3 +166,12 @@ export function addReminder(
   return id
 }
 
+/**
+ * 提醒是否存在（端点用它回 404）。
+ *
+ * 为什么不复用 `listReminders(taskId)`：端点手上只有 reminderId，没有 taskId。
+ * 在路由里直写 SQL 会让「SQL 只许在 db/」破口（架构规则 R7）。
+ */
+export function reminderExists(db: DatabaseSync, reminderId: string): boolean {
+  return db.prepare('SELECT 1 AS x FROM task_reminders WHERE id = ?').get(reminderId) !== undefined
+}

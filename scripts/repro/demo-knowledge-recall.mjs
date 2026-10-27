@@ -27,7 +27,7 @@ import { join } from 'node:path'
 import { openWorkbenchDb } from '../../lib/db/database.js'
 import { KnowledgeRecallManager } from '../../lib/knowledge/recall.js'
 import { listRecallLog } from '../../lib/knowledge/recall-log.js'
-import { formatRelevance } from '../../lib/shared/knowledgeRecall.js'
+import { formatRelevance } from '../../lib/knowledge/recall-pure.js'
 import { listKnowledge, listTasks } from '../../lib/db/repo.js'
 import { linkTaskSession } from '../../lib/db/repo/task-sessions.js'
 

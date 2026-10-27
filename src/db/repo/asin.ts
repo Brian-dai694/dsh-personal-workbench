@@ -492,3 +492,34 @@ export function appendAsinLaunchOutcome(db: DatabaseSync, asin: string, taskId: 
   db.prepare('UPDATE asin_products SET note = ?, updated_at = ? WHERE asin = ?').run(next, at, clean)
   return true
 }
+
+/** 立项路由需要的 ASIN 摘要（只读五个字段 + 判断原文）。 */
+export interface AsinTaskSource {
+  title: string
+  price: number | null
+  site: string | null
+  verdict: string | null
+  score: number | null
+  judgmentJson: string | null
+}
+
+/**
+ * 取一条 ASIN 的立项摘要；不存在返回 undefined。
+ *
+ * 为什么不复用 `listAsinProducts`：那会把 30 列 + 标签/店铺聚合全查一遍，
+ * 而立项只需要拼一段描述。**但 SQL 仍然归仓储**（架构规则 R7）。
+ */
+export function getAsinTaskSource(db: DatabaseSync, asin: string): AsinTaskSource | undefined {
+  const row = db.prepare(
+    'SELECT title, price, site, verdict, score, judgment_json FROM asin_products WHERE asin = ?',
+  ).get(asin) as unknown as { title: string; price: number | null; site: string | null; verdict: string | null; score: number | null; judgment_json: string | null } | undefined
+  if (row === undefined) return undefined
+  return {
+    title: row.title,
+    price: row.price,
+    site: row.site,
+    verdict: row.verdict,
+    score: row.score,
+    judgmentJson: row.judgment_json,
+  }
+}

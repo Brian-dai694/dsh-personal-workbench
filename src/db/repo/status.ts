@@ -250,3 +250,31 @@ export function listTaskReviews(db: DatabaseSync, taskId: string): Array<Record<
   return db.prepare('SELECT * FROM task_reviews WHERE task_id = ? ORDER BY created_at DESC').all(taskId) as unknown as Array<Record<string, unknown>>
 }
 
+/** 周期报告里的一条任务事件（HTTP 形状，camelCase 在这里一次转完）。 */
+export interface TaskEventView {
+  id: string
+  taskId: string
+  eventCode: string
+  actor: string
+  note: string | null
+  at: string
+}
+
+/**
+ * 按时间窗取任务事件（日报/周报的"这段时间发生了什么"）。
+ *
+ * `limit` 是工作量上限：报告只需要代表性事件，不需要全量回放。
+ */
+export function listTaskEventsInRange(db: DatabaseSync, startIso: string, endIso: string, limit = 500): TaskEventView[] {
+  const rows = db.prepare(
+    'SELECT id, task_id, event_code, actor, note, at FROM task_events WHERE at >= ? AND at < ? ORDER BY at ASC LIMIT ?',
+  ).all(startIso, endIso, limit) as unknown as Array<{
+    id: string
+    task_id: string
+    event_code: string
+    actor: string
+    note: string | null
+    at: string
+  }>
+  return rows.map((row) => ({ id: row.id, taskId: row.task_id, eventCode: row.event_code, actor: row.actor, note: row.note, at: row.at }))
+}

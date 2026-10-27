@@ -138,3 +138,26 @@ test('状态语义色只允许出现在令牌定义行（别处一律 var(--wb-*
   assert.deepEqual(offenders, [],
     `这些声明还在用状态色的字面色，应改用 --wb-warn / --wb-danger / --wb-ok / --wb-info / --wb-neutral：\n  - ${offenders.join('\n  - ')}`)
 })
+
+/**
+ * 「状态主色只做填充/边框，当文字一律用 -ink」——这条是**看图看出来的**，不是洁癖。
+ *
+ * 琥珀 `#f5b83d` 当文字压在 14% 琥珀底上，对比度约 1.8:1（`待验收` 徽标肉眼发灰）；
+ * `--wb-ok`(#2E9B7B) / `--wb-danger`(#E74C3C) 当小字也只有 3.5~3.9:1。所以状态色分两档：
+ * 主色负责"是什么"（底/边/进度条），ink 负责"读得清"（文字）。
+ *
+ * `(?<![-\w])` 是为了只命中真正的 `color:`，不误伤 `border-color:` / `background-color:` /
+ * `accent-color:` —— 那三类本来就该用主色。
+ */
+test('状态主色不得直接当文字色（color: 要用 -ink）', () => {
+  const css = stripComments(WORKBENCH_CSS)
+  const offenders = []
+  for (const match of css.matchAll(/(?<![-\w])color\s*:\s*([^;}]+)/g)) {
+    const value = match[1].replace(/\s+/g, ' ').trim()
+    // 只禁"整条值就是状态主色"。`color-mix(… var(--wb-ok) 70%, label-primary)` 这类
+    // 是刻意往深/往浅调过的派生色，不在禁止范围。
+    if (/^var\(--wb-(warn|danger|ok|info|neutral)\)$/.test(value)) offenders.push(value)
+  }
+  assert.deepEqual(offenders, [],
+    `这些 color: 还在用状态主色（浅底上读不清），应改用 --wb-warn-ink / --wb-danger-ink / --wb-ok-ink / --wb-info-ink：\n  - ${offenders.join('\n  - ')}`)
+})

@@ -12,11 +12,11 @@ import { readFile, stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import {
-  ensureRecurringInstances, getDailyPlan, getDictionary, getTask, listTasks, localDateString,
+  ensureRecurringInstances, getDailyPlan, getDictionary, getTask, listTaskEventsInRange, listTasks, localDateString,
   type ReportPeriodCode, type TaskInput,
 } from '../../db/repo.js'
 
-export { isLoopbackRequest, readJsonBody, writeJson } from '../http.js'
+export { apiError, apiOk, isLoopbackRequest, readJsonBody, writeJson } from '../http.js'
 
 /** 「预计耗时」落库时的合法区间。上界与 `dailyCapacityMinutes` 一致。 */
 export const MIN_ESTIMATE_MINUTES = 1
@@ -150,19 +150,11 @@ export function reportContext(db: DatabaseSync, periodCode: ReportPeriodCode, pe
   const inRange = (iso: string | null): boolean => iso !== null && Date.parse(iso) >= startMs && Date.parse(iso) < endMs
   const completed = tasks.filter((task) => inRange(task.completedAt))
   const created = tasks.filter((task) => inRange(task.createdAt))
-  const eventRows = db.prepare('SELECT * FROM task_events WHERE at >= ? AND at < ? ORDER BY at ASC LIMIT 500').all(range.start, range.end) as unknown as Array<{
-    id: string
-    task_id: string
-    event_code: string
-    actor: string
-    note: string | null
-    at: string
-  }>
-  const events = eventRows.map((row) => ({
+  const events = listTaskEventsInRange(db, range.start, range.end).map((row) => ({
     id: row.id,
-    taskId: row.task_id,
-    taskTitle: getTask(db, row.task_id)?.title ?? '(任务已删除)',
-    eventCode: row.event_code,
+    taskId: row.taskId,
+    taskTitle: getTask(db, row.taskId)?.title ?? '(任务已删除)',
+    eventCode: row.eventCode,
     actor: row.actor,
     note: row.note,
     at: row.at,

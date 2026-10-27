@@ -7,6 +7,8 @@
  * - `GET    /:id`         读整份（行 + 已有词级建议 + 报表级结论 `aiSummary`）
  * - `PATCH  /:id`         AI 写回：`reviews`（词级建议，整份替换）/ `summary`（报表级结论，整份替换），可只传其一
  * - `DELETE /:id`         删除
+ *
+ * 响应信封（2026-10-27，决策 2）：一律走 `apiOk` / `apiError`。
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
@@ -17,7 +19,7 @@ import {
   saveAmazonDatasetSummary, saveSearchTermReview,
 } from '../../db/repo.js'
 import type { AmazonDatasetSummaryPayload } from '../../db/repo.js'
-import { isLoopbackRequest, readJsonBody, writeJson } from './helpers.js'
+import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
 
 const PREFIX = '/api/workbench/amazon/datasets'
 /** base64 上限：约 7.5MB 源文件，够一份几千行的搜索词报表。 */
@@ -92,30 +94,27 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
       kind: 'prefix',
       path: PREFIX,
       handler: async (req, res) => {
-        if (!isLoopbackRequest(req)) return writeJson(res, 403, { error: 'forbidden: loopback-only' })
+        if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
         const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
         const method = req.method ?? 'GET'
         const bodyLimit = bodyLimitFor(method, segments)
         if (['POST', 'PATCH'].includes(method) && declaredTooLarge(req, bodyLimit)) {
-          return writeJson(res, 413, {
-            error: `请求体过大（上限 ${Math.round(bodyLimit / 1024 / 1024)}MB），请先筛选或拆分后再导入`,
-            code: 'too-large',
-          })
+          return apiError(res, 413, `请求体过大（上限 ${Math.round(bodyLimit / 1024 / 1024)}MB），请先筛选或拆分后再导入`, { code: 'too-large' })
         }
         const body = ['POST', 'PATCH'].includes(method) ? await readJsonBody(req, bodyLimit) : undefined
 
         if (segments.length === 0) {
           if (method === 'GET') {
-            return writeJson(res, 200, { ok: true, datasets: listAmazonDatasets(db, url.searchParams.get('kind_code') ?? 'search_term') })
+            return apiOk(res, { datasets: listAmazonDatasets(db, url.searchParams.get('kind_code') ?? 'search_term') })
           }
           if (method === 'POST') {
-            if (body === undefined) return writeJson(res, 400, { error: 'invalid JSON body' })
+            if (body === undefined) return apiError(res, 400, 'invalid JSON body')
             try {
               const rows = Array.isArray(body.rows) ? body.rows.map(readRow) : []
               const valid = rows.filter((row): row is TrafficRow => row !== null)
               if (Array.isArray(body.rows) && valid.length !== body.rows.length) {
-                return writeJson(res, 400, { error: 'rows 中存在不合法的行（关键词为空或指标不是非负数字）' })
+                return apiError(res, 400, 'rows 中存在不合法的行（关键词为空或指标不是非负数字）')
               }
               const dataset = createAmazonDataset(db, {
                 kindCode: isAmazonDatasetKind(body.kindCode) ? body.kindCode : undefined,
@@ -125,12 +124,12 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
                 sourceCode: typeof body.sourceCode === 'string' ? body.sourceCode : 'paste',
                 sessionId: typeof body.sessionId === 'string' ? body.sessionId : null,
               })
-              return writeJson(res, 201, { ok: true, dataset })
+              return apiOk(res, { dataset }, 201)
             } catch (error) {
-              return writeJson(res, 400, { error: error instanceof Error ? error.message : String(error) })
+              return apiError(res, 400, error instanceof Error ? error.message : String(error))
             }
           }
-          return writeJson(res, 405, { error: 'method not allowed' })
+          return apiError(res, 405, 'method not allowed')
         }
 
         const id = segments[0]
@@ -141,28 +140,27 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
          * `parseTrafficCsv` 里，保证"粘贴"和"选文件"走同一条校验路径。
          */
         if (id === 'parse-file' && method === 'POST') {
-          if (body === undefined) return writeJson(res, 400, { error: 'invalid JSON body' })
+          if (body === undefined) return apiError(res, 400, 'invalid JSON body')
           const base64 = typeof body.base64 === 'string' ? body.base64 : ''
-          if (base64 === '') return writeJson(res, 400, { error: 'base64 不能为空' })
-          if (base64.length > MAX_FILE_BASE64) return writeJson(res, 413, { error: '文件过大（超过约 7.5MB），请先筛选或拆分后再导入', code: 'too-large' })
+          if (base64 === '') return apiError(res, 400, 'base64 不能为空')
+          if (base64.length > MAX_FILE_BASE64) return apiError(res, 413, '文件过大（超过约 7.5MB），请先筛选或拆分后再导入', { code: 'too-large' })
           const filename = typeof body.filename === 'string' ? body.filename : ''
           let buffer: Buffer
           try {
             buffer = Buffer.from(base64, 'base64')
           } catch {
-            return writeJson(res, 400, { error: '文件内容不是有效的 base64', code: 'bad-base64' })
+            return apiError(res, 400, '文件内容不是有效的 base64', { code: 'bad-base64' })
           }
           const kind = sniffKind(buffer)
           if (kind === 'text') {
-            return writeJson(res, 200, { ok: true, format: 'text', tsv: buffer.toString('utf8'), filename })
+            return apiOk(res, { format: 'text', tsv: buffer.toString('utf8'), filename })
           }
           const parsed = readXlsx(buffer)
           if (!parsed.ok) {
-            return writeJson(res, 400, { error: parsed.errors.join('；'), code: 'unreadable', filename })
+            return apiError(res, 400, parsed.errors.join('；'), { code: 'unreadable', filename })
           }
           const sheet = parsed.sheets[0]
-          return writeJson(res, 200, {
-            ok: true,
+          return apiOk(res, {
             format: 'xlsx',
             filename,
             sheetName: sheet.name,
@@ -173,15 +171,15 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
 
         if (method === 'GET' && segments.length === 1) {
           const dataset = getAmazonDataset(db, id)
-          return writeJson(res, dataset === undefined ? 404 : 200, dataset === undefined ? { error: 'dataset not found' } : { ok: true, dataset })
+          return dataset === undefined ? apiError(res, 404, 'dataset not found') : apiOk(res, { dataset })
         }
         if (method === 'PATCH' && segments.length === 1) {
-          if (body === undefined) return writeJson(res, 400, { error: 'invalid JSON body' })
+          if (body === undefined) return apiError(res, 400, 'invalid JSON body')
           const reviewsRaw: unknown[] = Array.isArray(body.reviews) ? body.reviews : []
           const hasReviews = Array.isArray(body.reviews)
           const hasSummary = Object.prototype.hasOwnProperty.call(body, 'summary')
           if (!hasReviews && !hasSummary) {
-            return writeJson(res, 400, { error: '需要 reviews 数组（词级建议）或 summary 对象（报表级结论）' })
+            return apiError(res, 400, '需要 reviews 数组（词级建议）或 summary 对象（报表级结论）')
           }
           /**
            * `summary` 先验后写：
@@ -195,14 +193,14 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
             if (raw === null) {
               summary = null
             } else if (typeof raw !== 'object' || Array.isArray(raw) || Object.keys(raw).length === 0) {
-              return writeJson(res, 400, { error: 'summary 必须是非空 JSON 对象，或 null（清空结论）' })
+              return apiError(res, 400, 'summary 必须是非空 JSON 对象，或 null（清空结论）')
             } else {
               summary = raw as AmazonDatasetSummaryPayload
             }
           }
           try {
             let dataset = getAmazonDataset(db, id)
-            if (dataset === undefined) return writeJson(res, 404, { error: 'dataset not found' })
+            if (dataset === undefined) return apiError(res, 404, 'dataset not found')
             if (hasReviews) {
               const reviews = reviewsRaw.map((item: unknown) => {
                 const raw = (typeof item === 'object' && item !== null ? item : {}) as Record<string, unknown>
@@ -216,18 +214,20 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
               dataset = saveSearchTermReview(db, id, reviews)
             }
             if (hasSummary) dataset = saveAmazonDatasetSummary(db, id, summary)
-            return writeJson(res, 200, { ok: true, dataset })
+            return apiOk(res, { dataset })
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error)
-            return writeJson(res, message === 'dataset not found' ? 404 : 400, { error: message })
+            return message === 'dataset not found'
+              ? apiError(res, 404, message)
+              : apiError(res, 400, message)
           }
         }
         if (method === 'DELETE' && segments.length === 1) {
           return deleteAmazonDataset(db, id)
-            ? writeJson(res, 200, { ok: true })
-            : writeJson(res, 404, { error: 'dataset not found' })
+            ? apiOk(res)
+            : apiError(res, 404, 'dataset not found')
         }
-        return writeJson(res, 405, { error: 'method not allowed' })
+        return apiError(res, 405, 'method not allowed')
       },
     },
   ]

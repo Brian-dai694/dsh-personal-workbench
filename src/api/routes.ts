@@ -10,7 +10,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import {
   ensureRecurringInstances, fireReminder, getDailyPlan, getTask, listDictionaries, listDueReminders, listTasks,
-  localDateString, readMeta, repairParentCompletion, writeMeta,
+  localDateString, readMeta, repairParentCompletion, taskStatusIndex, writeMeta,
 } from '../db/repo.js'
 import { makeAiSessionRoutes } from './routes/ai-sessions.js'
 import { makeAmazonDatasetRoutes } from './routes/amazon-datasets.js'
@@ -373,7 +373,7 @@ export function makeRoutes(db: DatabaseSync, deps: WorkbenchRouteDeps = {}): Web
          * "计划里少了一条，又没人说"。现在缺失任务照样返回（`taskStatusCode: 'missing'`），
          * 由界面标注，容量也照它的快照计入已排（requirements §4.2、AX-C04）。
          */
-        const planTaskStatus = new Map(listTasks(db, { includeArchived: true }).map((task) => [task.id, task.archived === 1 ? 'archived' : task.statusCode]))
+        const planTaskStatus = taskStatusIndex(db)
         const planView = plan === undefined ? null : {
           ...plan,
           items: plan.items.map((item) => ({
@@ -444,14 +444,14 @@ export function makeRoutes(db: DatabaseSync, deps: WorkbenchRouteDeps = {}): Web
       path: '/api/workbench/health',
       handler(_req, res) {
         if (!isLoopbackRequest(_req)) return writeJson(res, 403, { error: 'forbidden: loopback-only' })
-        const versionRow = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as { value: string } | undefined
+        const schemaVersion = readMeta(db, 'schema_version')
         writeJson(res, 200, {
           ok: true,
           name: '@dely0/dsh-personal-workbench',
           version: PACKAGE_VERSION,
           buildId: PACKAGE_BUILD_ID,
           db: {
-            schemaVersion: versionRow?.value ?? 'unknown',
+            schemaVersion: schemaVersion ?? 'unknown',
             taskCount: listTasks(db, { includeArchived: true }).length,
             dictionaryCount: listDictionaries(db).length,
           },

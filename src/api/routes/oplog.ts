@@ -5,13 +5,17 @@
  * - `POST /import`  导入旧「亚马逊运营日志 V5」导出的 JSON（幂等：同 id 覆盖）
  *
  * 与其它域同一条 loopback 信任围栏；只读 + 导入，不提供编辑/删除。
+ *
+ * 响应信封（2026-10-27，决策 2）：一律走 `apiOk` / `apiError`。
+ * 注意其中「置顶」那条原先回的是 `{ ok: <操作结果> }` —— 字段名恰好与信封同名，
+ * 统一后语义更准确：成功 `{ok:true}`、失败 `{ok:false, error}`，客户端读 `.ok` 的代码不受影响。
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
 import { createOplogEntry, deleteOplogEntry, deleteOplogType, getOplogEntry, getTask, importOplogEntries, listOplogDayIndex, listOplogEntries, listOplogTaskOptions, listOplogTypes, oplogFacets, oplogKpiCounts, setOplogPinned, updateOplogEntry, upsertOplogType } from '../../db/repo.js'
 import type { OplogDraft } from '../../db/repo.js'
 import { normalizeOplogImport } from '../../shared/oplogImport.js'
-import { isLoopbackRequest, readJsonBody, writeJson } from './helpers.js'
+import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
 
 
 function readDraft(body: Record<string, unknown>): OplogDraft | string {
@@ -44,7 +48,7 @@ export function makeOplogRoutes(db: DatabaseSync): WebRoute[] {
       kind: 'prefix',
       path: PREFIX,
       handler: async (req, res) => {
-        if (!isLoopbackRequest(req)) return writeJson(res, 403, { error: 'forbidden: loopback-only' })
+        if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
         const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
         const action = segments[0] ?? ''
@@ -59,79 +63,80 @@ export function makeOplogRoutes(db: DatabaseSync): WebRoute[] {
             keyword: url.searchParams.get('q') ?? undefined,
             limit: Number.isFinite(limit) ? limit : 200,
           })
-          return writeJson(res, 200, { entries, facets: oplogFacets(db), kpi: oplogKpiCounts(db), tasks: listOplogTaskOptions(db) })
+          return apiOk(res, { entries, facets: oplogFacets(db), kpi: oplogKpiCounts(db), tasks: listOplogTaskOptions(db) })
         }
 
         if (req.method === 'POST' && action === 'import') {
           // 旧导出常带内嵌截图：7 条日志就能到 ~1MB，默认 256KB 会把整份拒掉
           const body = await readJsonBody(req, 12 * 1024 * 1024)
           if (body === undefined) {
-            return writeJson(res, 413, { error: '导入文件过大或不是合法 JSON（上限 12MB）' })
+            return apiError(res, 413, '导入文件过大或不是合法 JSON（上限 12MB）')
           }
           const parsed = normalizeOplogImport(body)
           if (parsed.entries.length === 0) {
-            return writeJson(res, 400, {
-              error: parsed.firstReason ?? '没有可导入的条目',
-              rejected: parsed.rejected,
-            })
+            return apiError(res, 400, parsed.firstReason ?? '没有可导入的条目', { rejected: parsed.rejected })
           }
           const summary = importOplogEntries(db, parsed.entries, parsed.rejected, parsed.firstReason)
-          return writeJson(res, 200, { ok: true, ...summary, facets: oplogFacets(db) })
+          return apiOk(res, { ...summary, facets: oplogFacets(db) })
         }
 
 
         if (req.method === 'GET' && action === 'days') {
-          return writeJson(res, 200, { days: listOplogDayIndex(db) })
+          return apiOk(res, { days: listOplogDayIndex(db) })
         }
 
         if (req.method === 'GET' && action === 'types') {
-          return writeJson(res, 200, { types: listOplogTypes(db) })
+          return apiOk(res, { types: listOplogTypes(db) })
         }
 
         if (req.method === 'POST' && action === 'types') {
           const body = await readJsonBody(req, 256 * 1024)
-          if (body === undefined) return writeJson(res, 400, { error: '请求体不是合法 JSON' })
+          if (body === undefined) return apiError(res, 400, '请求体不是合法 JSON')
           const name = typeof body.name === 'string' ? body.name.trim() : ''
           const color = typeof body.color === 'string' ? body.color.trim() : ''
-          if (name === '' || !/^#[0-9a-fA-F]{6}$/.test(color)) return writeJson(res, 400, { error: '类型名或颜色不合法' })
-          return writeJson(res, 200, { types: listOplogTypes(db), type: upsertOplogType(db, name, color) })
+          if (name === '' || !/^#[0-9a-fA-F]{6}$/.test(color)) return apiError(res, 400, '类型名或颜色不合法')
+          return apiOk(res, { types: listOplogTypes(db), type: upsertOplogType(db, name, color) })
         }
 
         if (req.method === 'DELETE' && action === 'types' && segments[1] !== undefined) {
           const removed = deleteOplogType(db, decodeURIComponent(segments[1]))
-          return writeJson(res, removed ? 200 : 404, { types: listOplogTypes(db) })
+          /** 原实现回 `404 + {types}`（没有 error 字段），统一后 404 必须带可读原因。 */
+          return removed ? apiOk(res, { types: listOplogTypes(db) }) : apiError(res, 404, '类型不存在')
         }
 
         if (req.method === 'POST' && action === '' && segments.length === 0) {
           const body = await readJsonBody(req, 2 * 1024 * 1024)
-          if (body === undefined) return writeJson(res, 413, { error: '请求体不是合法 JSON 或过大' })
+          if (body === undefined) return apiError(res, 413, '请求体不是合法 JSON 或过大')
           const draft = readDraft(body)
-          if (typeof draft === 'string') return writeJson(res, 400, { error: draft })
+          if (typeof draft === 'string') return apiError(res, 400, draft)
           const taskId = typeof draft.taskId === 'string' ? draft.taskId.trim() : ''
-          if (taskId !== '' && getTask(db, taskId) === undefined) return writeJson(res, 400, { error: '关联任务不存在或已删除' })
-          return writeJson(res, 200, { entry: createOplogEntry(db, draft) })
+          if (taskId !== '' && getTask(db, taskId) === undefined) return apiError(res, 400, '关联任务不存在或已删除')
+          return apiOk(res, { entry: createOplogEntry(db, draft) })
         }
 
         if (req.method === 'PATCH' && segments[0] !== undefined && segments[1] === undefined) {
           const body = await readJsonBody(req, 2 * 1024 * 1024)
-          if (body === undefined) return writeJson(res, 413, { error: '请求体不是合法 JSON 或过大' })
+          if (body === undefined) return apiError(res, 413, '请求体不是合法 JSON 或过大')
           if (body.pinned !== undefined) {
-            const ok = setOplogPinned(db, segments[0], body.pinned === true)
-            return writeJson(res, ok ? 200 : 404, { ok })
+            const pinned = setOplogPinned(db, segments[0], body.pinned === true)
+            /** 成功 `{ok:true}`、失败 `{ok:false,error}`：原字段名与信封同名，客户端按 `.ok` 读不受影响。 */
+            return pinned ? apiOk(res) : apiError(res, 404, '日志不存在')
           }
           const draft = readDraft(body)
-          if (typeof draft === 'string') return writeJson(res, 400, { error: draft })
+          if (typeof draft === 'string') return apiError(res, 400, draft)
           const taskId = typeof draft.taskId === 'string' ? draft.taskId.trim() : ''
-          if (taskId !== '' && getTask(db, taskId) === undefined) return writeJson(res, 400, { error: '关联任务不存在或已删除' })
+          if (taskId !== '' && getTask(db, taskId) === undefined) return apiError(res, 400, '关联任务不存在或已删除')
           const entry = updateOplogEntry(db, segments[0], draft)
-          return writeJson(res, entry === null ? 404 : 200, { entry })
+          return entry === null ? apiError(res, 404, '日志不存在') : apiOk(res, { entry })
         }
 
         if (req.method === 'DELETE' && segments[0] !== undefined && segments[1] === undefined) {
-          return writeJson(res, deleteOplogEntry(db, segments[0]) ? 200 : 404, { ok: true })
+          return deleteOplogEntry(db, segments[0])
+            ? apiOk(res)
+            : apiError(res, 404, '日志不存在')
         }
 
-        return writeJson(res, 404, { error: 'not found' })
+        return apiError(res, 404, 'not found')
       },
     },
   ]

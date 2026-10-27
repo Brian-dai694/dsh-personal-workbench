@@ -26,7 +26,7 @@ import { join } from 'node:path'
 import { openWorkbenchDb } from '../../lib/db/database.js'
 import { KnowledgeRecallManager } from '../../lib/knowledge/recall.js'
 import { listKnowledge } from '../../lib/db/repo.js'
-import { formatRelevance, idfOf, termStatsOf } from '../../lib/shared/knowledgeRecall.js'
+import { formatRelevance, idfOf, termStatsOf } from '../../lib/knowledge/recall-pure.js'
 
 const args = process.argv.slice(2)
 const flag = (name, fallback = undefined) => {
@@ -143,7 +143,7 @@ for (const massSat of MADES) {
 
 if (args.includes('--detail')) {
   const chosen = Number(flag('--mass', '0.6'))
-  console.log(`\n=== 逐条明细（massSat=${chosen}，阈值 ${(await import('../../lib/shared/knowledgeRecall.js')).RECALL_DEFAULTS.minScore}）===`)
+  console.log(`\n=== 逐条明细（massSat=${chosen}，阈值 ${(await import('../../lib/knowledge/recall-pure.js')).RECALL_DEFAULTS.minScore}）===`)
   const manager = new KnowledgeRecallManager(db, { massSat: chosen, minScore: 0, log: () => {} })
   for (const q of realQueries) {
     const out = manager.recallToText({ taskId: null, query: q })

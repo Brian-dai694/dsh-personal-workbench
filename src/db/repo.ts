@@ -40,14 +40,14 @@ export {
 } from './repo/dictionaries.js'
 
 // 任务域已抽到 repo/tasks.ts
-export { createTask, findOpenTaskByAsin, getTask, listTasks, listChildren, updateTask, taskIdProblem } from './repo/tasks.js'
+export { createTask, findOpenTaskByAsin, getTask, listTasks, listChildren, updateTask, taskIdProblem, taskStatusIndex } from './repo/tasks.js'
 
 // 状态聚合与级联已抽到 repo/status.ts
 export {
   completeTaskCascade, updateTaskWithCompletion, repairParentCompletion,
-  archiveTask, restoreTask, listArchivedTasks, listTaskEvents, createTaskReview, listTaskReviews,
+  archiveTask, restoreTask, listArchivedTasks, listTaskEvents, listTaskEventsInRange, createTaskReview, listTaskReviews,
 } from './repo/status.js'
-export type { TaskReviewInput } from './repo/status.js'
+export type { TaskEventView, TaskReviewInput } from './repo/status.js'
 
 // 草稿域已抽到 repo/drafts.ts
 export {
@@ -70,7 +70,7 @@ export type { TaskMemoryRow } from './repo/task-memory.js'
 // 提醒域已抽到 repo/reminders.ts
 export {
   listDueReminders, skipStaleReminders, listReminders,
-  fireReminder, acknowledgeReminder, resetReminder, skipReminder, addReminder,
+  fireReminder, acknowledgeReminder, resetReminder, skipReminder, addReminder, reminderExists,
 } from './repo/reminders.js'
 export type { DueReminder, TaskReminderRow } from './repo/reminders.js'
 
@@ -169,8 +169,8 @@ export {
 export type { OplogDraft, OplogEntry, OplogFacets, OplogFilter, OplogImportSummary, OplogKpiCounts, OplogTaskOption, OplogDayIndexEntry, OplogType } from './repo/oplog.js'
 
 // ASIN 域
-export { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinJudgments, listAsinProducts, listAsinStoreSummaries, listAsinStores, setAsinStoreWatch, queryAsinPage, setAsinJudgment, setAsinWatch, trendsFor } from './repo/asin.js'
-export type { AsinBatchAction, AsinBatchResult, AsinStoreSummary } from './repo/asin.js'
+export { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, getAsinTaskSource, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinJudgments, listAsinProducts, listAsinStoreSummaries, listAsinStores, setAsinStoreWatch, queryAsinPage, setAsinJudgment, setAsinWatch, trendsFor } from './repo/asin.js'
+export type { AsinBatchAction, AsinBatchResult, AsinStoreSummary, AsinTaskSource } from './repo/asin.js'
 export type { AsinFacets, AsinFilter, AsinImportSummary, AsinJudgment, AsinJudgmentInput, AsinPage, AsinTrendPoint, AsinVerdict } from './repo/asin.js'
 
 // 库存补货看板（migration 31）：只存盘点输入，结论现算

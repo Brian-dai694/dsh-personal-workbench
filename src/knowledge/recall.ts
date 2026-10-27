@@ -51,7 +51,7 @@ import {
   type RecallCandidate,
   type RecallOutcome,
   type TermStats,
-} from '../shared/knowledgeRecall.js'
+} from './recall-pure.js'
 
 /** 完整知识条目 id（uuid v4 形态）。工具按 id 直读时只认这个，不做前缀模糊匹配。 */
 const ENTRY_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

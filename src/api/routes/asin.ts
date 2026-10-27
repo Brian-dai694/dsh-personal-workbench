@@ -10,19 +10,23 @@
  * - GET   /stores            店铺列表（带库内现算的关联商品数）
  * - PATCH /stores/:id/watch  关注/取消店铺
  * - DELETE /stores/:id       删除店铺记录（不删商品）
+ *
+ * 响应信封（2026-10-27，决策 2）：一律走 `apiOk` / `apiError`。
+ * 原实现里 `{ ok: <操作结果>, watch }` 这类"把业务结果塞进 ok 字段"的写法一并收敛：
+ * 成功 `{ok:true, ...}`、失败 `{ok:false, error}`，客户端按 `.ok` 读的语义不变。
  */
 import { access, mkdir, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
-import { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinStoreSummaries, listAsinStores, queryAsinPage, setAsinJudgment, setAsinStoreWatch, setAsinWatch, trendsFor } from '../../db/repo/asin.js'
+import { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, getAsinTaskSource, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinStoreSummaries, listAsinStores, queryAsinPage, setAsinJudgment, setAsinStoreWatch, setAsinWatch, trendsFor } from '../../db/repo/asin.js'
 import { ASIN_BATCH_ACTIONS, type AsinBatchAction } from '../../db/repo/asin.js'
 import { isAsinVerdict } from '../../shared/asinJudgment.js'
 import { normalizeAsinImport } from '../../shared/asinImport.js'
 import { asinBackupFileName, buildAsinBackup } from '../../shared/asinExport.js'
 import { addReminder, createTask, findOpenTaskByAsin, getDictionary, listDictionaries } from '../../db/repo.js'
-import { isLoopbackRequest, readJsonBody, requireCode, writeJson } from './helpers.js'
+import { apiError, apiOk, isLoopbackRequest, readJsonBody, requireCode } from './helpers.js'
 
 const PREFIX = '/api/workbench/asin'
 
@@ -48,7 +52,7 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
       kind: 'prefix',
       path: PREFIX,
       handler: async (req, res) => {
-        if (!isLoopbackRequest(req)) return writeJson(res, 403, { error: 'forbidden: loopback-only' })
+        if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
         const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
 
@@ -73,7 +77,7 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
             offset: (page - 1) * size,
           })
           const trends = trendsFor(db, result.items.map((p) => p.asin))
-          return writeJson(res, 200, {
+          return apiOk(res, {
             products: result.items.map((p) => ({ ...p, trend: trends.get(p.asin) ?? [] })),
             total: result.total,
             page,
@@ -88,7 +92,7 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
 
         if (req.method === 'PATCH' && segments.length === 2 && segments[1] === 'judgment') {
           const body = await readJsonBody(req, 256 * 1024)
-          if (body === undefined || body === null || typeof body !== 'object') return writeJson(res, 400, { error: '请求体不是合法 JSON' })
+          if (body === undefined || body === null || typeof body !== 'object') return apiError(res, 400, '请求体不是合法 JSON')
           const raw = body as Record<string, unknown>
           try {
             const judgment = setAsinJudgment(db, segments[0].toUpperCase(), {
@@ -101,32 +105,34 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
               keywordCount: typeof raw.keywordCount === 'number' ? raw.keywordCount : undefined,
               source: typeof raw.source === 'string' ? raw.source : 'manual',
             })
-            return writeJson(res, 200, { ok: true, judgment, facets: asinFacets(db) })
+            return apiOk(res, { judgment, facets: asinFacets(db) })
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error)
-            return writeJson(res, message === 'asin not found' ? 404 : 400, { error: message })
+            return message === 'asin not found'
+              ? apiError(res, 404, message)
+              : apiError(res, 400, message)
           }
         }
 
         if (req.method === 'PATCH' && segments.length === 2 && segments[1] === 'watch') {
           const body = await readJsonBody(req, 64 * 1024)
-          if (body === undefined || body === null || typeof body !== 'object') return writeJson(res, 400, { error: '请求体不是合法 JSON' })
+          if (body === undefined || body === null || typeof body !== 'object') return apiError(res, 400, '请求体不是合法 JSON')
           const watch = (body as { watch?: unknown }).watch
-          if (typeof watch !== 'boolean') return writeJson(res, 400, { error: 'watch 必须是布尔值' })
+          if (typeof watch !== 'boolean') return apiError(res, 400, 'watch 必须是布尔值')
           const updated = setAsinWatch(db, segments[0].toUpperCase(), watch)
-          return writeJson(res, updated ? 200 : 404, { ok: updated, watch })
+          return updated ? apiOk(res, { watch }) : apiError(res, 404, 'ASIN 不存在')
         }
 
         if (req.method === 'GET' && segments.length === 2 && segments[1] === 'trend') {
-          return writeJson(res, 200, { asin: segments[0], points: asinTrend(db, segments[0].toUpperCase()) })
+          return apiOk(res, { asin: segments[0], points: asinTrend(db, segments[0].toUpperCase()) })
         }
 
         if (req.method === 'POST' && segments[0] === 'import') {
           const body = await readJsonBody(req, 12 * 1024 * 1024)
-          if (body === undefined) return writeJson(res, 413, { error: '导入文件过大或不是合法 JSON（上限 12MB）' })
+          if (body === undefined) return apiError(res, 413, '导入文件过大或不是合法 JSON（上限 12MB）')
           const parsed = normalizeAsinImport(body)
           if (parsed.products.length === 0) {
-            return writeJson(res, 400, { error: parsed.firstReason ?? '没有可导入的 ASIN', rejected: parsed.rejected })
+            return apiError(res, 400, parsed.firstReason ?? '没有可导入的 ASIN', { rejected: parsed.rejected })
           }
           const summary = importAsinProducts(db, parsed.products, parsed.snapshots, parsed.rejected, parsed.firstReason)
           const stores = importAsinStores(db, parsed.stores)
@@ -149,7 +155,7 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
               judgmentFailed += 1
             }
           }
-          return writeJson(res, 200, { ok: true, ...summary, stores, judgmentRestored, judgmentFailed, facets: asinFacets(db) })
+          return apiOk(res, { ...summary, stores, judgmentRestored, judgmentFailed, facets: asinFacets(db) })
         }
 
         if (req.method === 'GET' && segments[0] === 'export') {
@@ -158,22 +164,21 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
           const filtered = selected === null
             ? products
             : products.filter((product) => selected.split(',').map((v) => v.trim().toUpperCase()).includes(product.asin.toUpperCase()))
-          if (filtered.length === 0) return writeJson(res, 400, { error: '没有可导出的商品' })
+          if (filtered.length === 0) return apiError(res, 400, '没有可导出的商品')
           try {
             const dir = join(homedir(), '.dsh', 'workbench', 'exports')
             await mkdir(dir, { recursive: true })
             const filePath = await freePath(dir, asinBackupFileName())
             const backup = buildAsinBackup(filtered, listAsinStores(db))
             await writeFile(filePath, JSON.stringify(backup, null, 2), 'utf8')
-            return writeJson(res, 200, {
-              ok: true,
+            return apiOk(res, {
               path: filePath,
               products: Object.keys(backup.products).length,
               stores: Object.keys(backup.stores).length,
               bytes: JSON.stringify(backup).length,
             })
           } catch (error) {
-            return writeJson(res, 400, { error: `写文件失败：${error instanceof Error ? error.message : String(error)}` })
+            return apiError(res, 400, `写文件失败：${error instanceof Error ? error.message : String(error)}`)
           }
         }
 
@@ -189,8 +194,8 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
          */
         if (req.method === 'POST' && segments.length === 2 && segments[1] === 'task') {
           const asin = segments[0].trim().toUpperCase()
-          const product = db.prepare('SELECT * FROM asin_products WHERE asin = ?').get(asin) as unknown as { title: string; price: number | null; site: string | null; verdict: string | null; score: number | null; judgment_json: string | null } | undefined
-          if (product === undefined) return writeJson(res, 404, { error: 'ASIN 不存在' })
+          const product = getAsinTaskSource(db, asin)
+          if (product === undefined) return apiError(res, 404, 'ASIN 不存在')
           /**
            * 类型/优先级/标题可由界面指定（v1.27），但**必须过字典校验**：
            * 允许自由字符串会让任务落进一个字典里不存在的 code，
@@ -207,14 +212,14 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
             requireCode(db, 'type', typeCode, 'typeCode')
             requireCode(db, 'priority', priorityCode, 'priorityCode')
           } catch (error) {
-            return writeJson(res, 400, { error: error instanceof Error ? error.message : String(error) })
+            return apiError(res, 400, error instanceof Error ? error.message : String(error))
           }
           const existing = findOpenTaskByAsin(db, asin)
           if (existing !== undefined) {
-            return writeJson(res, 409, { error: `这个 ASIN 已有未完成的立项任务：${existing.title}`, existingTaskId: existing.id })
+            return apiError(res, 409, `这个 ASIN 已有未完成的立项任务：${existing.title}`, { existingTaskId: existing.id })
           }
           let judgment: Record<string, unknown> = {}
-          try { judgment = JSON.parse(product.judgment_json ?? '{}') as Record<string, unknown> } catch { judgment = {} }
+          try { judgment = JSON.parse(product.judgmentJson ?? '{}') as Record<string, unknown> } catch { judgment = {} }
           const criteria = Array.isArray(judgment.criteria) ? judgment.criteria as Array<{ name: string; value: string }> : []
           const painPoints = Array.isArray(judgment.painPoints) ? judgment.painPoints as Array<{ label: string; count: number }> : []
           const risk = judgment.risk !== null && typeof judgment.risk === 'object' ? judgment.risk as { level?: string; note?: string } : null
@@ -237,7 +242,7 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
           let dueAt: string | null = null
           if (typeof wanted.dueAt === 'string' && wanted.dueAt.trim() !== '') {
             const parsed = Date.parse(wanted.dueAt)
-            if (!Number.isFinite(parsed)) return writeJson(res, 400, { error: 'dueAt 不是合法时间' })
+            if (!Number.isFinite(parsed)) return apiError(res, 400, 'dueAt 不是合法时间')
             dueAt = new Date(parsed).toISOString()
           }
           const task = createTask(db, {
@@ -261,33 +266,33 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
             const offset = typeof typeDefault === 'number' ? typeDefault : typeof priorityDefault === 'number' ? priorityDefault : undefined
             if (typeof offset === 'number' && Number.isFinite(offset) && offset >= 0) addReminder(db, task.id, offset, 'browser')
           }
-          return writeJson(res, 200, { ok: true, taskId: task.id, title: task.title, dueAt: task.dueAt })
+          return apiOk(res, { taskId: task.id, title: task.title, dueAt: task.dueAt })
         }
         if (req.method === 'GET' && segments[0] === 'stores' && segments.length === 1) {
-          return writeJson(res, 200, { stores: listAsinStoreSummaries(db) })
+          return apiOk(res, { stores: listAsinStoreSummaries(db) })
         }
 
         if (req.method === 'PATCH' && segments[0] === 'stores' && segments.length === 3 && segments[2] === 'watch') {
           const body = await readJsonBody(req, 64 * 1024)
-          if (body === undefined || body === null || typeof body !== 'object') return writeJson(res, 400, { error: '请求体不是合法 JSON' })
+          if (body === undefined || body === null || typeof body !== 'object') return apiError(res, 400, '请求体不是合法 JSON')
           const watch = (body as { watch?: unknown }).watch
-          if (typeof watch !== 'boolean') return writeJson(res, 400, { error: 'watch 必须是布尔值' })
+          if (typeof watch !== 'boolean') return apiError(res, 400, 'watch 必须是布尔值')
           const updated = setAsinStoreWatch(db, decodeURIComponent(segments[1]), watch)
-          return writeJson(res, updated ? 200 : 404, { ok: updated, watch })
+          return updated ? apiOk(res, { watch }) : apiError(res, 404, '店铺不存在')
         }
 
         if (req.method === 'DELETE' && segments[0] === 'stores' && segments.length === 2) {
           const removed = deleteAsinStore(db, decodeURIComponent(segments[1]))
-          return writeJson(res, removed ? 200 : 404, { ok: removed })
+          return removed ? apiOk(res) : apiError(res, 404, '店铺不存在')
         }
         if (req.method === 'POST' && segments[0] === 'batch') {
           const body = await readJsonBody(req, 256 * 1024)
-          if (body === undefined || body === null || typeof body !== 'object') return writeJson(res, 400, { error: '请求体不是合法 JSON' })
+          if (body === undefined || body === null || typeof body !== 'object') return apiError(res, 400, '请求体不是合法 JSON')
           const raw = body as { asins?: unknown; action?: unknown; tag?: unknown }
-          if (!Array.isArray(raw.asins)) return writeJson(res, 400, { error: 'asins 必须是数组' })
+          if (!Array.isArray(raw.asins)) return apiError(res, 400, 'asins 必须是数组')
           const action = typeof raw.action === 'string' ? raw.action : ''
           if (!ASIN_BATCH_ACTIONS.includes(action as AsinBatchAction)) {
-            return writeJson(res, 400, { error: `不支持的批量动作：${action}` })
+            return apiError(res, 400, `不支持的批量动作：${action}`)
           }
           try {
             const result = batchUpdateAsins(
@@ -296,13 +301,13 @@ export function makeAsinRoutes(db: DatabaseSync): WebRoute[] {
               action as AsinBatchAction,
               typeof raw.tag === 'string' ? raw.tag : '',
             )
-            return writeJson(res, 200, { ok: true, ...result, facets: asinFacets(db) })
+            return apiOk(res, { ...result, facets: asinFacets(db) })
           } catch (error) {
-            return writeJson(res, 400, { error: error instanceof Error ? error.message : String(error) })
+            return apiError(res, 400, error instanceof Error ? error.message : String(error))
           }
         }
 
-        return writeJson(res, 404, { error: 'not found' })
+        return apiError(res, 404, 'not found')
       },
     },
   ]

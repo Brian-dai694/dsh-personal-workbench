@@ -10,6 +10,8 @@
  *
  * 只读写本地 SQLite 与本地导出目录；**不连接广告账户、不创建活动、不上传 Bulk**。
  * 与其它域同一条 loopback 信任围栏。
+ *
+ * 响应信封（2026-10-27，决策 2）：一律走 `apiOk` / `apiError`。
  */
 import { access, mkdir, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -22,7 +24,7 @@ import {
 } from '../../db/repo.js'
 import type { KeywordPlanInput } from '../../db/repo.js'
 import { keywordCsvFileName, keywordPlanCsv } from '../../shared/keywordPlanCsv.js'
-import { isLoopbackRequest, readJsonBody, writeJson } from './helpers.js'
+import { apiError, apiOk, isLoopbackRequest, readJsonBody } from './helpers.js'
 
 const PREFIX = '/api/workbench/keyword-plans'
 
@@ -79,26 +81,26 @@ export function makeKeywordPlanRoutes(db: DatabaseSync): WebRoute[] {
       kind: 'prefix',
       path: PREFIX,
       handler: async (req, res) => {
-        if (!isLoopbackRequest(req)) return writeJson(res, 403, { error: 'forbidden: loopback-only' })
+        if (!isLoopbackRequest(req)) return apiError(res, 403, 'forbidden: loopback-only')
         const url = new URL(req.url ?? '/', 'http://localhost')
         const segments = url.pathname.slice(PREFIX.length).split('/').filter((part) => part !== '')
         const method = req.method ?? 'GET'
         const id = segments[0] === undefined ? '' : decodeURIComponent(segments[0])
 
         if (method === 'GET' && segments.length === 0) {
-          return writeJson(res, 200, { plans: listKeywordPlans(db) })
+          return apiOk(res, { plans: listKeywordPlans(db) })
         }
 
         if (method === 'GET' && segments.length === 1) {
           const plan = getKeywordPlan(db, id)
-          return plan === null ? writeJson(res, 404, { error: '方案不存在' }) : writeJson(res, 200, { plan })
+          return plan === null ? apiError(res, 404, '方案不存在') : apiOk(res, { plan })
         }
 
         if (method === 'POST' && segments.length === 0) {
           const body = await readJsonBody(req, 4 * 1024 * 1024)
-          if (body === undefined) return writeJson(res, 413, { error: '请求体不是合法 JSON 或过大' })
+          if (body === undefined) return apiError(res, 413, '请求体不是合法 JSON 或过大')
           const input = readInput(body)
-          if ((input.title ?? '').trim() === '') return writeJson(res, 400, { error: '方案标题不能为空' })
+          if ((input.title ?? '').trim() === '') return apiError(res, 400, '方案标题不能为空')
           try {
             const plan = createKeywordPlan(db, {
               title: input.title as string,
@@ -110,21 +112,23 @@ export function makeKeywordPlanRoutes(db: DatabaseSync): WebRoute[] {
               asin: input.asin,
               note: input.note,
             })
-            return writeJson(res, 200, { plan })
+            return apiOk(res, { plan })
           } catch (error) {
-            return writeJson(res, 400, { error: error instanceof Error ? error.message : String(error) })
+            return apiError(res, 400, error instanceof Error ? error.message : String(error))
           }
         }
 
         if (method === 'PATCH' && segments.length === 1) {
           const body = await readJsonBody(req, 4 * 1024 * 1024)
-          if (body === undefined) return writeJson(res, 413, { error: '请求体不是合法 JSON 或过大' })
+          if (body === undefined) return apiError(res, 413, '请求体不是合法 JSON 或过大')
           const plan = updateKeywordPlan(db, id, readInput(body))
-          return plan === null ? writeJson(res, 404, { error: '方案不存在或标题为空' }) : writeJson(res, 200, { plan })
+          return plan === null ? apiError(res, 404, '方案不存在或标题为空') : apiOk(res, { plan })
         }
 
         if (method === 'DELETE' && segments.length === 1) {
-          return writeJson(res, deleteKeywordPlan(db, id) ? 200 : 404, { ok: true })
+          /** 同 aba-keywords：原实现回 `404 + ok:true`，信封自相矛盾，这里拆成两条。 */
+          if (!deleteKeywordPlan(db, id)) return apiError(res, 404, '方案不存在')
+          return apiOk(res)
         }
 
         /**
@@ -135,25 +139,24 @@ export function makeKeywordPlanRoutes(db: DatabaseSync): WebRoute[] {
          */
         if (method === 'POST' && segments.length === 2 && segments[1] === 'export') {
           const plan = getKeywordPlan(db, id)
-          if (plan === null) return writeJson(res, 404, { error: '方案不存在' })
+          if (plan === null) return apiError(res, 404, '方案不存在')
           try {
             const dir = join(homedir(), '.dsh', 'workbench', 'exports')
             await mkdir(dir, { recursive: true })
             const filePath = await freePath(dir, keywordCsvFileName(plan.title))
             await writeFile(filePath, '\uFEFF' + keywordPlanCsv(plan.rows, plan.negatives), 'utf8')
-            return writeJson(res, 200, {
-              ok: true,
+            return apiOk(res, {
               path: filePath,
               fileLink: pathToFileURL(filePath).href,
               rows: plan.rows.length,
               negatives: plan.negatives.length,
             })
           } catch (error) {
-            return writeJson(res, 400, { error: `写文件失败：${error instanceof Error ? error.message : String(error)}` })
+            return apiError(res, 400, `写文件失败：${error instanceof Error ? error.message : String(error)}`)
           }
         }
 
-        return writeJson(res, 404, { error: 'not found' })
+        return apiError(res, 404, 'not found')
       },
     },
   ]

@@ -24,7 +24,7 @@ import { createKnowledge, createTask } from '../lib/db/repo.js'
 import { linkTaskSession } from '../lib/db/repo/task-sessions.js'
 import { KnowledgeRecallManager } from '../lib/knowledge/recall.js'
 import { listRecallLog, readSessionOverrides } from '../lib/knowledge/recall-log.js'
-import { extractTerms, scoreCandidate } from '../lib/shared/knowledgeRecall.js'
+import { extractTerms, scoreCandidate } from '../lib/knowledge/recall-pure.js'
 
 function withDb(run) {
   const dir = mkdtempSync(join(tmpdir(), 'dsh-workbench-knowledge-recall-'))

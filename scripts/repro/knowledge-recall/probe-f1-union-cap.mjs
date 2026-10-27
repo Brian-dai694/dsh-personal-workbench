@@ -2,7 +2,7 @@
  * 反向前置 #1：多句 query 合并后必须仍然受单回合上限约束。
  * 有缺陷时退出码非零（合并后 6 条 > 上限 3 条）。
  */
-import { mergeRecallOutcomes, recallKnowledge, RECALL_DEFAULTS } from '../../../lib/shared/knowledgeRecall.js'
+import { mergeRecallOutcomes, recallKnowledge, RECALL_DEFAULTS } from '../../../lib/knowledge/recall-pure.js'
 
 const NOW = new Date('2026-09-17T00:00:00.000Z')
 const entry = (id, title) => ({

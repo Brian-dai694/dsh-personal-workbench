@@ -35,7 +35,7 @@ import {
   taskIdFromWorkspacePath,
   termStatsOf,
   willInject,
-} from '../lib/shared/knowledgeRecall.js'
+} from '../lib/knowledge/recall-pure.js'
 
 /**
  * ⚠️ 这里**不 import 类型**：`node --test` 直接跑 `.mjs`，`.d.ts` 只是类型、运行时并不存在，

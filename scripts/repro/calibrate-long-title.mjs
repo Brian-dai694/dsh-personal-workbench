@@ -28,7 +28,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openWorkbenchDb } from '../../lib/db/database.js'
 import { KnowledgeRecallManager } from '../../lib/knowledge/recall.js'
-import { RECALL_DEFAULTS } from '../../lib/shared/knowledgeRecall.js'
+import { RECALL_DEFAULTS } from '../../lib/knowledge/recall-pure.js'
 import { listKnowledge } from '../../lib/db/repo.js'
 
 const SOURCE = join(process.env.USERPROFILE ?? process.env.HOME ?? '', '.dsh', 'workbench', 'workbench.db')
