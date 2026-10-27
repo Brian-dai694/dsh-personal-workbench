@@ -126,19 +126,21 @@ src/
 
 ---
 
-## 5. 这一轮**没**做的（下一步按 rebaseline §5 继续）
+## 5. 截至本轮结束的缺口清单
 
-| 缺口 | 现状 | 批次 |
+| 缺口 | 现状 | 状态 |
 | --- | --- | --- |
-| 直写 SQL 越层 | **34 处**：api 7 / reminder 14 / `tools/workbench.ts` 1 / `knowledge/recall*.ts` 10 / `memory/review-memory.ts` 2 | 4 |
-| 域间直接依赖 | `db/repo/status.ts` → `asin.ts`；`api/routes/asin.ts` → `createTask` | 3 |
-| 大文件 | `experts/install.ts`(1,704) `knowledge/recall.ts`(1,423) `experts/drafts.ts`(1,239) `tools/workbench.ts`(1,177) | 5 |
-| `tsconfig.build.json` | 仍是 100 条**显式白名单**（漏一条 = 产物缺模块，无测试会红） | 2 / 6 |
-| 架构规则测试 | 本轮靠一次性脚本 + grep 校验，**没有落成 `test/architecture.test.mjs`** | 6 |
-| 本地文件端点 | `read-local-file` / `list-local-dir` / `workspaces/ensure` 无目录白名单（D6） | 6 |
+| 直写 SQL 越层 | **1 处**（`experts/install.ts` 的 `PRAGMA database_list`，已在 R7 白名单注明理由） | ✅ 已收 |
+| 架构规则测试 | `test/architecture.test.mjs`（R1/R2/R4a/R4b/R5/R6/R7/R8，四条带棘轮） | ✅ 已落 |
+| 装配瘦身 | `index.ts` 723 → 33 行（`plugin/*` 六个模块）；设置域拆出 `routes/settings.ts` | ✅ 已落 |
+| 域间直接依赖 | `status.ts` 摘掉 `asin.ts`、`findOpenTaskByAsin` 移到 asin 域、Amazon 路由前缀收敛 | ✅ 由并行线完成（`7e2185c`） |
+| 大文件 | `experts/install.ts`(1,704) · `knowledge/recall.ts`(1,423) · `experts/drafts.ts`(1,239) · `tools/workbench.ts`(1,177) | ⏳ 待做（批次 5） |
+| `tsconfig.build.json` | 仍是 100 条**显式白名单**（漏一条 = 产物缺模块，无测试会红） | ⏳ 待做（批次 2 / 6） |
+| 本地文件端点 | `read-local-file` / `list-local-dir` / `workspaces/ensure` 无目录白名单（D6） | ⏳ 待做（批次 6） |
+| 客户端视图直连 HTTP | 4 个视图 23 处（rebaseline D5 附带发现） | ⏳ 待做（批次 7） |
 
-> 建议下一步优先做**批次 6 的前半段**（把本轮验证用的三条边界扫描写成测试）：
-> 没有测试的边界，下一个 PR 就会重新破掉——这正是本轮之前的状态。
+> 下一步优先级：**`tsconfig.build.json` 白名单 → glob（或加产物覆盖测试）** 成本最低、收益最直接
+> （它现在靠"人记得加一行"维持，是本轮所有结构性收益里唯一还没被机制守住的一条）。
 
 ---
 
@@ -156,7 +158,7 @@ src/
 | R1 | `shared/` 必须双端共用（shared→shared **传递闭包**后判定） | 5 条历史遗留，棘轮 |
 | R5 | `client/` 不得运行时依赖宿主；type-only 单独登记 | 0 运行时 / 6 条 type-only |
 | R6 | `src/` 根只允许 `index.ts` | 通过 |
-| R7 | `db.prepare(` 只许在 `db/` | 28 处 / 8 文件，棘轮 |
+| R7 | `db.prepare(` 只许在 `db/` | api 层清零，剩 1 处 PRAGMA，棘轮 |
 | R8 | `shared/` 不得 import `node:*` | 0 违规 |
 
 > 写完立刻就抓到两件事：① `shared/quickAttachments`、`shared/taskFolder` 被词法漏判成"单端"
