@@ -28,9 +28,6 @@
 
 前置：**DSH ≥ `0.1.5-rc.1`**（Web 版）、Node `^22.19.0` 或 `>=24.0.0`、pnpm `>=11.7.0 <12`。
 
-```sh
-dsh plugin --profile web add @dely0/dsh-personal-workbench
-```
 
 > ⚠️ **装完必须重启 `dsh web`，只刷新浏览器不够**：客户端 bundle 由宿主在**启动时**读进内存，
 > 刷新拿到的是旧代码。升级/回退同理。
@@ -40,8 +37,6 @@ dsh plugin --profile web add @dely0/dsh-personal-workbench
 ```sh
 # GitHub 源码
 dsh plugin --profile web add git+https://github.com/Brian-dai694/dsh-personal-workbench.git
-# Release tarball
-dsh plugin --profile web add file:/path/to/dsh-personal-workbench-<version>.tgz
 ```
 
 ## 快速上手
