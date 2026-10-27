@@ -12,8 +12,11 @@
  * - 「跳到关联任务」走入口注入的 `openTaskById`（它会 `setView('list')`，这是既有行为，原样保留）。
  * - 编辑表单直接读写域模型里的 `draft`（拆分前就是受控的 `setKnowledgeDraft(prev => …)`），
  *   不额外留一份本地副本 —— 两份可写状态就是下一个"改了一处另一处不动"。
+ *
+ * ⚠️ 2026-10-27 批次 8：本文件**不再直接发 HTTP**。保存与删除原先写在这里的
+ * `void api(...)` 里（连"保存后关草稿 + 重拉列表"这组状态变更也散在 JSX 中），
+ * 已搬进 `useKnowledge` 的 `saveDraft()` / `removeEntry()`。视图只喊意图、只给文案。
  */
-import { api } from '../api.js'
 import { Badge } from '../components/TaskList.js'
 import { Icon } from '../components/Icon.js'
 import { MarkdownText } from '../components/MarkdownText.js'
@@ -43,12 +46,10 @@ export function KnowledgeDetailPane(props: KnowledgeDetailPaneProps): JSX.Elemen
       <form className="wb-form" onSubmit={(e) => {
         e.preventDefault()
         if (draft.title.trim() === '') return
-        const tags = draft.tags.split(/[,#，\s]+/).map((tag) => tag.trim()).filter((tag) => tag !== '').slice(0, 20)
         const isEdit = model.editId !== null
-        const payload = { title: draft.title.trim(), contentMd: draft.contentMd, kindCode: draft.kindCode, tags, sourceTaskId: draft.sourceTaskId.trim() === '' ? null : draft.sourceTaskId.trim(), sourceReviewId: draft.sourceReviewId.trim() === '' ? null : draft.sourceReviewId.trim(), fileLink: draft.fileLink.trim() === '' ? null : draft.fileLink.trim() }
-        void api(isEdit ? `/api/workbench/knowledge/${model.editId}` : '/api/workbench/knowledge', { method: isEdit ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
-          .then(() => { model.closeDraft(); model.bumpRefreshKey(); setNotice(isEdit ? t('知识条目已更新') : t('知识条目已创建')) })
-          .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
+        void model.saveDraft().then((ok) => {
+          if (ok) setNotice(isEdit ? t('知识条目已更新') : t('知识条目已创建'))
+        })
       }}>
         <h4 className="full" style={{ margin: 0 }}>{model.editId === null ? t('新建知识条目') : t('编辑知识条目')}</h4>
         <label className="full">{t('标题')}<input value={draft.title} onChange={(e) => model.patchDraft({ title: e.target.value })} placeholder={t('可检索的标题')} /></label>
@@ -69,7 +70,7 @@ export function KnowledgeDetailPane(props: KnowledgeDetailPaneProps): JSX.Elemen
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <h4 style={{ flex: 1, margin: 0 }}>{selected.title}</h4>
           <button className="wb-btn" onClick={() => model.startEdit(selected)}><Icon name="edit" />{t('编辑')}</button>
-          <button className="wb-btn" onClick={() => { if (window.confirm(t('删除这条知识？'))) { void api(`/api/workbench/knowledge/${selected.id}`, { method: 'DELETE' }).then(() => { model.setSelected(null); model.bumpRefreshKey(); setNotice(t('已删除')) }).catch((err: unknown) => setError(err instanceof Error ? err.message : String(err))) } }}><Icon name="trash" />{t('删除')}</button>
+          <button className="wb-btn" onClick={() => { if (window.confirm(t('删除这条知识？'))) { void model.removeEntry(selected.id).then((ok) => { if (ok) setNotice(t('已删除')) }) } }}><Icon name="trash" />{t('删除')}</button>
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
           <Badge dict={dictOf('knowledge_kind')} code={selected.kindCode} />

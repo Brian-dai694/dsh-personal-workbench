@@ -37,7 +37,7 @@
 | **7a 打开文件注入面（D6）** | ✅ **完成（本会话）** | `api/openFileRoute.ts` 删掉 `execFile('cmd', ['/c','start',…], { windowsVerbatimArguments: true })` —— 那两件事叠加成**命令注入**（Node 不转义 + cmd 二次解析，路径里的 `&`/`|` 变命令分隔符），而路径来自知识条目 `fileLink`（**AI 能写**）。改为 `rundll32 url.dll,FileProtocolHandler` + `file://` URL（无 shell，每参数独立 argv），WSL 分支同样删掉 `cmd.exe /c start`。新增 `test/openFileSafety.test.mjs`（3 条源码守卫 + 2 条行为）。**验证**：`tsc` 0；`build` 0；定向 **22/22** |
 | **7b 目录白名单（D6）** | ⏸ **暂缓（用户决策）** | 按字面加白名单会砍掉「选择本地文档」的**选任意盘**能力（该弹窗现在能浏览所有盘符）。留待单独决策：严格模式 / 可配置开关 / 只写文档。**现状是"本机同用户能力"，不是提权** |
 | **6 拆大文件（D5）** | 🔶 **部分完成（对方会话）** | `index.ts` 723 → 33 行 + `plugin/*` 六模块（`0873664`）。剩：`experts/install.ts`(1916)、`knowledge/recall.ts`(1423)、`experts/drafts.ts`(1413)、`tools/workbench.ts`(1177) |
-| **8 客户端纪律** | ⬜ 未开始 | `client/views/*.tsx` 仍有 **15 处**直接 `api(` 调用 |
+| **8 客户端纪律** | 🔶 **护栏已建 + 1 视图已收回（本会话）** | 口径修正：`views/*.tsx` 直接 HTTP 共 **21 处**（AsinView 9 / OpsLogView 10 / InventoryView 2）。先前报的 13/15 是**漏算**——正则只匹配 `api(`，漏掉了 `api<T>(...)` 泛型写法。本会话把 `KnowledgeDetailPane`（2 → **0**）搬进 `useKnowledge.saveDraft()/removeEntry()`；新增 `test/viewHttpFence.test.mjs` 三条守卫。余下 3 视图按棘轮额度登记，只许减少 |
 
 **当前快照（11:00:49）**：`src` 257 文件 / 70,632 行。
 

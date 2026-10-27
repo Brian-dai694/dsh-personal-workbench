@@ -202,6 +202,18 @@ export interface UseKnowledgeResult {
   patchDraft: (patch: Partial<KnowledgeDraft>) => void
   closeDraft: () => void
   filePicker: KnowledgeFilePicker
+  /**
+   * 保存当前草稿（`editId === null` 走 POST，否则 PATCH）。返回是否成功。
+   *
+   * ⚠️ **提示文案不在这里**：本 hook 不碰 i18n（它连 `setNotice` 都只用来发"已选择本地文件"
+   * 这类与界面语言无关的内部状态）。成功/失败后的用户可见文案由**视图**用 `t()` 给，
+   * 这样 D17 拆分后的中文措辞逐字不变，也不会为了搬一个 HTTP 调用把 i18n 拖进域模型。
+   *
+   * 返 `boolean` 而不是抛：表单提交要先防重复提示，调用方拿不到结果就只能靠 catch 猜。
+   */
+  saveDraft: () => Promise<boolean>
+  /** 删除一条知识条目。返回是否成功（同 `saveDraft` 的取舍）。 */
+  removeEntry: (id: string) => Promise<boolean>
   /** 用系统默认程序打开知识条目关联的本地文件。 */
   openKnowledgeFile: (fileLink: string) => Promise<void>
 }
@@ -342,6 +354,59 @@ export function useKnowledge(input: UseKnowledgeInput): UseKnowledgeResult {
     void summarize(entry.path)
   }
 
+  /**
+   * 保存草稿（2026-10-27 批次 8）：原先这段 HTTP 写在 `views/KnowledgeDetailPane.tsx` 的表单
+   * `onSubmit` 里 —— 视图直接发 HTTP 破坏了 D17 的结构硬门（"视图拿意图不拿 HTTP"），
+   * 也让"保存后关闭草稿 + 触发重拉"这组状态变更散在 JSX 里。搬到这里后视图只喊 `saveDraft()`。
+   *
+   * 行为逐字保留：标签解析（逗号/空格/中文逗号切分、去空、上限 20）、空标题直接不提交、
+   * 成功后 `closeDraft()` + `bumpRefreshKey()`（由 refreshKey 的 effect 触发重拉）。
+   */
+  const saveDraft = async (): Promise<boolean> => {
+    if (draft === null) return false
+    const title = draft.title.trim()
+    if (title === '') return false
+    const tags = draft.tags.split(/[,#，\s]+/).map((tag) => tag.trim()).filter((tag) => tag !== '').slice(0, 20)
+    const payload = {
+      title,
+      contentMd: draft.contentMd,
+      kindCode: draft.kindCode,
+      tags,
+      sourceTaskId: draft.sourceTaskId.trim() === '' ? null : draft.sourceTaskId.trim(),
+      sourceReviewId: draft.sourceReviewId.trim() === '' ? null : draft.sourceReviewId.trim(),
+      fileLink: draft.fileLink.trim() === '' ? null : draft.fileLink.trim(),
+    }
+    try {
+      await api(
+        editId === null ? '/api/workbench/knowledge' : `/api/workbench/knowledge/${editId}`,
+        { method: editId === null ? 'POST' : 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) },
+      )
+      setDraft(null)
+      setEditId(null)
+      setRefreshKey((v) => v + 1)
+      return true
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      return false
+    }
+  }
+
+  /**
+   * 删除条目（2026-10-27 批次 8）：同上，HTTP 从 `views/KnowledgeDetailPane.tsx` 的删除按钮里搬来。
+   * 成功后清空选中 + 触发重拉（原先也是这两步）。
+   */
+  const removeEntry = async (id: string): Promise<boolean> => {
+    try {
+      await api(`/api/workbench/knowledge/${id}`, { method: 'DELETE' })
+      setSelected(null)
+      setRefreshKey((v) => v + 1)
+      return true
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      return false
+    }
+  }
+
   const openKnowledgeFile = async (fileLink: string): Promise<void> => {
     try {
       const workspaces = safeService<WorkbenchRuntime['workspaces']>(runtime, 'workspaces')
@@ -387,6 +452,7 @@ export function useKnowledge(input: UseKnowledgeInput): UseKnowledgeResult {
       openPicker, close: () => setFilePickerOpen(false),
       loadDir, pickFile, pickAndSummarize, summarize,
     },
+    saveDraft, removeEntry,
     openKnowledgeFile,
   }
 }
