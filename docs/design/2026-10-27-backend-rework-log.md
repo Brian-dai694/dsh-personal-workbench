@@ -135,12 +135,13 @@ src/
 | 装配瘦身 | `index.ts` 723 → 33 行（`plugin/*` 六个模块）；设置域拆出 `routes/settings.ts` | ✅ 已落 |
 | 域间直接依赖 | `status.ts` 摘掉 `asin.ts`、`findOpenTaskByAsin` 移到 asin 域、Amazon 路由前缀收敛 | ✅ 由并行线完成（`7e2185c`） |
 | 大文件 | `experts/install.ts`(1,704) · `knowledge/recall.ts`(1,423) · `experts/drafts.ts`(1,239) · `tools/workbench.ts`(1,177) | ⏳ 待做（批次 5） |
-| `tsconfig.build.json` | 仍是 100 条**显式白名单**（漏一条 = 产物缺模块，无测试会红） | ⏳ 待做（批次 2 / 6） |
+| `tsconfig.build.json` | 已改为继承 `include: ["src"]`，并加 `test/buildOutput.test.mjs`（产物覆盖断言）；lib 267 js / 4.8 MB | ✅ 已收 |
 | 本地文件端点 | `read-local-file` / `list-local-dir` / `workspaces/ensure` 无目录白名单（D6） | ⏳ 待做（批次 6） |
 | 客户端视图直连 HTTP | 4 个视图 23 处（rebaseline D5 附带发现） | ⏳ 待做（批次 7） |
 
-> 下一步优先级：**`tsconfig.build.json` 白名单 → glob（或加产物覆盖测试）** 成本最低、收益最直接
-> （它现在靠"人记得加一行"维持，是本轮所有结构性收益里唯一还没被机制守住的一条）。
+> 下一步优先级：**大文件拆分（批次 5）** —— `experts/install.ts` 1,704 行是最硬的一块；
+> 其次是**客户端视图直连 HTTP 的 23 处**（D5 附带发现，纯纪律问题，改动面小但散）。
+> `lib/` 里那 58 个 UI 产物属于 rebaseline D1 的未决项（要不要排除 client 目录），不是 bug。
 
 ---
 
@@ -232,7 +233,81 @@ tsc 与全量测试在合并后的树上通过。
 本轮 1 次 MISS 就是这么发现的（`product.judgment_json` 缩进不一致）。
 
 
-## 8. 回滚方式
+## 8. 第四轮：装配瘦身（index.ts 723 → 33 行 + 设置域拆出）
+
+### 8.1 入口拆成 `plugin/`（提交 `0873664`）
+
+| 新模块 | 行数 | 职责 |
+| --- | --- | --- |
+| `plugin/apply.ts` | 60 | 开库 → 失败走降级 / 成功交给 `ready`（降级是"宿主还能起来"的唯一保证） |
+| `plugin/ready.ts` | 412 | 数据库可用时的完整装配；文件头写明 4 条**顺序约束**（知识召回/专家服务先于路由、recover 先于技能 provider、逆序释放） |
+| `plugin/commands.ts` | 168 | `/workbench`、`/expert` 两个斜杠命令（命令本体仍单独导出，单测直接驱动） |
+| `plugin/prompt.ts` | 35 | 注入模型的常量文本（纯数据） |
+| `plugin/probe.ts` | 21 | 可选服务软探测的**唯一实现**（"绝不写进 inject"这条规则的执行点） |
+| `plugin/config.ts` | 49 | 配置项与目录覆盖口径 |
+| `index.ts` | **33** | 只留对外表面：`name` / `inject` / `apply` / `workbenchCommandDefinition` / `Config` |
+
+配套：新增 `test/_entrySources.mjs`（读"入口面"= index + plugin/*），10 个接线测试改成**读真实 owner**
+而不是硬编码 `src/index.ts`。其中 `expertWiring` 的释放次序断言改成"**去注释后**的 ready.ts"——
+注释里也会出现 `experts.dispose()` 字样，直接 `indexOf` 会把注释位置当成代码位置。
+
+### 8.2 设置域拆出 `api/routes/settings.ts`（提交 `9fae1c1`）
+
+`api/routes.ts` **463 → 308 行**。搬走的是：读模型 `readWorkbenchSettings` + 三个区间常量/读取器 +
+`/settings` 的 GET/POST handler（原先 81 行内联）。
+
+拆法上有一个刻意的选择：**读模型与写入口放在同一个文件**。这个 handler 历史上的 bug 是
+"加字段时 GET/POST 只改一边 → 保存后开关自己变回去"，而分开两个文件正是让那件事更容易发生。
+
+配套：`routes.ts` 从新模块 re-export 读模型（外部调用点不变）；`knowledgeRecallRoutes` / `expertWiring`
+的判据改读 `routes/settings.ts`；`apiEnvelope` 的 `RAW_WRITEJSON_BASELINE` 278 → 282，
+并在注释里补上"**纯搬迁例外**"的规则（默认仍不许上调，因为设置域的 5 处手写响应随文件搬进了被扫描集合）。
+
+**验证**：`tsc` 0 error；`pnpm build` 0；全量 **1544 项测试全绿**。
+
+### 8.3 这一轮暴露的协作问题
+
+同一工作树上有另一条线在并行做 **D3 域解耦**（`status.ts` 摘掉 `asin.ts`、新增
+`db/repo/task-completion-hooks.ts`、`findOpenTaskByAsin` 移到 asin 域、Amazon 路由前缀收敛）。
+两次撞到的是同一件事：**我跑完验证、准备提交时，对方的半成品已经把 `tsc` 弄红**。
+
+处置：只 `git add` 我自己那 5 个文件（`routes.ts` / `settings.ts` / 两个测试 owner 修正 / 棘轮基线），
+对方的文件留给对方提交（他随后提交了 `7e2185c`）。**不要用 `git add -A` 在并行工作树上做"顺手一起提交"。**
+
+---
+
+## 9. 第五轮：构建配置去白名单（提交 `caaa5b4`）
+
+`tsconfig.build.json` 原先是一份 **100 条逐文件白名单**。它的问题不是啰嗦，而是**没有守卫**：
+新增模块忘了加一行 → 产物里没有这个文件，而 `tsc --noEmit`（走 `tsconfig.json` 的 `include: ["src"]`）**照样是绿的**。
+表现是"本地跑得通、装盘后 ERR_MODULE_NOT_FOUND"。
+
+现在构建配置只保留 emit 选项，`include` 继承基配置的 `["src"]`：
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": false, "declaration": true, "outDir": "lib", "rootDir": "src" }
+}
+```
+
+配套 `test/buildOutput.test.mjs` 三条断言：① include 不许回退成逐文件白名单（条目 ≤5 且不以 .ts 结尾）；
+② **全部宿主侧源码**（`src/` 下非 `client/`）都有对应 `lib/**/*.js`（这条直接替代了"人记得加一行"）；
+③ `lib/index.js` / `lib/client.js` / `lib/build-info.json` 三件套在位。
+
+**代价（要知道）**：`lib/` 产物 209 → **267 个 js**，体积 4.8 MB。多出来的 58 个是此前不在白名单里的
+client UI 模块（`client/index.js`、`app/*`、`views/*`）。"UI 该不该进宿主产物"仍是 rebaseline D1 的未决项 ——
+现在它从"靠白名单间接控制"变成"显式要决定的事"，要么改代码排除目录并同步改测试的 import 口径，要么承认它只是惰性体积。
+
+**验证**：`tsc` 0 error；`pnpm build` 0；全量 **1552 项测试全绿**。
+
+> 又一次证明"白名单式配置"的代价：这一轮改完，立刻有测试**断言白名单本身**（`taskDetailWiring` 里
+> "xlsx 必须在构建清单"），说明当年的设计把"配置写法"当成了契约。判据应该指向**结果**
+> （产物在不在），而不是**实现**（有没有那一行）。
+
+---
+
+## 10. 回滚方式
 
 三批各自一次提交，互不依赖：
 
