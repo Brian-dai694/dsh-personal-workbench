@@ -27,7 +27,7 @@ import { copyFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openWorkbenchDb } from '../../lib/db/database.js'
-import { KnowledgeRecallManager } from '../../lib/knowledge-recall.js'
+import { KnowledgeRecallManager } from '../../lib/knowledge/recall.js'
 import { RECALL_DEFAULTS } from '../../lib/shared/knowledgeRecall.js'
 import { listKnowledge } from '../../lib/db/repo.js'
 

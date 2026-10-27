@@ -18,10 +18,10 @@ import { dirname, join } from 'node:path'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const CORE = join(ROOT, 'lib', 'shared', 'knowledgeRecall.js')
-const MANAGER = join(ROOT, 'lib', 'knowledge-recall.js')
-const LOG = join(ROOT, 'lib', 'knowledge-recall-log.js')
+const MANAGER = join(ROOT, 'lib', 'knowledge', 'recall.js')
+const LOG = join(ROOT, 'lib', 'knowledge', 'recall-log.js')
 const REPO_KNOWLEDGE = join(ROOT, 'lib', 'db', 'repo', 'knowledge.js')
-const TOOLS = join(ROOT, 'lib', 'knowledge-tools.js')
+const TOOLS = join(ROOT, 'lib', 'knowledge', 'tools.js')
 const TEST_FILES = [
   'test/knowledgeRecallPure.test.mjs',
   'test/knowledgeRecallManager.test.mjs',

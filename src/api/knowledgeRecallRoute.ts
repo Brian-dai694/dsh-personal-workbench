@@ -16,8 +16,8 @@
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
-import type { KnowledgeRecallManager } from '../knowledge-recall.js'
-import { listRecallLog, readSessionOff, type RecallLogEntry } from '../knowledge-recall-log.js'
+import type { KnowledgeRecallManager } from '../knowledge/recall.js'
+import { listRecallLog, readSessionOff, type RecallLogEntry } from '../knowledge/recall-log.js'
 import { isLoopbackRequest, KNOWLEDGE_RECALL_PREFIX, readJsonBody, writeJson } from './routes/helpers.js'
 
 /** 一行人类可读的摘要（界面与 curl 都用它，避免两处各拼一遍）。 */

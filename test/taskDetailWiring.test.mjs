@@ -39,7 +39,7 @@ const contractsSource = read('src/client/app/contracts.ts')
 /** D17/P7-2：四段 JSX 搬进 app/ —— 详情面板与三路分派的装配点在 WorkbenchBody。 */
 const appBodySource = read('src/client/app/WorkbenchBody.tsx')
 const appHeaderSource = read('src/client/app/WorkbenchHeader.tsx')
-const amazonToolsSource = read('src/amazon-tools.ts')
+const amazonToolsSource = read('src/amazon/tools.ts')
 /** 测算视图与共享成本模型：面板/DSH 工具同源，出价公式只有一份实现。 */
 const amazonToolsViewSource = read('src/client/views/AmazonToolsView.tsx')
 const calculatorSource = read('src/client/amazonCalculator.ts')

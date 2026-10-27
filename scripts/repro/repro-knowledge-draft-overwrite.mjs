@@ -35,7 +35,7 @@ const OUT = resolve('_local-archive/knowledge-draft-overwrite')
 mkdirSync(OUT, { recursive: true })
 
 const { openWorkbenchDb } = await import(pathToFileURL(resolve('lib/db/database.js')).href)
-const { submitKnowledgeTool } = await import(pathToFileURL(resolve('lib/tools.js')).href)
+const { submitKnowledgeTool } = await import(pathToFileURL(resolve('lib/tools/workbench.js')).href)
 const { confirmKnowledgeDraft, createDraft, deleteDraftRow, deleteKnowledge, getDraft, listKnowledge } = await import(pathToFileURL(resolve('lib/db/repo.js')).href)
 const { KnowledgeDraftBody } = await import(pathToFileURL(resolve('lib/client/components/KnowledgeDraftBody.js')).href)
 const { WORKBENCH_CSS } = await import(pathToFileURL(resolve('lib/client/styles.js')).href)

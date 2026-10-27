@@ -22,10 +22,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const MODULE = join(ROOT, 'lib', 'shared', 'knowledgeDraftOverwrite.js')
 const TOOLS = join(ROOT, 'src', 'tools.ts')
 /**
- * 编译产物：`test/tools.test.mjs` 跑的是**真实工具**（`lib/tools.js`），
+ * 编译产物：`test/tools.test.mjs` 跑的是**真实工具**（`lib/tools/workbench.js`），
  * 所以"行为级"变异要打在它上面；只改 `src/` 只能被源码扫描断言看见。
  */
-const LIB_TOOLS = join(ROOT, 'lib', 'tools.js')
+const LIB_TOOLS = join(ROOT, 'lib', 'tools', 'workbench.js')
 const INDEX = join(ROOT, 'src', 'index.ts')
 const BANNER = join(ROOT, 'src', 'client', 'components', 'DraftBanner.tsx')
 const BODY = join(ROOT, 'src', 'client', 'components', 'KnowledgeDraftBody.tsx')

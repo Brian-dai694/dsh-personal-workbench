@@ -533,7 +533,7 @@ test('AX-E33: expert confirm 返回 expert 字段；再次 confirm 幂等回放�
 
 test('AX-E33: 旧任务草稿的 confirm 返回结构一个字都没变（expert 分支不得吃掉它）', async () => {
   await withServer(async ({ request, db }) => {
-    const { submitTaskTool } = await import('../lib/tools.js')
+    const { submitTaskTool } = await import('../lib/tools/workbench.js')
     const { getDraftBySession } = await import('../lib/db/repo.js')
     const created = await submitTaskTool(db).execute(
       { title: '任务草稿的旧契约', type_code: 'code_impl', priority_code: 'p2' },

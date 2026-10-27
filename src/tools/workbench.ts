@@ -5,17 +5,17 @@
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { DatabaseSync } from 'node:sqlite'
-import { addTaskMemory, assertValidFileLink, createDraft, getDailyPlan, getDeferredDraftForTask, getDictionary, getDraft, getIdea, getIdeaCluster, getPendingDailyPlanDraft, getPendingDraftForSession, getPendingDraftForTask, getPendingKnowledgeDraft, getPendingReportDraft, getTask, listActiveDictionaryCodes, listTaskEvents, listTaskSessions, listTasks, localDateString, setTaskProgress, submitCompletionDraft, taskIdProblem, updateDraft, updateTask } from './db/repo.js'
-import { DEFAULT_PLAN_MINUTES, checkPlanMinutes, resolveDefaultPlanMinutes } from './shared/dailyPlanPolicy.js'
+import { addTaskMemory, assertValidFileLink, createDraft, getDailyPlan, getDeferredDraftForTask, getDictionary, getDraft, getIdea, getIdeaCluster, getPendingDailyPlanDraft, getPendingDraftForSession, getPendingDraftForTask, getPendingKnowledgeDraft, getPendingReportDraft, getTask, listActiveDictionaryCodes, listTaskEvents, listTaskSessions, listTasks, localDateString, setTaskProgress, submitCompletionDraft, taskIdProblem, updateDraft, updateTask } from '../db/repo.js'
+import { DEFAULT_PLAN_MINUTES, checkPlanMinutes, resolveDefaultPlanMinutes } from '../shared/dailyPlanPolicy.js'
 import {
   PERSONA_BODY_MAX_CHARS,
   PERSONA_RESOURCE_EXTENSIONS,
   PERSONA_RESOURCE_MAX_BYTES,
   PERSONA_RESOURCE_MAX_CHARS,
-} from './shared/persona.js'
-import { loadSessionPersona, readSessionPersonaResource, type PersonaRootOptions } from './personas/binding.js'
-import { KNOWLEDGE_DRAFT_SESSION_CONSTRAINT, knowledgeDraftWriteMessage, planKnowledgeDraftWrite, withKnowledgeDraftHistory } from './shared/knowledgeDraftOverwrite.js'
-import { checkWorkspacePath } from './workspace-check.js'
+} from '../shared/persona.js'
+import { loadSessionPersona, readSessionPersonaResource, type PersonaRootOptions } from '../personas/binding.js'
+import { KNOWLEDGE_DRAFT_SESSION_CONSTRAINT, knowledgeDraftWriteMessage, planKnowledgeDraftWrite, withKnowledgeDraftHistory } from '../shared/knowledgeDraftOverwrite.js'
+import { checkWorkspacePath } from '../core/workspace-check.js'
 
 function text(value: string): ContentBlock[] {
   return [{ type: 'text', text: value }]

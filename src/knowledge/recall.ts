@@ -31,11 +31,11 @@
  */
 import type { Context } from '@deepseek-ai/cordis'
 import type { DatabaseSync } from 'node:sqlite'
-import { getKnowledge, getTask, listKnowledge } from './db/repo.js'
-import type { KnowledgeRow } from './db/repo/knowledge.js'
-import { findTaskIdBySession } from './db/repo/task-sessions.js'
-import { readMeta } from './db/repo/meta.js'
-import { appendRecallLog, citeRecallLog, readSessionOverrides, writeSessionOverride } from './knowledge-recall-log.js'
+import { getKnowledge, getTask, listKnowledge } from '../db/repo.js'
+import type { KnowledgeRow } from '../db/repo/knowledge.js'
+import { findTaskIdBySession } from '../db/repo/task-sessions.js'
+import { readMeta } from '../db/repo/meta.js'
+import { appendRecallLog, citeRecallLog, readSessionOverrides, writeSessionOverride } from './recall-log.js'
 import {
   citationMatch,
   formatHintText,
@@ -51,7 +51,7 @@ import {
   type RecallCandidate,
   type RecallOutcome,
   type TermStats,
-} from './shared/knowledgeRecall.js'
+} from '../shared/knowledgeRecall.js'
 
 /** 完整知识条目 id（uuid v4 形态）。工具按 id 直读时只认这个，不做前缀模糊匹配。 */
 const ENTRY_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

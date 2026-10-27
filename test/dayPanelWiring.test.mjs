@@ -137,7 +137,7 @@ test('AX-T02: 清除某日计划只有一处实现，且写完之后必须重新
  */
 test('ADR0010: AI 侧四处口径都只说「只能排可执行叶子」，不再教「同一父子链」', () => {
   const files = {
-    'src/tools.ts': read('src/tools.ts'),
+    'src/tools/workbench.ts': read('src/tools/workbench.ts'),
     'src/index.ts': read('src/index.ts'),
     'src/client/dailyPlanPrompt.ts': read('src/client/dailyPlanPrompt.ts'),
     'src/client/hooks/useWorkbenchAISessions.ts': read('src/client/hooks/useWorkbenchAISessions.ts'),
@@ -146,7 +146,7 @@ test('ADR0010: AI 侧四处口径都只说「只能排可执行叶子」，不�
     assert.equal(source.includes('同一父子链'), false, `${name} 里不许再教"同一父子链二选一"（ADR0010 已改口径）`)
     assert.ok(source.includes('可执行叶子'), `${name} 必须把新口径说清：只能排可执行叶子`)
   }
-  assert.match(files['src/tools.ts'], /整份拒绝/, '工具描述要写明代价：非叶子提案会被整份拒绝')
+  assert.match(files['src/tools/workbench.ts'], /整份拒绝/, '工具描述要写明代价：非叶子提案会被整份拒绝')
   assert.match(files['src/client/dailyPlanPrompt.ts'], /整份拒绝/, '提示词构造器同样要说清代价')
 })
 

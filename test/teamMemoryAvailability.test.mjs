@@ -25,7 +25,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { memoryHome, teamMemoryAvailable } from '../lib/review-memory.js'
+import { memoryHome, teamMemoryAvailable } from '../lib/memory/review-memory.js'
 
 test('默认路径：判定与「默认目录是否真的存在」一致（开发机与干净机都成立）', () => {
   /**

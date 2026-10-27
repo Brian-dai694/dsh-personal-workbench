@@ -10,7 +10,7 @@ import { nowIso, getDraft, setDraftStatus, withDraftConfirm, parseDraft, type Dr
 import { getTask, listTasks, createTask } from './tasks.js'
 import { getDictionary } from './dictionaries.js'
 import { linkTaskSession } from './task-sessions.js'
-import { checkWorkspacePath } from '../../workspace-check.js'
+import { checkWorkspacePath } from '../../core/workspace-check.js'
 import { addReminder } from './reminders.js'
 import type { DraftInput, TaskInput, TaskRow } from '../types.js'
 

@@ -110,7 +110,7 @@
     "src/client/notificationCapability.ts",
     "src/client/popoverPlacement.ts",
     "src/client/quickWorkspaceDefault.ts",
-    "src/review-memory.ts",
-    "src/workspace-check.ts"
+    "src/memory/review-memory.ts",
+    "src/core/workspace-check.ts"
   ]
 }

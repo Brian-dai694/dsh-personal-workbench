@@ -25,9 +25,9 @@ import { seedDictionaries } from '../lib/db/seed.js'
 import { createKnowledge, createTask, deleteKnowledgeWithRefs, getKnowledge, updateKnowledge } from '../lib/db/repo.js'
 import { linkTaskSession } from '../lib/db/repo/task-sessions.js'
 import { makeRoutes } from '../lib/api/routes.js'
-import { KnowledgeRecallManager } from '../lib/knowledge-recall.js'
-import { listRecallLog } from '../lib/knowledge-recall-log.js'
-import { knowledgeRecallControlTool, searchKnowledgeTool } from '../lib/knowledge-tools.js'
+import { KnowledgeRecallManager } from '../lib/knowledge/recall.js'
+import { listRecallLog } from '../lib/knowledge/recall-log.js'
+import { knowledgeRecallControlTool, searchKnowledgeTool } from '../lib/knowledge/tools.js'
 
 /**
  * ⚠️ `withDb` 必须 **await**：里面的用例是 async（要打 HTTP），

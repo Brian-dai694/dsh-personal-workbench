@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { openWorkbenchDb } from '../../lib/db/database.js'
-import { KnowledgeRecallManager } from '../../lib/knowledge-recall.js'
+import { KnowledgeRecallManager } from '../../lib/knowledge/recall.js'
 import { createKnowledge, listKnowledge } from '../../lib/db/repo.js'
 
 const SOURCE = join(process.env.USERPROFILE ?? process.env.HOME ?? '', '.dsh', 'workbench', 'workbench.db')

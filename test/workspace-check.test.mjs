@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkWorkspacePath, windowsToWsl, wslToWindows } from '../lib/workspace-check.js'
+import { checkWorkspacePath, windowsToWsl, wslToWindows } from '../lib/core/workspace-check.js'
 
 /**
  * `src/workspace-check.ts` 单测（导入 `lib/` 编译产物，与既有测试同口径）。

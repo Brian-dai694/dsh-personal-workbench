@@ -30,7 +30,7 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { openWorkbenchDb } from '../lib/db/database.js'
 import { getKnowledge, updateKnowledge } from '../lib/db/repo.js'
-import { KnowledgeRecallManager } from '../lib/knowledge-recall.js'
+import { KnowledgeRecallManager } from '../lib/knowledge/recall.js'
 
 const args = process.argv.slice(2)
 const flag = (name) => {

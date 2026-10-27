@@ -19,7 +19,7 @@ import { seedDictionaries } from '../lib/db/seed.js'
 import { createTask, createTaskReview } from '../lib/db/repo.js'
 import {
   memoryContentHash, notesFromReview, readWrittenMap, saveMemoryNote, slugify, writeReviewToTeamMemory,
-} from '../lib/review-memory.js'
+} from '../lib/memory/review-memory.js'
 
 async function withDb(fn) {
   const dir = mkdtempSync(join(tmpdir(), 'dsh-workbench-review-memory-'))

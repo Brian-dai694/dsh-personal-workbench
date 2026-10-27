@@ -19,7 +19,7 @@
  * **按平台口径去重**（Windows 上 ID 大小写不敏感，与库层同一把尺子）。
  */
 import type { DatabaseSync } from 'node:sqlite'
-import { readMeta, writeMeta } from '../repo/meta.js'
+import { readMeta, writeMeta } from './meta.js'
 import { dedupeByPersonaKey } from '../../personas/library.js'
 
 export const PERSONA_EXTERNAL_DIR_META_KEY = 'persona_external_dir'

@@ -226,7 +226,7 @@ test('AX-D04 新增未知/关闭任务、非叶子整份拒绝；既有缺失项
 
 test('AX-D04 AI 提案里带 effortDone 由工具层直接报错（今日投入只能由用户操作）', async () => {
   await withEnv(async ({ db, newTask }) => {
-    const { proposeDailyPlanTool } = await import('../lib/tools.js')
+    const { proposeDailyPlanTool } = await import('../lib/tools/workbench.js')
     const task = newTask('不许被 AI 结束')
     const tool = proposeDailyPlanTool(db)
     const out = await tool.execute(

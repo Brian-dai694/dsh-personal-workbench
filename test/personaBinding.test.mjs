@@ -25,7 +25,7 @@ import { getAiSession, registerAiSession } from '../lib/db/repo.js'
 import { readPersonaBinding, writePersonaBinding, PERSONA_BINDING_SCOPE } from '../lib/db/repo/persona-bindings.js'
 import { writePersonaSettings } from '../lib/db/repo/personas.js'
 import { bindSessionPersona, loadSessionPersona, readSessionPersonaResource } from '../lib/personas/binding.js'
-import { loadPersonaTool, readPersonaResourceTool } from '../lib/tools.js'
+import { loadPersonaTool, readPersonaResourceTool } from '../lib/tools/workbench.js'
 import { PERSONA_BINDING_VERSION } from '../lib/shared/persona.js'
 
 // ---------------------------------------------------------------------------

@@ -12,7 +12,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { openWorkbenchDb } from '../lib/db/database.js'
 import { seedDictionaries } from '../lib/db/seed.js'
-import { requestCompletionTool, updateProgressTool, updateTaskTool } from '../lib/tools.js'
+import { requestCompletionTool, updateProgressTool, updateTaskTool } from '../lib/tools/workbench.js'
 import {
   createTask, getPendingDraftForTask, getTask, listTaskEvents, setTaskProgress, updateTask,
 } from '../lib/db/repo.js'

@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs'
 import { openWorkbenchDb } from '../lib/db/database.js'
 import { seedDictionaries } from '../lib/db/seed.js'
 import { makeRoutes } from '../lib/api/routes.js'
-import { readSearchTermsTool, saveSearchTermReviewTool, saveSearchTermSummaryTool } from '../lib/amazon-tools.js'
+import { readSearchTermsTool, saveSearchTermReviewTool, saveSearchTermSummaryTool } from '../lib/amazon/tools.js'
 import { buildFakeCfb, buildXls, buildXlsx } from './_xlsxFixture.mjs'
 
 /** 真实报表行（本地 DB 导出后摘出来的），用来验"按词聚合"在工具层真的生效。 */

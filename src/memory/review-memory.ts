@@ -37,7 +37,7 @@ import { createHash } from 'node:crypto'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
-import { readMeta, writeMeta } from './db/repo/meta.js'
+import { readMeta, writeMeta } from '../db/repo/meta.js'
 
 /** 一条待写入的记忆（落盘 + 入队用）。 */
 export interface MemoryNote {

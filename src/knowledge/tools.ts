@@ -23,8 +23,8 @@
  */
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { isEntryIdQuery, unwrapEntryId, type KnowledgeRecallManager } from './knowledge-recall.js'
-import { extractTerms, formatRelevance, RECALL_DEFAULTS, recallKnowledge, relevanceOf, scoreFromRelevance } from './shared/knowledgeRecall.js'
+import { isEntryIdQuery, unwrapEntryId, type KnowledgeRecallManager } from './recall.js'
+import { extractTerms, formatRelevance, RECALL_DEFAULTS, recallKnowledge, relevanceOf, scoreFromRelevance } from '../shared/knowledgeRecall.js'
 
 function text(value: string): ContentBlock[] {
   return [{ type: 'text', text: value }]

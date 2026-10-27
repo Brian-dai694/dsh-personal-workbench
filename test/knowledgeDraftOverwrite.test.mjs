@@ -41,7 +41,7 @@ const content = (over = {}) => ({
   title: 't', contentMd: 'c', kindCode: 'lesson', tags: [], sourceTaskId: null, sourceReviewId: null, fileLink: null, ...over,
 })
 
-const toolsSource = readFileSync(new URL('../src/tools.ts', import.meta.url), 'utf8')
+const toolsSource = readFileSync(new URL('../src/tools/workbench.ts', import.meta.url), 'utf8')
 const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8')
 const bannerSource = readFileSync(new URL('../src/client/components/DraftBanner.tsx', import.meta.url), 'utf8')
 const bodySource = readFileSync(new URL('../src/client/components/KnowledgeDraftBody.tsx', import.meta.url), 'utf8')

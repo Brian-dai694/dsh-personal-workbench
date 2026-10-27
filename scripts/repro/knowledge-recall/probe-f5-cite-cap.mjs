@@ -14,8 +14,8 @@ import { join } from 'node:path'
 import { openWorkbenchDb } from '../../../lib/db/database.js'
 import { seedDictionaries } from '../../../lib/db/seed.js'
 import { createKnowledge } from '../../../lib/db/repo.js'
-import { KnowledgeRecallManager } from '../../../lib/knowledge-recall.js'
-import { listRecallLog } from '../../../lib/knowledge-recall-log.js'
+import { KnowledgeRecallManager } from '../../../lib/knowledge/recall.js'
+import { listRecallLog } from '../../../lib/knowledge/recall-log.js'
 
 const dir = mkdtempSync(join(tmpdir(), 'wb-citecap-'))
 const db = openWorkbenchDb({ dbPath: join(dir, 'w.db') })
