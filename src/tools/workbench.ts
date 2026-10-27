@@ -5,7 +5,7 @@
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { DatabaseSync } from 'node:sqlite'
-import { addTaskMemory, assertValidFileLink, createDraft, getDailyPlan, getDeferredDraftForTask, getDictionary, getDraft, getIdea, getIdeaCluster, getPendingDailyPlanDraft, getPendingDraftForSession, getPendingDraftForTask, getPendingKnowledgeDraft, getPendingReportDraft, getTask, listActiveDictionaryCodes, listTaskEvents, listTaskSessions, listTasks, localDateString, setTaskProgress, submitCompletionDraft, taskIdProblem, updateDraft, updateTask } from '../db/repo.js'
+import { addTaskMemory, assertValidFileLink, createDraft, getDailyPlan, getDeferredDraftForTask, getDictionary, getDraft, getIdea, getIdeaCluster, getPendingDailyPlanDraft, getPendingDraftForSession, getPendingDraftForTask, getPendingKnowledgeDraft, getPendingReportDraft, getTask, listActiveDictionaryCodes, listTaskEvents, listTaskSessions, listTasks, localDateString, readMeta, setTaskProgress, submitCompletionDraft, taskIdProblem, updateDraft, updateTask } from '../db/repo.js'
 import { DEFAULT_PLAN_MINUTES, checkPlanMinutes, resolveDefaultPlanMinutes } from '../shared/dailyPlanPolicy.js'
 import {
   PERSONA_BODY_MAX_CHARS,
@@ -411,8 +411,8 @@ export function proposeDailyPlanTool(db: DatabaseSync) {
 
 /** 设置里的默认投入（缺省 30）；与 settings 的 defaultEstimateMinutes 同一个 meta 键。 */
 function readDefaultEstimateMinutes(db: DatabaseSync): number {
-  const row = db.prepare("SELECT value FROM meta WHERE key = 'default_estimate_minutes'").get() as { value: string } | undefined
-  const parsed = row === undefined ? Number.NaN : Number(row.value)
+  const raw = readMeta(db, 'default_estimate_minutes')
+  const parsed = raw === undefined ? Number.NaN : Number(raw)
   return Number.isInteger(parsed) && parsed >= 1 && parsed <= 1440 ? parsed : DEFAULT_PLAN_MINUTES
 }
 

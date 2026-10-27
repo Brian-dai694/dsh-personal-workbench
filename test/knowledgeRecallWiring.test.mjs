@@ -24,7 +24,7 @@ import { openWorkbenchDb } from '../lib/db/database.js'
 import { seedDictionaries } from '../lib/db/seed.js'
 import { createKnowledge, createTask } from '../lib/db/repo.js'
 import { linkTaskSession } from '../lib/db/repo/task-sessions.js'
-import { listRecallLog } from '../lib/knowledge/recall-log.js'
+import { listRecallLog } from '../lib/db/repo/knowledgeRecallLog.js'
 import { installKnowledgeRecall, currentTurnOf, latestUserMessage, isUserAuthored, turnNumberOf } from '../lib/knowledge/recall.js'
 
 function withDb(run) {

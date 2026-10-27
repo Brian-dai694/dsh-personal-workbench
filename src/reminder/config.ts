@@ -4,6 +4,7 @@
  * 设计见 docs/design/2026-09-09-reminder-policy-model.md
  */
 import type { DatabaseSync } from 'node:sqlite'
+import { readMeta, writeMeta } from '../db/repo/meta.js'
 
 export const REMINDER_POLICY_META_KEY = 'reminder_policy'
 
@@ -112,10 +113,10 @@ export function normalizeReminderPolicy(raw: unknown): ReminderPolicy {
 }
 
 export function readReminderPolicy(db: DatabaseSync): ReminderPolicy {
-  const row = db.prepare('SELECT value FROM meta WHERE key = ?').get(REMINDER_POLICY_META_KEY) as { value: string } | undefined
-  if (row === undefined) return { ...DEFAULT_REMINDER_POLICY }
+  const raw = readMeta(db, REMINDER_POLICY_META_KEY)
+  if (raw === undefined) return { ...DEFAULT_REMINDER_POLICY }
   try {
-    return normalizeReminderPolicy(JSON.parse(row.value))
+    return normalizeReminderPolicy(JSON.parse(raw))
   } catch {
     return { ...DEFAULT_REMINDER_POLICY }
   }
@@ -123,8 +124,7 @@ export function readReminderPolicy(db: DatabaseSync): ReminderPolicy {
 
 export function writeReminderPolicy(db: DatabaseSync, raw: unknown): ReminderPolicy {
   const policy = normalizeReminderPolicy(raw)
-  db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
-    .run(REMINDER_POLICY_META_KEY, JSON.stringify(policy))
+  writeMeta(db, REMINDER_POLICY_META_KEY, JSON.stringify(policy))
   return policy
 }
 

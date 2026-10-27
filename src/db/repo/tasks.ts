@@ -262,3 +262,15 @@ export function taskStatusIndex(db: DatabaseSync): Map<string, string> {
     Array<{ id: string; status_code: string; archived: number }>
   return new Map(rows.map((row) => [row.id, row.archived === 1 ? 'archived' : row.status_code]))
 }
+
+/** 任务的优先级 code（调度器给提醒定级用）；任务不存在返回 undefined（调用方回落 p2）。 */
+export function taskPriorityCode(db: DatabaseSync, taskId: string): string | undefined {
+  const row = db.prepare('SELECT priority_code FROM tasks WHERE id = ?').get(taskId) as { priority_code: string } | undefined
+  return row?.priority_code
+}
+
+/** 直接子任务 id 列表（知识召回按任务树扩候选集用：本任务 → 子树 → 全局）。 */
+export function listChildIds(db: DatabaseSync, parentId: string): string[] {
+  const rows = db.prepare('SELECT id FROM tasks WHERE parent_id = ?').all(parentId) as unknown as Array<{ id: string }>
+  return rows.map((row) => row.id)
+}

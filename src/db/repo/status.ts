@@ -278,3 +278,28 @@ export function listTaskEventsInRange(db: DatabaseSync, startIso: string, endIso
   }>
   return rows.map((row) => ({ id: row.id, taskId: row.task_id, eventCode: row.event_code, actor: row.actor, note: row.note, at: row.at }))
 }
+
+/** 复盘的**原始行**（团队记忆回写用；调用方按旧字段名读，避免连带改一遍映射）。 */
+export interface TaskReviewRecord {
+  id: string
+  task_id: string
+  summary_md: string
+  lessons_json: string
+}
+
+/** 按 id 取一条复盘；不存在返回 undefined。 */
+export function getTaskReviewRecord(db: DatabaseSync, reviewId: string): TaskReviewRecord | undefined {
+  return db.prepare('SELECT id, task_id, summary_md, lessons_json FROM task_reviews WHERE id = ?').get(reviewId) as unknown as TaskReviewRecord | undefined
+}
+
+/**
+ * 同一任务同一事件类型是否已记过（事件 note 里带 reminderId 作为去重键）。
+ *
+ * 调度器 30 秒一轮，重复写同一条「提醒已发」事件会把事件表刷爆；判定放这里，
+ * 调度器只负责「要不要写」。
+ */
+export function countTaskEventsWithNote(db: DatabaseSync, taskId: string, eventCode: string, needle: string): number {
+  const row = db.prepare('SELECT COUNT(*) AS c FROM task_events WHERE task_id = ? AND event_code = ? AND note LIKE ?')
+    .get(taskId, eventCode, `%${needle}%`) as { c: number } | undefined
+  return row?.c ?? 0
+}

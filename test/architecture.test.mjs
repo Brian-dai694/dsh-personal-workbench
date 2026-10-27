@@ -252,19 +252,11 @@ test('R6：src/ 根目录只允许 index.ts', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * 2026-10-27 的存量（28 处 / 8 文件），只许减少。
- * api 层已清零（7 处全部收进 `db/repo/*`）；余下按域继续收。
- * 修法：在 `db/repo/<domain>.ts` 里加一个具名函数，调用点改成 `repo.xxx(...)`。
+ * 唯一保留项：`experts/install.ts` 读 `PRAGMA database_list` 判断「装专家时用的是哪个库文件」。
+ * 那是 SQLite 元信息查询，不是业务数据读写，不值得为它造一个仓储函数；**其余必须为 0**。
  */
 const RAW_SQL_DEBT = new Map([
   ['experts/install.ts', 1],
-  ['knowledge/recall-log.ts', 8],
-  ['knowledge/recall.ts', 2],
-  ['memory/review-memory.ts', 2],
-  ['reminder/config.ts', 2],
-  ['reminder/draft-notify.ts', 10],
-  ['reminder/scheduler.ts', 2],
-  ['tools/workbench.ts', 1],
 ])
 
 test('R7：db.prepare 只许出现在 db/（存量白名单只许减少）', () => {

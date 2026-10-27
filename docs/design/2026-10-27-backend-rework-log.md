@@ -187,9 +187,26 @@ src/
 **验证**：`tsc` 0 error；`pnpm build` 0；`node --test test/*.test.mjs` **1544 项全绿**；
 `test/architecture.test.mjs` 8/8 通过。
 
-**剩余越层 SQL：28 处 / 8 文件**（`reminder/draft-notify.ts` 10、`knowledge/recall-log.ts` 8、
-`memory/review-memory.ts` 2、`reminder/config.ts` 2、`reminder/scheduler.ts` 2、`knowledge/recall.ts` 2、
-`tools/workbench.ts` 1、`experts/install.ts` 1 的 PRAGMA）—— 全部登记在 R7 白名单里，只许减少。
+**剩余越层 SQL：1 处** —— 只剩 `experts/install.ts` 的 `PRAGMA database_list`（装专家时判断用的是哪个库文件，
+SQLite 元信息查询，不是业务数据读写），已在 R7 白名单里写明理由。
+
+### 6.4 第三批收口：通知队列 / 召回日志 / 零散查询（28 → 1）
+
+| 原位置 | 收口方式 |
+| --- | --- |
+| `reminder/draft-notify.ts`（10 处） | 整块**存储层**搬到新模块 `db/repo/draftNotifyQueue.ts`：队列读写 + `task_drafts.notified_at`；`draft-notify.ts` 只留策略判定/静默汇总/发送编排 |
+| `knowledge/recall-log.ts`（8 处） | 整文件搬到 `db/repo/knowledgeRecallLog.ts`（日志表读写 + 保留策略 + 会话级覆盖），语义与注释原样保留 |
+| `reminder/config.ts`（2 处） | 改走 `repo/meta.ts` 的 `readMeta` / `writeMeta` |
+| `reminder/scheduler.ts`（2 处） | 新增 `repo.taskPriorityCode()`（提醒定级）与 `repo.countTaskEventsWithNote()`（30 秒一轮的写事件去重） |
+| `memory/review-memory.ts`（2 处） | 新增 `repo.getTaskReviewRecord()`；标题走既有 `repo.getTask()` |
+| `knowledge/recall.ts`（2 处） | 全局开关走 `writeMeta`；任务树扩候选集走新增 `repo.listChildIds()` |
+| `tools/workbench.ts`（1 处） | 默认投入走 `readMeta(db, 'default_estimate_minutes')` |
+
+**验证**：`tsc` 0 error；`pnpm build` 0；全量 **1544 项测试全绿**；`architecture.test.mjs` 8/8。
+
+> 一个反复出现的坑：`pnpm build` 返回后**立刻**跑全量测试，会偶发 `ERR_MODULE_NOT_FOUND`（刚写出的 `lib/**`
+> 还没落地，实测两次、重跑即绿）。验证链应当是「build → 确认 `lib/` 里有新模块 → 再跑测试」，
+> 而不是把两条命令塞进同一个管道里赌时序。
 
 ---
 

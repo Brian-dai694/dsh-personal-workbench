@@ -31,7 +31,7 @@
 | **1 断环（D2）** | ✅ 完成 | `0a2d666 refactor(db): 断开门面与 17 个领域模块的循环依赖（R4）`。**已实测验证**：`repo/*` 回导门面 **0 处**；`repo.ts` 从 314 → **199 行** 且 `export function` **0 个**（真成纯 re-export） |
 | **5 域目录收编** | ✅ 完成 | `46ef287 refactor(src): 收编根目录散件到 knowledge/ tools/ amazon/ memory/ core/`。**已实测验证**：`src/` 根散件 **8 → 1**（只剩 `index.ts`）；新增 `amazon/ core/ knowledge/ memory/ tools/` 五个目录 |
 | **2 收回共享（D1）** | 🔶 **进行中（未提交）** | 工作树 38 个改动；`src/shared/taskFolder.ts` 已出现在 shared 侧（10:59:35）、`tsconfig.build.json` 已改（10:59:14）；`node --test` 正在跑 |
-| **3a 信封收口（决策 2）** | ✅ **代码完成（本会话）** | `api/http.ts` 新增 `apiOk()` / `apiError()`；7 个 Amazon 路由文件 **134 处**响应全部改走收口函数，源码零手写 `{ok:…}`；新增 `test/apiEnvelope.test.mjs`（债务棘轮基线 = 278）。**验证**：`tsc --noEmit` 0 error；定向 10 文件 **72/72 通过**；**全量测试未能取得可信结果**（见下方竞态说明） |
+| **3a 信封收口（决策 2）** | ✅ **完成并验收（本会话）** | `api/http.ts` 新增 `apiOk()` / `apiError()`；7 个 Amazon 路由文件 **134 处**响应全部改走收口函数，源码零手写 `{ok:…}`；新增 `test/apiEnvelope.test.mjs`（债务棘轮基线 = 278）。**验证（窗口独占，`pnpm build` + `node --test` 一次跑完）：1544 / 1544 全绿，0 失败**；`tsc --noEmit` 0 error。已随 `6c8bbc6` 合入 |
 | **3b 路径收敛（D3）** | ⬜ 未开始 | 7 处内联 `pathname.slice` 与 7 个 `const PREFIX` 仍在。**刻意与 3a 分开**：它要处理各文件自己的 `decodeURIComponent` 语义，混进信封批次会让"纯机械"的承诺失效 |
 | **4 域解耦（D3）** | ⬜ 未开始 | `db/repo/status.ts:12` 仍 `import { appendAsinLaunchOutcome } from './asin.js'`；`tasks.ts:244` `findOpenTaskByAsin` 仍在 |
 | **6 拆大文件（D5）** | ⬜ 未开始 | 仍 **23 个**文件 >600 行、**17 个** >800 行；`client/index.tsx` 仍 2092 行 |
@@ -64,15 +64,26 @@
 > ⚠️ **协作风险（已实际发生）**：两条会话同时改同一工作副本时，任何结构性改动都会互相污染
 > （尤其 `tsconfig.build.json`、`shared/` 与 `api/http.ts`）。本文后续批次**应由单一会话串行执行**。
 >
-> 2026-10-27 11:03–11:08 的实况：本会话在批次 2 提交后接手 3a（改 `http.ts` / `helpers.ts` / 7 个 Amazon 路由），
+> 2026-10-27 11:03–11:12 的实况：本会话在批次 2 提交后接手 3a（改 `http.ts` / `helpers.ts` / 7 个 Amazon 路由），
 > 同时另一会话并行推进批次 4（`db/repo/status.ts`、`tasks.ts`、`asin.ts`）与知识目录收编（`shared/knowledgeRecall.ts` → `knowledge/recall-pure.ts`）。
-> **两者改动的文件集合无重叠**，所以没有代码级冲突；但 **`pnpm build` 第一步是 `rmSync('lib')`**，
-> 对方在 11:07:13 / 11:08:07 连续两次重建，把 `lib` 清空并重写得比本会话的测试窗口更快，
-> 于是本会话那次全量测试（627 例、70 例失败）**全部是 `ERR_MODULE_NOT_FOUND` 造成的假失败**，不是断言失败。
 >
-> **教训（值得写进 SOP）**：`lib/` 是被 `rmSync` 重建的共享产物，**不是可安全并发读取的稳定输入**。
-> 两条会话并行时，任何"构建 + 跑测试"的动作都必须独占窗口；否则得到的红绿结果不可信。
-> 正确的验收命令（窗口空闲时一次跑完）：
+> **最初判断"文件集合无重叠"是错的** —— 实测有 **2 个文件双方都改过**：
+> `api/routes/asin.ts`（我的信封 + 对方的 `getAsinTaskSource` 收口）与
+> `api/routes/helpers.ts`（我的 `apiOk/apiError` 再导出 + 对方的 `listTaskEventsInRange` 抽取）。
+> 两者的改动在 `6c8bbc6` 里**都还在**（`asin.ts` 同一处现在是 `apiError(res, 404, 'ASIN 不存在')`，产品查询走对方的新接口），
+> 属于"锚定字符串替换"恰好不撞车，**不是设计保证的**。
+>
+> **两次假红，一次真绿**，都值得记：
+>
+> | 时点 | 结果 | 真实原因 |
+> |---|---|---|
+> | 11:07 | 627 例 / **70 失败** | 对方 `pnpm build` 的 `rmSync('lib')` 在我测试加载期间清空了 `lib` → 全为 `ERR_MODULE_NOT_FOUND` |
+> | 11:20 | 1481 例 / **5 失败** | **我自己的流程错误**：没先 `build` 就跑测，而 `lib` 相对对方未提交的 `src/db/repo/draftNotifyQueue.ts` 已过期 |
+> | 11:26 | 1544 例 / **0 失败** | `pnpm build` + `node --test` 在同一独占窗口内一次跑完 |
+>
+> **教训（值得写进 SOP）**：`lib/` 是被 `rmSync` 重建的共享产物，**不是可安全并发读取的稳定输入**，
+> 也**不是可以拿来当"源码已编译"的缓存**。两条会话并行时，任何验收都必须独占窗口，且**必须 build 再 test**。
+> 正确的验收命令（一次跑完，中间不插第二个 build）：
 >
 > ```powershell
 > pnpm build; node --test --test-concurrency=1 test/*.test.mjs

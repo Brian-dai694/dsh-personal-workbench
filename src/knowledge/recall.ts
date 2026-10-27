@@ -34,8 +34,9 @@ import type { DatabaseSync } from 'node:sqlite'
 import { getKnowledge, getTask, listKnowledge } from '../db/repo.js'
 import type { KnowledgeRow } from '../db/repo/knowledge.js'
 import { findTaskIdBySession } from '../db/repo/task-sessions.js'
-import { readMeta } from '../db/repo/meta.js'
-import { appendRecallLog, citeRecallLog, readSessionOverrides, writeSessionOverride } from './recall-log.js'
+import { readMeta, writeMeta } from '../db/repo/meta.js'
+import { listChildIds } from '../db/repo/tasks.js'
+import { appendRecallLog, citeRecallLog, readSessionOverrides, writeSessionOverride } from '../db/repo/knowledgeRecallLog.js'
 import {
   citationMatch,
   formatHintText,
@@ -240,8 +241,7 @@ export class KnowledgeRecallManager {
   }
 
   setAutoEnabled(enabled: boolean): void {
-    this.db.prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
-      .run(AUTO_RECALL_KEY, enabled ? '1' : '0')
+    writeMeta(this.db, AUTO_RECALL_KEY, enabled ? '1' : '0')
     this.log(`自动召回全局开关 → ${enabled ? '开' : '关'}`)
   }
 
@@ -451,8 +451,7 @@ export class KnowledgeRecallManager {
   }
 
   private childrenOf(parentId: string): string[] {
-    const rows = this.db.prepare('SELECT id FROM tasks WHERE parent_id = ?').all(parentId) as unknown as Array<{ id: string }>
-    return rows.map((row) => row.id)
+    return listChildIds(this.db, parentId)
   }
 
   /**

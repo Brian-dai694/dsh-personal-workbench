@@ -40,14 +40,15 @@ export {
 } from './repo/dictionaries.js'
 
 // 任务域已抽到 repo/tasks.ts
-export { createTask, findOpenTaskByAsin, getTask, listTasks, listChildren, updateTask, taskIdProblem, taskStatusIndex } from './repo/tasks.js'
+export { createTask, findOpenTaskByAsin, getTask, listChildIds, listTasks, listChildren, taskPriorityCode, updateTask, taskIdProblem, taskStatusIndex } from './repo/tasks.js'
 
 // 状态聚合与级联已抽到 repo/status.ts
 export {
   completeTaskCascade, updateTaskWithCompletion, repairParentCompletion,
-  archiveTask, restoreTask, listArchivedTasks, listTaskEvents, listTaskEventsInRange, createTaskReview, listTaskReviews,
+  archiveTask, restoreTask, listArchivedTasks, countTaskEventsWithNote, listTaskEvents, listTaskEventsInRange,
+  createTaskReview, getTaskReviewRecord, listTaskReviews,
 } from './repo/status.js'
-export type { TaskEventView, TaskReviewInput } from './repo/status.js'
+export type { TaskEventView, TaskReviewInput, TaskReviewRecord } from './repo/status.js'
 
 // 草稿域已抽到 repo/drafts.ts
 export {

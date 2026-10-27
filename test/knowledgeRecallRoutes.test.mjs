@@ -26,7 +26,7 @@ import { createKnowledge, createTask, deleteKnowledgeWithRefs, getKnowledge, upd
 import { linkTaskSession } from '../lib/db/repo/task-sessions.js'
 import { makeRoutes } from '../lib/api/routes.js'
 import { KnowledgeRecallManager } from '../lib/knowledge/recall.js'
-import { listRecallLog } from '../lib/knowledge/recall-log.js'
+import { listRecallLog } from '../lib/db/repo/knowledgeRecallLog.js'
 import { knowledgeRecallControlTool, searchKnowledgeTool } from '../lib/knowledge/tools.js'
 
 /**

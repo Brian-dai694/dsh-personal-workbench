@@ -10,53 +10,15 @@
  * - **不穿透静默**：草稿通知最高 p1，按策略走静默时段入队、次日汇总，不做 P0 穿透。
  * - 通道未就绪（未装/未配 dsh-im）：**不标记 notified_at**，等通道可用后再推。
  */
-import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { nowIso } from '../db/repo.js'
+import {
+  countDraftNotifiesSince, draftTaskTitle, enqueueDraftNotify, listDueDraftNotifies, listNotifiableDrafts,
+  markDraftNotified, markDraftNotifyAttempt, removeDraftNotify, type DraftNotifyEntry,
+} from '../db/repo/draftNotifyQueue.js'
 import type { ReminderPolicy } from './config.js'
 import { decideReminder, formatDigest, type ReminderCandidate, type ThrottleState } from './policy.js'
 import type { SendOutcome, WechatChannelAdapter } from './adapter.js'
 
-export interface DraftNotifyEntry {
-  id: string
-  draftId: string
-  kindCode: string
-  title: string
-  body: string
-  priorityCode: string
-  attempts: number
-  nextAttemptAt: string
-  lastError: string | null
-  createdAt: string
-}
-
-interface RawDraftNotifyRow {
-  id: string
-  draft_id: string
-  kind_code: string
-  title: string
-  body: string
-  priority_code: string
-  attempts: number
-  next_attempt_at: string
-  last_error: string | null
-  created_at: string
-}
-
-const parseEntry = (row: RawDraftNotifyRow): DraftNotifyEntry => ({
-  id: row.id,
-  draftId: row.draft_id,
-  kindCode: row.kind_code,
-  title: row.title,
-  body: row.body,
-  priorityCode: row.priority_code,
-  attempts: row.attempts,
-  nextAttemptAt: row.next_attempt_at,
-  lastError: row.last_error,
-  createdAt: row.created_at,
-})
-
-/** 草稿类型 → 通知优先级。验收/复盘需要用户立刻动手 → p1（即时）；其余 → p2（进汇总）。 */
 export function draftNotifyPriority(kindCode: string): string {
   return kindCode === 'completion' || kindCode === 'review' ? 'p1' : 'p2'
 }
@@ -102,63 +64,6 @@ export function draftNotifyBody(draft: { kindCode: string; payload: Record<strin
 }
 
 /** 找出「待确认、未暂存、未通知过、类型已开启」的草稿。 */
-export function listNotifiableDrafts(db: DatabaseSync, kinds: readonly string[]): Array<{ id: string; kindCode: string; payload: Record<string, unknown>; sessionId: string | null }> {
-  if (kinds.length === 0) return []
-  const placeholders = kinds.map(() => '?').join(', ')
-  const rows = db.prepare(`
-    SELECT id, kind_code, payload_json, session_id FROM task_drafts
-    WHERE status_code = 'pending' AND deferred_at IS NULL AND notified_at IS NULL AND kind_code IN (${placeholders})
-    ORDER BY created_at
-  `).all(...kinds) as unknown as Array<{ id: string; kind_code: string; payload_json: string; session_id: string | null }>
-  return rows.map((row) => ({ id: row.id, kindCode: row.kind_code, payload: JSON.parse(row.payload_json) as Record<string, unknown>, sessionId: row.session_id }))
-}
-
-/** 草稿关联的任务标题（验收申请草稿只存 taskId，通知里带上标题才有信息量）。 */
-function taskTitleOf(db: DatabaseSync, draft: { payload: Record<string, unknown> }): string | null {
-  const taskId = typeof draft.payload.taskId === 'string' ? draft.payload.taskId : ''
-  if (taskId === '') return null
-  const row = db.prepare('SELECT title FROM tasks WHERE id = ?').get(taskId) as { title: string } | undefined
-  return row?.title ?? null
-}
-
-export function markDraftNotified(db: DatabaseSync, draftId: string, at = nowIso()): void {
-  db.prepare('UPDATE task_drafts SET notified_at = ? WHERE id = ?').run(at, draftId)
-}
-
-export function enqueueDraftNotify(db: DatabaseSync, input: { draftId: string; kindCode: string; title: string; body: string; priorityCode: string; nextAttemptAt: string; at?: string }): DraftNotifyEntry {
-  const at = input.at ?? nowIso()
-  db.prepare(`
-    INSERT INTO draft_notify_queue (id, draft_id, kind_code, title, body, priority_code, attempts, next_attempt_at, last_error, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, 0, ?, NULL, ?)
-    ON CONFLICT(draft_id) DO NOTHING
-  `).run(randomUUID(), input.draftId, input.kindCode, input.title, input.body, input.priorityCode, input.nextAttemptAt, at)
-  const row = db.prepare('SELECT * FROM draft_notify_queue WHERE draft_id = ?').get(input.draftId) as unknown as RawDraftNotifyRow
-  return parseEntry(row)
-}
-
-export function listDraftNotifyQueue(db: DatabaseSync): DraftNotifyEntry[] {
-  const rows = db.prepare('SELECT * FROM draft_notify_queue ORDER BY created_at').all() as unknown as RawDraftNotifyRow[]
-  return rows.map(parseEntry)
-}
-
-export function listDueDraftNotifies(db: DatabaseSync, nowIso_: string): DraftNotifyEntry[] {
-  const rows = db.prepare('SELECT * FROM draft_notify_queue WHERE next_attempt_at <= ? ORDER BY created_at').all(nowIso_) as unknown as RawDraftNotifyRow[]
-  return rows.map(parseEntry)
-}
-
-export function removeDraftNotify(db: DatabaseSync, id: string): void {
-  db.prepare('DELETE FROM draft_notify_queue WHERE id = ?').run(id)
-}
-
-export function markDraftNotifyAttempt(db: DatabaseSync, id: string, error: string | null, nextAttemptAt: string): void {
-  db.prepare('UPDATE draft_notify_queue SET attempts = attempts + 1, last_error = ?, next_attempt_at = ? WHERE id = ?').run(error, nextAttemptAt, id)
-}
-
-export function countDraftNotifiesSince(db: DatabaseSync, sinceIso: string): number {
-  const row = db.prepare("SELECT COUNT(*) AS n FROM task_drafts WHERE notified_at IS NOT NULL AND notified_at >= ?").get(sinceIso) as { n: number } | undefined
-  return row?.n ?? 0
-}
-
 export interface DraftNotifyDeps {
   db: DatabaseSync
   adapter: WechatChannelAdapter
@@ -208,7 +113,7 @@ export async function scanDraftNotifications(deps: DraftNotifyDeps, policy: Remi
     }
     const decision = decideReminder(policy, candidate, state, nowMs)
     const title = draftNotifyTitle(draft.kindCode)
-    const body = draftNotifyBody(draft, taskTitleOf(deps.db, draft))
+    const body = draftNotifyBody(draft, draftTaskTitle(deps.db, draft.payload))
     if (decision.action === 'send') {
       const outcome = await deps.adapter.send({ title, body, priorityCode })
       if (outcome.ok) {

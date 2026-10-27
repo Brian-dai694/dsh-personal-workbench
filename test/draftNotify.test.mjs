@@ -20,9 +20,11 @@ import {
 } from '../lib/db/repo.js'
 import { DEFAULT_REMINDER_POLICY, normalizeReminderPolicy } from '../lib/reminder/config.js'
 import {
-  draftNotifyBody, draftNotifyPriority, enqueueDraftNotify, flushDraftNotifications, listDraftNotifyQueue,
-  listNotifiableDrafts, markDraftNotified, nextDigestAt, nextQuietEnd, scanDraftNotifications,
+  draftNotifyBody, draftNotifyPriority, flushDraftNotifications, nextDigestAt, nextQuietEnd, scanDraftNotifications,
 } from '../lib/reminder/draft-notify.js'
+import {
+  enqueueDraftNotify, listDraftNotifyQueue, listNotifiableDrafts, markDraftNotified,
+} from '../lib/db/repo/draftNotifyQueue.js'
 
 async function withDb(fn) {
   const dir = mkdtempSync(join(tmpdir(), 'dsh-workbench-draft-'))

@@ -38,6 +38,8 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import { readMeta, writeMeta } from '../db/repo/meta.js'
+import { getTask } from '../db/repo/tasks.js'
+import { getTaskReviewRecord } from '../db/repo/status.js'
 
 /** 一条待写入的记忆（落盘 + 入队用）。 */
 export interface MemoryNote {
@@ -325,12 +327,10 @@ export async function writeReviewToTeamMemory(
   const scope: 'private' | 'team' = options.scope === 'team' ? 'team' : 'private'
   if (!enabled) return { enabled: false, scope, written: 0, skipped: 0 }
 
-  const row = db.prepare('SELECT * FROM task_reviews WHERE id = ?').get(reviewId) as
-    | { id: string; task_id: string; summary_md: string; lessons_json: string }
-    | undefined
+  const row = getTaskReviewRecord(db, reviewId)
   if (row === undefined) return { enabled, scope, written: 0, skipped: 0, degradedReason: '复盘不存在，未写入记忆' }
 
-  const taskTitle = (db.prepare('SELECT title FROM tasks WHERE id = ?').get(row.task_id) as { title?: string } | undefined)?.title ?? '(任务已删除)'
+  const taskTitle = getTask(db, row.task_id)?.title ?? '(任务已删除)'
   let lessons: unknown = []
   try { lessons = JSON.parse(row.lessons_json) } catch { lessons = [] }
   const now = options.now ?? new Date()

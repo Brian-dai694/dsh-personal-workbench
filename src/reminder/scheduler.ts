@@ -15,15 +15,18 @@ import type { DatabaseSync } from 'node:sqlite'
 import {
   countFiredRemindersSince,
   countQueue,
+  countTaskEventsWithNote,
   enqueueReminder,
   fireReminder,
   getTaskRootIdOrSelf,
   listDueReminders,
   appendEvent,
   skipReminder,
+  taskPriorityCode,
 } from '../db/repo.js'
 import { readReminderPolicy, type ReminderPolicy } from './config.js'
-import { countDraftNotifiesSince, flushDraftNotifications, scanDraftNotifications, type DraftNotifyDeps, type DraftNotifyResult } from './draft-notify.js'
+import { countDraftNotifiesSince } from '../db/repo/draftNotifyQueue.js'
+import { flushDraftNotifications, scanDraftNotifications, type DraftNotifyDeps, type DraftNotifyResult } from './draft-notify.js'
 import { decideReminder, formatDigest, type ReminderCandidate, type ThrottleState } from './policy.js'
 import type { SendOutcome, WechatChannelAdapter } from './adapter.js'
 
@@ -263,13 +266,13 @@ export class ReminderScheduler {
   private toCandidate(reminder: { reminderId: string; taskId: string; title: string; dueAt: string; offsetMinutes: number }): ReminderCandidate {
     const dueMs = Date.parse(reminder.dueAt)
     const fireAt = Number.isFinite(dueMs) ? new Date(dueMs - reminder.offsetMinutes * 60_000).toISOString() : reminder.dueAt
-    const task = this.deps.db.prepare('SELECT priority_code FROM tasks WHERE id = ?').get(reminder.taskId) as { priority_code: string } | undefined
+    const priorityCode = taskPriorityCode(this.deps.db, reminder.taskId)
     return {
       reminderId: reminder.reminderId,
       taskId: reminder.taskId,
       rootTaskId: getTaskRootIdOrSelf(this.deps.db, reminder.taskId),
       title: reminder.title,
-      priorityCode: task?.priority_code ?? 'p2',
+      priorityCode: priorityCode ?? 'p2',
       dueAt: reminder.dueAt,
       fireAt,
     }
@@ -300,10 +303,7 @@ export class ReminderScheduler {
 
   /** 同一任务同一事件类型只记一次，避免 30 秒一轮刷屏。 */
   private appendEventOnce(taskId: string, eventCode: string, payload: Record<string, unknown>, now: Date): void {
-    const existing = this.deps.db.prepare(
-      "SELECT COUNT(*) AS c FROM task_events WHERE task_id = ? AND event_code = ? AND note LIKE ?",
-    ).get(taskId, eventCode, `%${String(payload.reminderId ?? '')}%`) as { c: number }
-    if (existing.c > 0) return
+    if (countTaskEventsWithNote(this.deps.db, taskId, eventCode, String(payload.reminderId ?? '')) > 0) return
     appendEvent(this.deps.db, taskId, eventCode, { actor: 'system', note: String(payload.reminderId ?? ''), at: now.toISOString(), after: payload })
   }
 
