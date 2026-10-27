@@ -8,11 +8,8 @@
 
 [English](#english) · 简体中文
 
-![今日](screenshot/%E4%BB%8A%E6%97%A5%E4%BB%BB%E5%8A%A1.PNG)
 
-| 日历 | 快速录入 | 知识库 |
-|---|---|---|
-| ![日历](screenshot/%E6%97%A5%E5%8E%86%E5%8A%9F%E8%83%BD.png) | ![快速录入](screenshot/%E5%BF%AB%E9%80%9F%E5%BD%95%E5%85%A5.png) | ![知识库](screenshot/%E7%9F%A5%E8%AF%86%E5%BA%93.png) |
+> 界面截图未随仓库发布：原截图取自真实使用实例（含个人任务、知识条目与 DeepSeek 账户余额），按隐私规范已从仓库移除。
 
 ## 亮点
 
