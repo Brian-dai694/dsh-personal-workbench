@@ -203,7 +203,10 @@ test('搜索词「接入表格 + agent 读写」的接线：落库、双向工�
   assert.match(datasetRoutesSource, /id === 'parse-file'/)
   assert.match(datasetRoutesSource, /readXlsx\(buffer\)/)
   assert.match(xlsxSource, /export function readXlsx/)
-  assert.match(buildTsconfigSource, /"src\/lib\/xlsx\.ts"/, 'xlsx 模块必须进构建清单，否则服务端 import 会 404')
+  // 2026-10-27：构建配置改成 include: ["src"]，不再逐文件枚举 —— 判据改成"配置不是白名单 + 产物真的在"。
+  assert.doesNotMatch(buildTsconfigSource, /"src\/lib\/xlsx\.ts"/, 'xlsx 不该再靠白名单收录'
+  )
+  assert.ok(read('lib/lib/xlsx.js').includes('readXlsx'), 'xlsx 必须有产物（否则服务端 import 会 404）')
 
   // 4. 结果在右栏（用户要求）：左栏只做接入，右栏渲染指标表与 AI 建议
   assert.match(appBodySource, /view === 'traffic' && <AmazonTrafficView model=\{props\.amazonData\} \/>/)
