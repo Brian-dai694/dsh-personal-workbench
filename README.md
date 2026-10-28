@@ -3,7 +3,6 @@
 [![npm version](https://img.shields.io/npm/v/@dely0/dsh-personal-workbench)](https://www.npmjs.com/package/@dely0/dsh-personal-workbench)
 [![license](https://img.shields.io/npm/l/@dely0/dsh-personal-workbench)](./LICENSE)
 [![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
-[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
 
 **DSH（DeepSeek Harness）个人工作台插件**：把 DSH 变成「日历 + 层级任务 + AI 助手」的工作台。
 自然语言录入任务，AI 澄清 / 拆解 / 执行 / 复盘，数据全部留在本机。
