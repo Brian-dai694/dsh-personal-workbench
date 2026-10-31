@@ -66,6 +66,11 @@ test('package.json 的 files 必须包含内置角色库目录（否则发布出
   assert.equal(covered, true, `files 里必须有 assets/personas，当前：${JSON.stringify(files)}`)
 })
 
+test('package.json 的 files 不得包含仓库截图（截图可能含真实任务、账户或本地路径）', () => {
+  const files = Array.isArray(pkg.files) ? pkg.files : []
+  assert.equal(files.includes('screenshot'), false, `发布包不得带 screenshot/：${JSON.stringify(files)}`)
+})
+
 /**
  * 内置角色分**两个来源区**，这个划分本身就是判据（2026-10-01）：
  *

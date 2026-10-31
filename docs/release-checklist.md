@@ -133,7 +133,7 @@ node scripts/dev-install.mjs --apply    # 真装：自动备份 + 零增量 diff
       **命中不等于要删**：逐条判断是"给用户看的示例文案（合法）"还是真泄漏 —— 误报一键删会删掉产品文案。
 - [ ] 若目标是 npm：`pnpm publish`（`files` 白名单已含 `lib`、`assets/personas`、`cordis.patch.yml`、
       `README.md`、`LICENSE`、`LICENSE-novotnyllc-dotnet-artisan`、`LICENSE-K-Dense-scientific-agents`、
-      `THIRD_PARTY_NOTICES.md`、`screenshot`；**确认 `lib/` 是最新构建产物**）。
+      `THIRD_PARTY_NOTICES.md`；**确认 `lib/` 是最新构建产物**；截图目录不随包发布）。
       ⚠️ 两份上游 `LICENSE-*` 是 **MIT 的硬要求**（"副本中保留版权声明与许可全文"）——
       随包内置了第三方 persona 就必须带上，漏了等于署名义务破。
 - [ ] 发布后再跑一次 `node scripts/check-installed-version.mjs`（防止发布动作本身改了 profile）。

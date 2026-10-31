@@ -33,8 +33,7 @@
     "LICENSE",
     "LICENSE-novotnyllc-dotnet-artisan",
     "LICENSE-K-Dense-scientific-agents",
-    "THIRD_PARTY_NOTICES.md",
-    "screenshot"
+    "THIRD_PARTY_NOTICES.md"
   ],
   "license": "MIT",
   "private": false,
