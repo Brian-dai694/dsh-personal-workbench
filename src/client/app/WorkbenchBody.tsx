@@ -121,15 +121,16 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
    * 现在的判定按"这个视图到底有没有详情内容"来分：
    * - 任务、今日：有选中任务才展开（今日的任务选中来自日期面板）；
    * - 知识库 / 点子：各自有选中项才展开（收起时它们的详情就点不到了，属于功能回归）；
-   *   **但点子的「记个点子 / 新建/重命名文件夹」是右栏里的表单**，此时还没有任何选中项，
-   *   若只判选中，表单会渲染进一个 `display:none` 的容器 —— 点按钮看起来完全没反应。
-   *   所以 `draft` / `folderForm` 非空时也必须展开。
+   *   **但知识库的「新建知识」与点子的「记个点子 / 新建/重命名文件夹」都是右栏里的表单**，
+   *   此时还没有任何选中项，若只判选中，表单会渲染进一个 `display:none` 的容器
+   *   —— 点按钮看起来完全没反应（知识库与点子都真实踩到过）。
+   *   所以 `knowledge.draft` / `ideas.draft` / `ideas.folderForm` 非空时也必须展开。
    * - 流量分析：右侧是分析结果区，空态本身有引导文案，保持常显；
    * - 测算 / 关键词：**没有详情内容**，一律收起 —— 这两个正是这轮要修的。
    */
   const detailOpen = ((): boolean => {
     if (view === 'list' || view === 'today') return selected !== null
-    if (view === 'knowledge') return knowledge.selected !== null
+    if (view === 'knowledge') return knowledge.selected !== null || knowledge.draft !== null
     if (view === 'ideas') return ideas.selectedIdea !== null || ideas.selectedCluster !== null || ideas.draft !== null || ideas.folderForm !== null
     /**
      * `'traffic'` 保留但**不再可达**（2026-10-29 合并进「报表分析 · 搜索词」）。
