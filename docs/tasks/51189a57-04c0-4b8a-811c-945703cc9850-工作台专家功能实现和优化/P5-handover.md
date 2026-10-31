@@ -130,7 +130,7 @@ node --test test/expertProvider.test.mjs test/expertCatalog.test.mjs test/skills
 node --test test/*.test.mjs                         → 1（tests 1195 / pass 1194 / fail 1）
 ```
 
-全仓那 1 条失败 = `db migrations, dictionaries and task tree`（`test/db.test.mjs`）在 **`finally` 清理期**的已知 EPERM（`Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\dsh-personal-workbench-db-…`），仓库既有问题（`docs/releases/v1.16.0.md:134`、`docs/issues/2026-10-05-clear-plan-does-not-refresh.md:60`），**不是本批回归**。
+全仓那 1 条失败 = `db migrations, dictionaries and task tree`（`test/db.test.mjs`）在 **`finally` 清理期**的已知 EPERM（`Error: EPERM, Permission denied: \\?\C:\Users\<user>\AppData\Local\Temp\dsh-personal-workbench-db-…`），仓库既有问题（`docs/releases/v1.16.0.md:134`、`docs/issues/2026-10-05-clear-plan-does-not-refresh.md:60`），**不是本批回归**。
 
 CR 检查（本批 14 个文件）全为 **CR=0**；`REVERSE-INJECTION` 在 `src/**`、`test/**` 残留 **0**。
 

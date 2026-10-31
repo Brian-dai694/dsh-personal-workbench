@@ -124,7 +124,7 @@ export function installExpertInputSource(ctx, createRegistrar?): () => void
 | `node --test` 专家域 9 文件（expertRoutes / expertTools / expertWiring / expertProvider / expertCatalog / skills / httpFence / pluginEntry / personaLibrary） | 0 | `tests 146 / pass 146 / fail 0` |
 | `node --test test/*.test.mjs`（全仓） | 1 | `tests 1244 / pass 1243 / fail 1`（duration 约 11.2 s） |
 
-全仓唯一失败与 P5/P6 基线同源、**非本批引入**：`test/db.test.mjs` 的 "db migrations, dictionaries and task tree"（单独跑也失败：`tests 9 / pass 8 / fail 1`），错误是 `Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\dsh-personal-workbench-db-KXtbln`（临时目录清理期）。另注：`test/verifySafety.test.mjs:351` 会打出一行带 `✖` 前缀的诊断文本（内容是"拒绝继承 profile 目录…"），但它**不在** failing tests 列表里、不计入 `fail`。
+全仓唯一失败与 P5/P6 基线同源、**非本批引入**：`test/db.test.mjs` 的 "db migrations, dictionaries and task tree"（单独跑也失败：`tests 9 / pass 8 / fail 1`），错误是 `Error: EPERM, Permission denied: \\?\C:\Users\<user>\AppData\Local\Temp\dsh-personal-workbench-db-KXtbln`（临时目录清理期）。另注：`test/verifySafety.test.mjs:351` 会打出一行带 `✖` 前缀的诊断文本（内容是"拒绝继承 profile 目录…"），但它**不在** failing tests 列表里、不计入 `fail`。
 
 基线推算：P5 `1195 / 1194 / 1` + P6 新增 16 + P7 新增 34 → 期望 1245，实测 1244（差 1 条，未追根因；纯计数差，不影响任何断言结论）。
 

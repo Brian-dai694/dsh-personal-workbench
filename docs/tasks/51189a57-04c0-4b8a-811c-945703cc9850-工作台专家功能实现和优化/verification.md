@@ -514,7 +514,7 @@ dry-run 通过、目标不等于当前实例且任务已有测试实例授权后
 | `node --test` 专家域 9 文件 | 0 | `tests 146 / pass 146 / fail 0` |
 | `node --test test/*.test.mjs`（全仓） | 1 | `tests 1244 / pass 1243 / fail 1`（duration 约 11.2 s） |
 
-全仓唯一失败与 P5/P6 基线同源、非本批引入：`test/db.test.mjs` 的 "db migrations, dictionaries and task tree"，单独跑也失败（`tests 9 / pass 8 / fail 1`），错误为 `Error: EPERM, Permission denied: \\?\C:\Users\ADMINI~1\AppData\Local\Temp\dsh-personal-workbench-db-KXtbln`（临时目录清理期）。`test/verifySafety.test.mjs:351` 会打一行带 `✖` 前缀的诊断文本，但它不在 failing tests 列表、不计入 `fail`。基线推算 P5 `1195 / 1194 / 1` + P6 16 + P7 34 = 期望 1245，实测 1244（差 1 条纯计数差，未追根因，不影响断言结论）。
+全仓唯一失败与 P5/P6 基线同源、非本批引入：`test/db.test.mjs` 的 "db migrations, dictionaries and task tree"，单独跑也失败（`tests 9 / pass 8 / fail 1`），错误为 `Error: EPERM, Permission denied: \\?\C:\Users\<user>\AppData\Local\Temp\dsh-personal-workbench-db-KXtbln`（临时目录清理期）。`test/verifySafety.test.mjs:351` 会打一行带 `✖` 前缀的诊断文本，但它不在 failing tests 列表、不计入 `fail`。基线推算 P5 `1195 / 1194 / 1` + P6 16 + P7 34 = 期望 1245，实测 1244（差 1 条纯计数差，未追根因，不影响断言结论）。
 
 ### 14.2 AX-E45–E47 / E51
 
