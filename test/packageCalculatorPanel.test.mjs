@@ -35,6 +35,18 @@ test('包裹计算保留尺寸、重量、计费输入和结果展示', () => {
   assert.match(panel, /result\.warnings\.map/)
 })
 
+test('包装和外箱参数统一显式保存并在下次打开时恢复', () => {
+  assert.match(view, /const PACKAGE_STORAGE_KEY = 'dsh-workbench-amazon-package-v1'/)
+  assert.match(view, /function loadPackageInput\(\)/)
+  assert.match(view, /function loadCartonOuter\(\)/)
+  assert.match(view, /localStorage\.setItem\(PACKAGE_STORAGE_KEY, JSON\.stringify\(packageInput\)\)/)
+  assert.match(view, /localStorage\.setItem\(CARTON_STORAGE_KEY, JSON\.stringify\(cartonOuter\)\)/)
+  assert.match(view, /保存所有参数/)
+  assert.match(view, /保存失败：浏览器存储不可用/)
+  const updateCarton = view.slice(view.indexOf('function updateCartonOuter('), view.indexOf('\n  function update(', view.indexOf('function updateCartonOuter(')))
+  assert.doesNotMatch(updateCarton, /localStorage\.setItem/)
+})
+
 test('包裹计算面板与样式不再包含 3D 纸盒或交互残留', () => {
   assert.doesNotMatch(panel, /wb-package-visual|wb-package-box|wb-package-cube|wb-package-airmail/)
   assert.doesNotMatch(panel, /visualScale|rotation|isFolded|dragRef|suppressClickRef|handlePointer|handleBoxKeyDown/)

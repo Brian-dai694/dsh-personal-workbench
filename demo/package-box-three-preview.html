@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>牛皮纸飞机盒 · Three.js 3D 预览</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f4f6;color:#242424;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}.page{max-width:1040px;margin:28px auto;padding:0 20px}.top{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:16px}.eyebrow{font-size:12px;color:#777}.title{margin:2px 0 0;font-size:22px;font-weight:650}.dims{color:#555;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px}.viewport{position:relative;min-height:560px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden}.viewport canvas{display:block;width:100%;height:100%;touch-action:none}.hud{position:absolute;left:18px;top:16px;pointer-events:none}.hud b{display:block;font-size:15px}.hud span{font-size:12px;color:#756754}.controls{position:absolute;left:16px;bottom:16px;display:flex;gap:8px}.controls button{height:32px;padding:0 12px;background:#fff;border:1px solid #d2d2d2;border-radius:5px;cursor:pointer}.controls button:hover{border-color:#9b754d}.side{padding:18px;background:#fff;border:1px solid #ddd;border-radius:8px}.side h2{margin:0 0 12px;font-size:15px}.side dl{margin:0}.side dt{margin-top:14px;color:#777;font-size:12px}.side dd{margin:2px 0 0;font-variant-numeric:tabular-nums}.hint{position:absolute;right:14px;bottom:18px;color:#888;font-size:11px}@media(max-width:760px){.page{margin:12px auto;padding:0 10px}.layout{grid-template-columns:1fr}.viewport{min-height:420px}.side{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.side h2{grid-column:1/-1}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main class="page">
+<header class="top"><div><div class="eyebrow">PACKAGING STRUCTURE PREVIEW</div><h1 class="title">牛皮纸飞机盒</h1></div><div class="dims">刀版尺寸 315 × 202 × 62 mm</div></header>
+<div class="layout">
+<section class="viewport" id="view"><div class="hud"><b>外尺寸约 316 × 206.5 × 63 mm</b><span>瓦楞纸板真实厚度 3 mm · 结构预览</span></div><div class="controls"><button id="lid" type="button">打开盒盖</button><button id="reset" type="button">复位</button></div><div class="hint">拖动旋转 · 滚轮缩放</div></section>
+<aside class="side"><h2>模型规格</h2><form id="dimensions" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"><label>长 cm<input name="length" type="number" min="1" step="0.1" value="31.5" style="width:100%"></label><label>宽 cm<input name="width" type="number" min="1" step="0.1" value="20.2" style="width:100%"></label><label>高 cm<input name="height" type="number" min="1" step="0.1" value="6.2" style="width:100%"></label><button type="submit" style="grid-column:1/-1;height:32px;border:1px solid #ccc;border-radius:5px;background:#fff;cursor:pointer">更新模型尺寸</button></form><dl><dt>纸板厚度</dt><dd>3 mm（切边可见楞层）</dd><dt>结构组成</dt><dd>底板、四面侧板、后铰链盖、前插舌、左右防尘翼</dd><dt>材质</dt><dd>哑光牛皮纸、纤维纹理、粗糙表面</dd><dt>光照</dt><dd>白色影棚背景、柔和阴影</dd></dl></aside>
+</div>
+</main>
+<script type="module" src="/demo/package-box-three-preview.js?v=surface-clean-5"></script>
+</body>
+</html>

@@ -33,6 +33,7 @@ import type { useOplogDayIndex } from '../hooks/useOplogDayIndex.js'
 import type { useInventory } from '../hooks/useInventory.js'
 import type { useKeywordPlans } from '../hooks/useKeywordPlans.js'
 import type { useCalculatorScenarios } from '../hooks/useCalculatorScenarios.js'
+import type { usePackagingDimensions } from '../hooks/usePackagingDimensions.js'
 import type { useWorkbenchQuickIntake } from '../hooks/useWorkbenchQuickIntake.js'
 import type { useWorkbenchReminders } from '../hooks/useWorkbenchReminders.js'
 import type { useWorkbenchSettings } from '../hooks/useWorkbenchSettings.js'
@@ -82,6 +83,7 @@ export interface WorkbenchAssembly {
   keywordPlans: ReturnType<typeof useKeywordPlans>
   /** 测算方案库：已保存方案与对比选择的唯一所有者（数学仍在 amazonCalculator）。 */
   calculatorScenarios: ReturnType<typeof useCalculatorScenarios>
+  packagingDimensions: ReturnType<typeof usePackagingDimensions>
   /** 知识域（D17/P1）。 */
   knowledge: ReturnType<typeof useKnowledge>
   /**

@@ -18,6 +18,9 @@ import {
 } from '../calculatorCompare.js'
 import type { UseCalculatorScenariosResult } from '../hooks/useCalculatorScenarios.js'
 import { MAX_COMPARE } from '../hooks/useCalculatorScenarios.js'
+import type { UsePackagingDimensionsResult } from '../hooks/usePackagingDimensions.js'
+import type { UseUniverCsvTableResult } from '../hooks/useUniverCsvTable.js'
+import type { PackagingDimensionRecord } from '../../shared/packagingDimensions.js'
 import { CALCULATOR_DEFAULTS, REFERRAL_FEE_RATE, withFixedReferralFee } from '../../shared/calculatorScenario.js'
 import { calculatePackage, type PackageCalculatorInput, type PackageSizeUnit, type PackageWeightUnit } from '../../shared/packageCalculator.js'
 import { packCarton, type CartonSize } from '../../shared/cartonPacking.js'
@@ -25,11 +28,32 @@ import { PackageBoxThree } from '../components/PackageBoxThree.js'
 import { CartonBox3D } from '../components/CartonBox3D.js'
 
 const STORAGE_KEY = 'dsh-workbench-amazon-calculator-v1'
+const PACKAGE_STORAGE_KEY = 'dsh-workbench-amazon-package-v1'
 type CalculatorMode = 'profit' | 'bid' | 'package' | 'carton'
 
-/** 外箱默认值：24×18×12 in 是北美最通用的搬家/整箱规格，改一次就存在本机 */
+/** 外箱默认值：24×18×12 in 是北美常见规格。 */
 const CARTON_STORAGE_KEY = 'dsh-workbench-carton-outer-v1'
 const CARTON_DEFAULT: CartonSize = { length: 24, width: 18, height: 12 }
+const PACKAGE_DEFAULT: PackageCalculatorInput = { length: 15, width: 12, height: 8, weight: 2, quantity: 1, sizeUnit: 'in', weightUnit: 'lb' }
+
+function loadPackageInput(): PackageCalculatorInput {
+  try {
+    const raw = localStorage.getItem(PACKAGE_STORAGE_KEY)
+    if (raw !== null) return { ...PACKAGE_DEFAULT, ...JSON.parse(raw) as Partial<PackageCalculatorInput> }
+  } catch { /* Invalid or unavailable local storage falls back to defaults. */ }
+  return PACKAGE_DEFAULT
+}
+
+function loadCartonOuter(): CartonSize {
+  try {
+    const raw = localStorage.getItem(CARTON_STORAGE_KEY)
+    if (raw !== null) {
+      const value = JSON.parse(raw) as Partial<CartonSize>
+      if (typeof value.length === 'number' && typeof value.width === 'number' && typeof value.height === 'number') return value as CartonSize
+    }
+  } catch { /* Invalid or unavailable local storage falls back to defaults. */ }
+  return CARTON_DEFAULT
+}
 
 /**
  * 默认参数来自共享模块（`shared/calculatorScenario.ts`）：对比表补齐老方案时用的
@@ -67,32 +91,19 @@ function loadInput(): AmazonCalculatorInput {
 const money = (value: number | null) => value === null || !Number.isFinite(value) ? '—' : `$${value.toFixed(2)}`
 const percent = (value: number | null) => value === null || !Number.isFinite(value) ? '—' : `${(value * 100).toFixed(2)}%`
 
-export function AmazonToolsView({ onSendToAI, scenarios: model }: { onSendToAI?: (text: string) => void; scenarios?: UseCalculatorScenariosResult } = {}): JSX.Element {
+export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table }: { onSendToAI?: (text: string) => void; scenarios?: UseCalculatorScenariosResult; packaging?: UsePackagingDimensionsResult; table?: UseUniverCsvTableResult } = {}): JSX.Element {
   const [input, setInput] = useState<AmazonCalculatorInput>(loadInput)
   const [mode, setMode] = useState<CalculatorMode>('profit')
   const [bid, setBid] = useState(0.8)
   const [placementPercent, setPlacementPercent] = useState(50)
   const [maxMultiplier, setMaxMultiplier] = useState(2)
-  const [packageInput, setPackageInput] = useState<PackageCalculatorInput>({ length: 15, width: 12, height: 8, weight: 2, quantity: 1, sizeUnit: 'in', weightUnit: 'lb' })
-  /**
-   * 外箱尺寸：跟着本机存。
-   * 内盒不单独存 —— 内盒**就是**包裹尺寸，两边各存一份必然出现"预览装 4 件、面板算 6 件"。
-   */
-  const [cartonOuter, setCartonOuter] = useState<CartonSize>(() => {
-    try {
-      const saved = localStorage.getItem(CARTON_STORAGE_KEY)
-      if (saved !== null) {
-        const parsed = JSON.parse(saved) as Partial<CartonSize>
-        if (typeof parsed.length === 'number' && typeof parsed.width === 'number' && typeof parsed.height === 'number') {
-          return { length: parsed.length, width: parsed.width, height: parsed.height }
-        }
-      }
-    } catch { /* 本机存储不可用时回落默认值 */ }
-    return CARTON_DEFAULT
+  const [packageInput, setPackageInput] = useState<PackageCalculatorInput>(loadPackageInput)
+  /** 内盒直接取包裹尺寸；两者各存一份会造成装箱结果不一致。 */
+  const [cartonOuter, setCartonOuter] = useState<CartonSize>(loadCartonOuter)
+  const [hasSaved, setHasSaved] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY) !== null || localStorage.getItem(PACKAGE_STORAGE_KEY) !== null || localStorage.getItem(CARTON_STORAGE_KEY) !== null } catch { return false }
   })
-  const [saved, setSaved] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) !== null } catch { return false }
-  })
+  const [saveMessage, setSaveMessage] = useState('')
   const [scenarioName, setScenarioName] = useState('')
   const [scenarioNote, setScenarioNote] = useState('')
   const [scenarioMsg, setScenarioMsg] = useState('')
@@ -120,19 +131,16 @@ export function AmazonToolsView({ onSendToAI, scenarios: model }: { onSendToAI?:
   function updatePackage(key: keyof PackageCalculatorInput, raw: string): void {
     if (key === 'sizeUnit' || key === 'weightUnit') {
       setPackageInput((current) => ({ ...current, [key]: raw }))
+      setSaveMessage('')
       return
     }
     setPackageInput((current) => ({ ...current, [key]: raw === '' ? 0 : Number(raw) }))
+    setSaveMessage('')
   }
 
-  /** 外箱尺寸改动：空值沿用上一次，避免清空输入框时预览塌成 1 单位 */
   function updateCartonOuter(key: keyof CartonSize, raw: string): void {
-    const value = raw === '' ? 0 : Number(raw)
-    setCartonOuter((current) => {
-      const next: CartonSize = { ...current, [key]: value > 0 ? value : current[key] }
-      try { localStorage.setItem(CARTON_STORAGE_KEY, JSON.stringify(next)) } catch { /* 存不了就不存 */ }
-      return next
-    })
+    setCartonOuter((current) => ({ ...current, [key]: raw === '' ? 0 : Number(raw) }))
+    setSaveMessage('')
   }
 
   function update(key: keyof AmazonCalculatorInput, raw: string): void {
@@ -143,9 +151,12 @@ export function AmazonToolsView({ onSendToAI, scenarios: model }: { onSendToAI?:
   function save(): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(calcInput))
-      setSaved(true)
+      localStorage.setItem(PACKAGE_STORAGE_KEY, JSON.stringify(packageInput))
+      localStorage.setItem(CARTON_STORAGE_KEY, JSON.stringify(cartonOuter))
+      setHasSaved(true)
+      setSaveMessage('参数已保存到本机浏览器')
     } catch {
-      setSaved(false)
+      setSaveMessage('保存失败：浏览器存储不可用，请检查隐私或存储空间设置')
     }
   }
 
@@ -212,7 +223,7 @@ export function AmazonToolsView({ onSendToAI, scenarios: model }: { onSendToAI?:
     <section className="wb-amazon-tools" aria-label="Amazon 测算">
       <header className="wb-amazon-heading">
         <div><h2>Amazon 测算</h2><p>成本盈亏与广告位 CPC · 本地计算，不修改广告账户</p></div>
-        <button className="wb-btn" type="button" onClick={save}>保存到本机</button>
+        <div className="wb-amazon-save-actions"><span className="wb-amazon-save-state" role="status">{saveMessage || (hasSaved ? '已有已保存参数' : '尚未保存')}</span><button className="wb-btn primary" type="button" onClick={save}>保存所有参数</button></div>
       </header>
 
       <div className="wb-segmented wb-amazon-mode" role="tablist" aria-label="计算模式">
@@ -262,8 +273,8 @@ export function AmazonToolsView({ onSendToAI, scenarios: model }: { onSendToAI?:
                * 在视觉上比真正的主按钮还显眼，而它其实是个破坏性动作。
                */}
               <div className="wb-amazon-input-actions">
-                <p className="wb-amazon-save-state" role="status">{saved ? '已保存在本机浏览器' : '参数尚未保存'}</p>
-                <button className="wb-btn" type="button" onClick={() => { setInput(DEFAULTS); setSaved(false) }}>恢复默认值</button>
+                <p className="wb-amazon-save-state" role="status">{hasSaved ? '参数已保存在本机浏览器' : '参数尚未保存'}</p>
+                <button className="wb-btn" type="button" onClick={() => { setInput(DEFAULTS); setHasSaved(false); setSaveMessage('') }}>恢复默认值</button>
               </div>
             </div>
             <div className="wb-amazon-results" aria-live="polite">
@@ -325,6 +336,40 @@ export function AmazonToolsView({ onSendToAI, scenarios: model }: { onSendToAI?:
           outer={cartonOuter}
           unit={packageInput.sizeUnit ?? 'in'}
           onOuter={updateCartonOuter}
+        />
+      )}
+
+      {/**
+       * 尺寸记录：包装尺寸属于**可查可调用的主数据**，只存在浏览器缓存里等于没有记录。
+       * 记录存工作台数据库；表格视图交给 Univer（它负责批量编辑与可视化，合并仍由用户确认）。
+       */}
+      {(mode === 'package' || mode === 'carton') && packaging !== undefined && (
+        <PackagingRecordsPanel
+          packaging={packaging}
+          current={{ packageInput, cartonOuter }}
+          onLoad={(record) => {
+            const data = record.data
+            setPackageInput({
+              length: data.packageLength, width: data.packageWidth, height: data.packageHeight,
+              weight: data.packageWeight, quantity: data.quantity, sizeUnit: data.sizeUnit, weightUnit: data.weightUnit,
+            })
+            setCartonOuter({ length: data.cartonLength, width: data.cartonWidth, height: data.cartonHeight })
+            setSaveMessage(`已载入尺寸记录「${record.name}」`)
+          }}
+          onOpenTable={() => {
+            const rows = packaging.records.map((record) => [
+              record.name, record.sku,
+              record.data.packageLength, record.data.packageWidth, record.data.packageHeight, record.data.packageWeight,
+              record.data.quantity, record.data.sizeUnit, record.data.weightUnit,
+              record.data.cartonLength, record.data.cartonWidth, record.data.cartonHeight,
+            ])
+            void table?.actions.openTable(
+              ['名称', 'SKU', '包裹长', '包裹宽', '包裹高', '包裹重量', '单箱件数', '尺寸单位', '重量单位', '外箱长', '外箱宽', '外箱高'],
+              rows,
+              '包装与外箱尺寸记录',
+            )
+          }}
+          tableAvailable={table?.available === true}
         />
       )}
 
@@ -572,3 +617,126 @@ function Field({ label, value, onChange, hint, percent: isPercent }: { label: st
 function Metric({ label, value }: { label: string; value: string }): JSX.Element {
   return <div className="wb-amazon-metric"><span>{label}</span><strong>{value}</strong></div>
 }
+
+/**
+ * 尺寸记录面板：把当前包裹 + 外箱尺寸存成**可检索、可载入**的记录。
+ *
+ * 为什么不用 localStorage：换机器就丢、不进备份，也说不出"上次那个 SKU 用的什么尺寸"。
+ * 记录落工作台数据库；Univer 视图只是同一批记录的表格化外壳（合并仍由用户确认）。
+ */
+function PackagingRecordsPanel({ packaging, current, onLoad, onOpenTable, tableAvailable }: {
+  packaging: UsePackagingDimensionsResult
+  current: { packageInput: PackageCalculatorInput; cartonOuter: CartonSize }
+  onLoad: (record: PackagingDimensionRecord) => void
+  onOpenTable: () => void
+  tableAvailable: boolean
+}): JSX.Element {
+  const [name, setName] = useState('')
+  const [sku, setSku] = useState('')
+  const [query, setQuery] = useState('')
+  const [msg, setMsg] = useState('')
+
+  const keyword = query.trim().toLowerCase()
+  const records = packaging.records.filter((record) => keyword === ''
+    || record.name.toLowerCase().includes(keyword)
+    || record.sku.toLowerCase().includes(keyword))
+
+  function currentData() {
+    const p = current.packageInput
+    const c = current.cartonOuter
+    return {
+      packageLength: p.length, packageWidth: p.width, packageHeight: p.height,
+      packageWeight: p.weight, quantity: p.quantity ?? 1,
+      sizeUnit: p.sizeUnit ?? 'in', weightUnit: p.weightUnit ?? 'lb',
+      cartonLength: c.length, cartonWidth: c.width, cartonHeight: c.height,
+    } as const
+  }
+
+  /** 名称留空就自动命名：一个「点了没反应」的按钮比一个多余的名字更糟。 */
+  function autoName(): string {
+    const now = new Date()
+    const pad = (value: number) => String(value).padStart(2, '0')
+    const stamp = `${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+    return `尺寸记录 ${sku.trim() === '' ? '' : `${sku.trim()} `}${stamp}`.trim()
+  }
+
+  async function saveNew(): Promise<void> {
+    const finalName = name.trim() === '' ? autoName() : name.trim()
+    const result = await packaging.save(finalName, sku.trim(), currentData())
+    if (result.ok) {
+      setMsg(`已保存「${finalName}」· 共 ${result.total} 条`)
+      setName('')
+    } else {
+      setMsg('保存失败：原因见下方错误提示')
+    }
+  }
+
+  return (
+    <section className="wb-pkg-records" aria-label="尺寸记录">
+      <div className="wb-pkg-records-head">
+        <div>
+          <h3 className="wb-amazon-section-title">尺寸记录（{packaging.records.length}）</h3>
+          <p className="wb-amazon-footnote">存在工作台数据库（随备份走，不是浏览器缓存）；按名称或 SKU 载入会同时还原包裹与外箱尺寸。</p>
+        </div>
+        <button className="wb-btn" type="button" disabled={!tableAvailable || packaging.records.length === 0} onClick={onOpenTable}>
+          {tableAvailable ? '用 Univer 打开记录表' : '用 Univer 打开记录表（未装 dsh-univer-office）'}
+        </button>
+      </div>
+
+      <div className="wb-pkg-records-form">
+        <label className="wb-pkg-records-field">
+          <span>名称<small>留空自动命名</small></span>
+          <input value={name} placeholder="如「YB2301-1 标准包装」" aria-label="尺寸记录名称" onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void saveNew() }} />
+        </label>
+        <label className="wb-pkg-records-field">
+          <span>SKU<small>可选</small></span>
+          <input value={sku} placeholder="如 YB2301-1" aria-label="SKU" onChange={(event) => setSku(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void saveNew() }} />
+        </label>
+        <button className="wb-btn primary" type="button" disabled={packaging.busy} onClick={() => void saveNew()}>
+          {packaging.busy ? '保存中…' : '保存记录'}
+        </button>
+      </div>
+
+      {packaging.error !== null && <div className="wb-amazon-warning" role="alert">尺寸记录操作失败：{packaging.error}</div>}
+
+      <div className="wb-pkg-records-tools">
+        <input className="wb-pkg-records-search" value={query} placeholder="搜索名称或 SKU" aria-label="搜索尺寸记录" onChange={(event) => setQuery(event.target.value)} />
+        <span className="wb-pkg-records-status" role="status">
+          {msg !== '' ? msg : `共 ${packaging.records.length} 条${keyword === '' ? '' : ` · 命中 ${records.length} 条`}`}
+        </span>
+      </div>
+
+      {records.length === 0
+        ? (
+          <div className="wb-amazon-empty">
+            <strong>{packaging.records.length === 0 ? '还没有尺寸记录' : '没有匹配的记录'}</strong>
+            <span>{packaging.records.length === 0
+              ? '填好包裹与外箱尺寸后点「保存记录」，之后按名称或 SKU 直接载入。'
+              : '换个关键词，或清空搜索框看全部记录。'}</span>
+          </div>
+        )
+        : (
+          <ul className="wb-calc-scenario-list">
+            {records.map((record) => (
+              <li key={record.id} className="wb-calc-scenario-item">
+                <div className="wb-calc-scenario-meta">
+                  <b>{record.name}</b>
+                  <small>
+                    {record.sku === '' ? '无 SKU' : record.sku}
+                    {` · 包裹 ${record.data.packageLength}×${record.data.packageWidth}×${record.data.packageHeight} ${record.data.sizeUnit}`}
+                    {` · 外箱 ${record.data.cartonLength}×${record.data.cartonWidth}×${record.data.cartonHeight} ${record.data.sizeUnit}`}
+                  </small>
+                </div>
+                <div className="wb-calc-scenario-actions">
+                  <button className="wb-btn" type="button" disabled={packaging.busy} onClick={() => onLoad(record)}>载入</button>
+                  <button className="wb-oplog-card-open" type="button" disabled={packaging.busy} onClick={() => { void packaging.remove(record.id) }}>删除</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      <p className="wb-amazon-footnote">Univer 打开的是记录表的草稿；是否写回工作区文件由你在 Viewer 里确认。</p>
+    </section>
+  )
+}
+

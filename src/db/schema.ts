@@ -7,7 +7,7 @@ import { LEGACY_COLOR_REWRITES } from '../shared/palette.js'
 import { applyAsinIdentityV37, backfillAsinIdentityV37 } from './asinIdentityV37.js'
 import { applyOplogAssociationsV38, backfillOplogAssociationsV38 } from './oplogAssociationsV38.js'
 
-export const SCHEMA_VERSION = 39
+export const SCHEMA_VERSION = 40
 
 export interface Migration {
   version: number
@@ -1017,6 +1017,23 @@ export const MIGRATIONS: Migration[] = [
       ) STRICT;
       CREATE INDEX IF NOT EXISTS idx_products_updated ON products(updated_at DESC);
       CREATE INDEX IF NOT EXISTS idx_products_site ON products(site);`)
+    },
+  },
+  {
+    version: 40,
+    name: 'packaging-dimension-records',
+    /** 每个 SKU 可调用的包裹与外箱尺寸记录，独立于浏览器缓存与测算方案。 */
+    up(db) {
+      db.exec(`CREATE TABLE IF NOT EXISTS packaging_dimensions (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        sku TEXT NOT NULL DEFAULT '',
+        data_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_packaging_dimensions_updated ON packaging_dimensions(updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_packaging_dimensions_sku ON packaging_dimensions(sku);`)
     },
   },
 ]

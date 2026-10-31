@@ -20,7 +20,27 @@ export type IdeasDetailPaneProps = {
 }
 
 export function IdeasDetailPane({ model, dictOf, busy, startAISession }: IdeasDetailPaneProps): JSX.Element {
-  const { selectedIdea, selectedCluster, draft: ideaDraft } = model
+  const { selectedIdea, selectedCluster, draft: ideaDraft, folderForm } = model
+
+  /**
+   * 文件夹的「新建 / 重命名」表单。
+   *
+   * 这一段原先**根本不存在**：`useIdeas#setFolderForm` 会被三个按钮写入（顶栏「新建文件夹」、
+   * 文件夹网格的「+ 新建空文件夹」、文件夹详情的「重命名」），但没有任何组件读 `folderForm`，
+   * 于是那三个按钮全是"点了没反应"。表单放在这里（而不是弹窗）是为了与点子表单同一处理方式：
+   * 右栏展开由 `WorkbenchBody#detailOpen` 负责（它已把 `folderForm` 计入判据）。
+   */
+  if (folderForm !== null) {
+    const isCreate = folderForm.mode === 'create'
+    return (
+  <form className="wb-form" onSubmit={(e) => { e.preventDefault(); model.actions.saveFolder() }}>
+    <h4 className="full" style={{ margin: 0 }}>{isCreate ? '新建文件夹' : '重命名文件夹'}</h4>
+    <label className="full">名称<input value={folderForm.title} onChange={(e) => model.patchFolderForm({ title: e.target.value })} placeholder="一句话概括这个文件夹的主题" /></label>
+    <label className="full">总结（可选，Markdown）<textarea rows={6} value={folderForm.summaryMd} onChange={(e) => model.patchFolderForm({ summaryMd: e.target.value })} /></label>
+    <div className="full" style={{ display: 'flex', gap: 8 }}><button className="wb-btn primary" type="submit"><Icon name="check" />保存</button><button className="wb-btn" type="button" onClick={() => model.setFolderForm(null)}>取消</button></div>
+  </form>
+    )
+  }
 
   if (ideaDraft !== null) {
     return (

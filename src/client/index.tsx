@@ -43,6 +43,7 @@ import { useOplogDayIndex } from './hooks/useOplogDayIndex.js'
 import { useInventory } from './hooks/useInventory.js'
 import { useKeywordPlans } from './hooks/useKeywordPlans.js'
 import { useCalculatorScenarios } from './hooks/useCalculatorScenarios.js'
+import { usePackagingDimensions } from './hooks/usePackagingDimensions.js'
 import { useAbaKeywordSets } from './hooks/useAbaKeywordSets.js'
 import { useAdReportDatasets } from './hooks/useAdReportDatasets.js'
 import { useUniverCsvTable } from './hooks/useUniverCsvTable.js'
@@ -267,6 +268,7 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
   const keywordPlans = useKeywordPlans()
   /** 测算方案库（2026-10-24）：已保存方案 + 对比选择的唯一所有者。 */
   const calculatorScenarios = useCalculatorScenarios()
+  const packagingDimensions = usePackagingDimensions()
   /** ABA 词表域（T3）：关键词页那 7 条请求的唯一所有者（视图不发 HTTP）。 */
   const abaKeywordSets = useAbaKeywordSets()
   /** 广告报表域（T3）：非搜索词类型的本地状态；搜索词读下面的 `amazonData`。 */
@@ -821,7 +823,7 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
   const assembly: WorkbenchAssembly = {
     nav, data, forms, detail, taskList, day, quick, ai,
     prefs, dir, busyApi, remindersApi, draftsApi, oplogIndex, keywordPlans, calculatorScenarios, knowledge, ideas, feedback, experts, amazonData,
-    abaKeywordSets, adReportData, inventory, univerTable,
+    abaKeywordSets, adReportData, inventory, univerTable, packagingDimensions,
     runtime, closePanel, loadModelModalityTable, aiSessionUsable,
     collapseAll, dayPanelProps, now, pendingCount, linkedSessionIds, sessionCandidates,
     sessionListSnapshot, reparentCandidates, workspaceChoices, openTask, openTaskById,

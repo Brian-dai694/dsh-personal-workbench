@@ -32,6 +32,7 @@ import { makeInventoryRoutes } from './routes/inventory.js'
 import { makeOplogRoutes } from './routes/oplog.js'
 import { makeKeywordPlanRoutes } from './routes/keyword-plans.js'
 import { makeCalculatorScenarioRoutes } from './routes/calculator-scenarios.js'
+import { makePackagingDimensionRoutes } from './routes/packaging-dimensions.js'
 import { makeAbaKeywordRoutes } from './routes/aba-keywords.js'
 import { makePlanRoutes } from './routes/plans.js'
 import { makeSettingsRoutes } from './routes/settings.js'
@@ -303,6 +304,7 @@ export function makeRoutes(db: DatabaseSync, deps: WorkbenchRouteDeps = {}): Web
     ...makeInventoryRoutes(db),
     ...makeKeywordPlanRoutes(db),
     ...makeCalculatorScenarioRoutes(db),
+    ...makePackagingDimensionRoutes(db),
     ...makeAbaKeywordRoutes(db),
     ...makeAiSessionRoutes(db),
     ...makeReportRoutes(db),

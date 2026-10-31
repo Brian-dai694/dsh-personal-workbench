@@ -208,6 +208,12 @@ export {
 } from './repo/calculatorScenarios.js'
 export type { CalculatorScenario, CalculatorScenarioInput } from './repo/calculatorScenarios.js'
 
+// 包装尺寸记录
+export {
+  createPackagingDimension, deletePackagingDimension, listPackagingDimensions, updatePackagingDimension,
+} from './repo/packagingDimensions.js'
+export type { PackagingDimensionData, PackagingDimensionInput, PackagingDimensionRecord } from './repo/packagingDimensions.js'
+
 // ABA 词集
 export {
   createAbaKeywordSet, deleteAbaKeywordSet, getAbaKeywordSet, listAbaKeywordSets, setAbaAnnotations,

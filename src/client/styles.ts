@@ -2043,6 +2043,7 @@ const AMAZON_CSS = `
 .wb-amazon-heading .wb-btn { flex: none; white-space: nowrap; }
 .wb-amazon-heading h2 { margin: 0 0 var(--wb-sp-2); font-size: var(--wb-fs-5); }
 .wb-amazon-heading p, .wb-amazon-footnote, .wb-amazon-save-state { margin: 0; color: var(--wb-label-secondary); font-size: var(--wb-fs-1); }
+.wb-amazon-save-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--wb-sp-3); flex-wrap: wrap; }
 .wb-amazon-layout { display: grid; grid-template-columns: minmax(290px, .9fr) minmax(320px, 1.1fr); gap: var(--wb-sp-6); align-items: start; }
 .wb-amazon-mode { width: max-content; max-width: 100%; margin: 0 0 var(--wb-sp-5); }
 .wb-amazon-native-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: var(--wb-sp-6); align-items: start; }
@@ -2795,6 +2796,28 @@ const AMAZON_CSS = `
   .wb-calc-scenario-name, .wb-calc-scenario-note { flex: 1 1 140px; width: auto; }
   .wb-calc-scenario-item { flex-wrap: wrap; }
   .wb-calc-scenario-actions { flex: 1 1 100%; justify-content: flex-end; }
+}
+/* ---- 包装/外箱尺寸记录 ----
+   保存表单是「名称 / SKU / 按钮」三列：标签在上、输入对齐到底线，按钮跟着输入框底边
+   （align-items: end），而不是被撑到与两行文字等高后再居中。
+   搜索框只占左侧固定宽度，状态文字跟在后面 —— 宽度 100% 的输入会把整行挤成两行。 */
+.wb-pkg-records { display: flex; flex-direction: column; gap: var(--wb-sp-4); margin-top: var(--wb-sp-7); padding-top: var(--wb-sp-6); border-top: 1px solid var(--wb-border-l1); }
+.wb-pkg-records-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--wb-sp-4); flex-wrap: wrap; }
+.wb-pkg-records-head > div { display: flex; flex-direction: column; gap: var(--wb-sp-1); min-width: 0; }
+.wb-pkg-records-head .wb-btn { flex: none; }
+.wb-pkg-records-form { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; align-items: end; gap: var(--wb-sp-3); padding: var(--wb-sp-4); border: 1px solid var(--wb-border-l1); border-radius: var(--wb-r-2); }
+.wb-pkg-records-field { display: flex; flex-direction: column; gap: var(--wb-sp-2); min-width: 0; color: var(--wb-label-secondary); font-size: var(--wb-fs-1); }
+.wb-pkg-records-field > span { display: flex; align-items: baseline; gap: var(--wb-sp-2); }
+.wb-pkg-records-field small { color: var(--wb-label-secondary); font-size: var(--wb-fs-1); font-weight: 400; }
+.wb-pkg-records-field input { box-sizing: border-box; width: 100%; min-width: 0; height: 34px; padding: 0 var(--wb-sp-3); color: var(--wb-label-primary); background: var(--wb-bg-base); border: 1px solid var(--wb-border-l1); border-radius: var(--wb-r-1); font: inherit; font-size: var(--wb-fs-2); }
+.wb-pkg-records-form .wb-btn { height: 34px; }
+.wb-pkg-records-tools { display: flex; align-items: center; gap: var(--wb-sp-3); flex-wrap: wrap; }
+.wb-pkg-records-search { box-sizing: border-box; flex: 0 1 260px; min-width: 0; height: 32px; padding: 0 var(--wb-sp-3); color: var(--wb-label-primary); background: var(--wb-bg-base); border: 1px solid var(--wb-border-l1); border-radius: var(--wb-r-1); font: inherit; font-size: var(--wb-fs-1); }
+.wb-pkg-records-status { color: var(--wb-label-secondary); font-size: var(--wb-fs-1); overflow-wrap: anywhere; }
+@container wb-calc (max-width: 560px) {
+  .wb-pkg-records-form { grid-template-columns: minmax(0, 1fr); }
+  .wb-pkg-records-form .wb-btn { width: 100%; }
+  .wb-pkg-records-search { flex: 1 1 100%; }
 }
 /* ---- 搜索词：右侧结果区（v1.19，结果与左栏导入分开） ---- */
 .wb-amazon-result-pane { display: flex; flex-direction: column; gap: var(--wb-sp-5); min-width: 0; container-type: inline-size; container-name: wb-calc; }

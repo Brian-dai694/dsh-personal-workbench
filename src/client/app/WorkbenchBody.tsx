@@ -121,13 +121,16 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
    * 现在的判定按"这个视图到底有没有详情内容"来分：
    * - 任务、今日：有选中任务才展开（今日的任务选中来自日期面板）；
    * - 知识库 / 点子：各自有选中项才展开（收起时它们的详情就点不到了，属于功能回归）；
+   *   **但点子的「记个点子 / 新建/重命名文件夹」是右栏里的表单**，此时还没有任何选中项，
+   *   若只判选中，表单会渲染进一个 `display:none` 的容器 —— 点按钮看起来完全没反应。
+   *   所以 `draft` / `folderForm` 非空时也必须展开。
    * - 流量分析：右侧是分析结果区，空态本身有引导文案，保持常显；
    * - 测算 / 关键词：**没有详情内容**，一律收起 —— 这两个正是这轮要修的。
    */
   const detailOpen = ((): boolean => {
     if (view === 'list' || view === 'today') return selected !== null
     if (view === 'knowledge') return knowledge.selected !== null
-    if (view === 'ideas') return ideas.selectedIdea !== null || ideas.selectedCluster !== null
+    if (view === 'ideas') return ideas.selectedIdea !== null || ideas.selectedCluster !== null || ideas.draft !== null || ideas.folderForm !== null
     /**
      * `'traffic'` 保留但**不再可达**（2026-10-29 合并进「报表分析 · 搜索词」）。
      * 旧会话里存着的 view 值不该让界面崩，所以这里仍按"有详情区"处理，
@@ -301,7 +304,7 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
 
           {view === 'ideas' && <IdeasListView model={ideas} dictOf={dictOf} busy={busy} startAISession={startAISession} />}
 
-          {view === 'amazon' && <><AmazonToolsView onSendToAI={(text) => void startAISession('consult', null, text)} scenarios={props.calculatorScenarios} /><AmazonSopCard tool="profit" /></>}
+          {view === 'amazon' && <><AmazonToolsView onSendToAI={(text) => void startAISession('consult', null, text)} scenarios={props.calculatorScenarios} packaging={props.packagingDimensions} table={props.univerTable} /><AmazonSopCard tool="profit" /></>}
 
           {view === 'keywords' && <><AmazonKeywordView model={props.keywordPlans} amazon={props.amazonData} aba={props.abaKeywordSets} table={props.univerTable} onSendToAI={(text) => void startAISession('consult', null, text)} onOpenTraffic={(keyword) => { props.amazonData.actions.setCurrentKeyword(keyword.trim() === '' ? null : keyword); setView('reports') }} /><AmazonSopCard tool="keywords" /></>}
 
