@@ -31,6 +31,28 @@ function isNetworkFailure(error: unknown): boolean {
 
 const RETRY_DELAYS_MS = [400, 900]
 
+/**
+ * 带状态码与错误码的 API 错误（P2，2026-10-29）。
+ *
+ * 为什么需要它：身份合同（`site + ASIN`）里 409 `identity_required` 是**可恢复**错误 ——
+ * 界面要据此弹出站点选择，而不是把一句文案丢给用户。原来的 `api()` 只保留 message，
+ * status/code 全丢，前端根本没法分支。
+ *
+ * 兼容：仍继承 Error，`message` 与旧行为完全一致（既有 catch 分支不用改）。
+ */
+export class ApiError extends Error {
+  readonly status: number
+  /** 服务端 `code`（例如 identity_required / site_required / site_mismatch）；旧响应没有就是 null。 */
+  readonly code: string | null
+
+  constructor(message: string, status: number, code: string | null) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => { setTimeout(resolve, ms) })
 
 /**
@@ -81,6 +103,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`无法连接工作台服务（${path}）：${detail}。服务可能正在重启，稍后重试即可。`)
   }
   const body = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}（${path}）`)
+  if (!res.ok) {
+    const payload = body as { error?: string; message?: string; code?: unknown }
+    const message = payload.error ?? payload.message ?? `HTTP ${res.status}（${path}）`
+    throw new ApiError(message, res.status, typeof payload.code === 'string' ? payload.code : null)
+  }
   return body as T
 }

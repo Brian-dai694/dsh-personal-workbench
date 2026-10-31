@@ -40,10 +40,12 @@ import { useWorkbenchPolling } from './hooks/useWorkbenchPolling.js'
 import { useWorkbenchNavigation } from './hooks/useWorkbenchNavigation.js'
 import { useWorkbenchBusy } from './hooks/useWorkbenchBusy.js'
 import { useOplogDayIndex } from './hooks/useOplogDayIndex.js'
+import { useInventory } from './hooks/useInventory.js'
 import { useKeywordPlans } from './hooks/useKeywordPlans.js'
 import { useCalculatorScenarios } from './hooks/useCalculatorScenarios.js'
 import { useAbaKeywordSets } from './hooks/useAbaKeywordSets.js'
 import { useAdReportDatasets } from './hooks/useAdReportDatasets.js'
+import { useUniverCsvTable } from './hooks/useUniverCsvTable.js'
 import type { WorkbenchAssembly } from './app/assembly.js'
 import { WorkbenchHeader } from './app/WorkbenchHeader.js'
 import { WorkbenchOverlays } from './app/WorkbenchOverlays.js'
@@ -269,6 +271,13 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
   const abaKeywordSets = useAbaKeywordSets()
   /** 广告报表域（T3）：非搜索词类型的本地状态；搜索词读下面的 `amazonData`。 */
   const adReportData = useAdReportDatasets()
+  /**
+   * 库存补货看板域（2026-10-27 批次 8）：原先整块在 `views/InventoryView.tsx` 里自己发
+   * `GET`/`POST /api/workbench/inventory`。现在是本域的**唯一所有者** ——
+   * 视图只拿结果与意图（D17 结构硬门「视图不发 HTTP」）。
+   * 只在 `view === 'inventory'` 时拉一次，与拆分前"视图挂载才拉"同一时机。
+   */
+  const inventory = useInventory({ activeView: view })
   // AI 会话域（D17/P6-3）：`promptModal` / `promptResolveRef` / `skillCatalog` / `skillsAvailable` /
   // `skillsLoading` / `skillProblem` / `skillQuery` / `selectedSkills` / `promptPersona` /
   // `quickPersona` / `promptModelSelection`（含包装 setter）10 项 state + 1 个 ref 已收进
@@ -678,6 +687,13 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
     onMinutesChange: (taskId: string, minutes: number) => patchPlanItem(dayPanel.day, taskId, { minutes }),
     onProgressChange: saveProgress,
     onClearPlan: () => void clearPlan(dayPanel.day),
+    /**
+     * 过去日期看不到「逾期 / 未排期」时的出口（2026-10-27）。
+     *
+     * 用户报的真实困惑："新建任务后在日历里看不见" —— 它其实在「今日 → 未排期」
+     *（新建任务默认无截止时间，不进「计划」）。这里只做导航，不替用户改任何数据。
+     */
+    onGoToday: () => day.actions.setPicked(new Date(`${day.todayAnchor}T00:00:00`)),
     onSavePlan: (items: Array<{ taskId: string; note: string; minutes?: number }>) => savePlan(dayPanel.day, items),
     report: {
       subTab: reportSubTab,
@@ -692,6 +708,17 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
 
   /** 同上：`?.list.getSnapshot()` 只保护外层，低版本宿主缺 `list` 时会抛 —— 一并加固。 */
   const sessionListSnapshot = safeService<WorkbenchRuntime['sessions']>(runtime, 'sessions')?.list?.getSnapshot?.() ?? { ids: [], byId: {}, current: undefined }
+  /**
+   * 表格能力域（并入 CSV 版块）：报表页的结论可一键生成 `.univer` 表格并就地打开。
+   *
+   * 会话 id 与工作区都走**既有唯一口径**（`currentSessionIdOf` + `byId[id].cwd`），
+   * 不另外猜目录 —— 猜错就会把文件写进别人的项目。
+   */
+  const univerSessionId = currentSessionIdOf(runtime)
+  const univerTable = useUniverCsvTable({
+    sessionId: univerSessionId,
+    workspace: sessionListSnapshot.byId[univerSessionId]?.cwd ?? '',
+  })
   /** 待你处理的事项数：待确认草稿 + 已暂存草稿 + 到期提醒。 */
   /** 待你处理的事项数：服务端的待确认草稿 + 到期提醒（草稿数不参与本地过滤）。 */
   const pendingCount = allPendingDrafts.length + reminders.length
@@ -794,7 +821,7 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
   const assembly: WorkbenchAssembly = {
     nav, data, forms, detail, taskList, day, quick, ai,
     prefs, dir, busyApi, remindersApi, draftsApi, oplogIndex, keywordPlans, calculatorScenarios, knowledge, ideas, feedback, experts, amazonData,
-    abaKeywordSets, adReportData,
+    abaKeywordSets, adReportData, inventory, univerTable,
     runtime, closePanel, loadModelModalityTable, aiSessionUsable,
     collapseAll, dayPanelProps, now, pendingCount, linkedSessionIds, sessionCandidates,
     sessionListSnapshot, reparentCandidates, workspaceChoices, openTask, openTaskById,

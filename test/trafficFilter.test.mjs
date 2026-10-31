@@ -148,7 +148,7 @@ test('渲染：筛选工具条与汇总条出现在结果区，行数按整份�
     datasets: [], current: dataset, busy: false, error: null, staleServer: null, updateFailed: false,
   abaLookup: new Map(),
   abaSource: '',
-    actions: { refresh: async () => {}, importRows: async () => null, parseUpload: async () => '', select: async () => {}, remove: async () => {}, clearError: () => {} },
+    actions: { refresh: async () => {}, importRows: async () => null, parseUpload: async () => ({ text: '', format: 'text', sheetCount: 1, sheetName: '' }), select: async () => {}, remove: async () => {}, clearError: () => {} },
   }
   const html = renderToStaticMarkup(createElement(AmazonTrafficDetailPane, { model }))
 

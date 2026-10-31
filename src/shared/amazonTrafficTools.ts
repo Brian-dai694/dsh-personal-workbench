@@ -25,6 +25,16 @@ export interface TrafficRow {
   orders: number
   spend: number
   sales: number
+  /**
+   * 投放单元信息（可选）：2026-10-29 起由本解析器一并读取。
+   *
+   * 为什么必须有：`keywordAnalysis.hasPlacementDetail()` 用它判断"否词能不能落到
+   * 具体广告组"。搜索词走本解析器、而本解析器原来只留 6 列时，带广告组的报表也会
+   * 被提示"否词需按投放单元复核"—— 列丢了，结论就偏保守，还查不出原因。
+   */
+  campaign?: string | null
+  adGroup?: string | null
+  matchType?: string | null
 }
 
 export interface TrafficParseResult {
@@ -63,13 +73,26 @@ export interface SearchTermAnnotation {
   updatedAt: string
 }
 
-const REQUIRED_COLUMNS: Record<keyof TrafficRow, string[]> = {
+/** 必备六列（`TrafficRow` 里除投放单元以外的字段）。 */
+type TrafficRequiredKey = 'keyword' | 'impressions' | 'clicks' | 'orders' | 'spend' | 'sales'
+
+const REQUIRED_COLUMNS: Record<TrafficRequiredKey, string[]> = {
   keyword: ['keyword', 'search term', 'customer search term', '用户搜索词', '客户搜索词', '搜索词', '搜索关键字'],
   impressions: ['impressions', 'impression', '曝光量', '曝光次数', '曝光', '展示量', '展示次数'],
   clicks: ['clicks', 'click', '点击量', '点击次数', '点击'],
   orders: ['orders', 'order', '广告订单', '订单数', '订单', '7天总订单', '总订单'],
   spend: ['spend', 'cost', '广告花费', '花费', '广告支出', '支出'],
   sales: ['sales', 'revenue', '广告销售额', '广告归因销售额', '销售额', '7天总销售额', '总销售额'],
+}
+
+/**
+ * 可选列：投放单元信息。**缺失不算错**（多数搜索词报表本来就不带），
+ * 但有就必须留住 —— 见 `TrafficRow.campaign` 的注释。
+ */
+const OPTIONAL_COLUMNS: Record<'campaign' | 'adGroup' | 'matchType', string[]> = {
+  campaign: ['campaign', 'campaign name', '广告活动', '广告活动名称', '活动名称'],
+  adGroup: ['ad group', 'ad group name', '广告组', '广告组名称'],
+  matchType: ['match type', '匹配类型', '匹配方式'],
 }
 
 export function analyseTraffic(rows: TrafficRow[]): TrafficMetric[] {
@@ -194,14 +217,14 @@ export function parseTrafficCsv(text: string): TrafficParseResult {
   const candidates = records.slice(0, 6)
   let bestIndex = -1
   let bestScore = 0
-  let bestMapping: Record<keyof TrafficRow, number> | null = null
+  let bestMapping: Record<TrafficRequiredKey, number> | null = null
   for (let rowIndex = 0; rowIndex < candidates.length; rowIndex += 1) {
     const cells = candidates[rowIndex].map(normalizeHeader)
     if (isMetadataRow(candidates[rowIndex])) continue
-    const mapping = {} as Record<keyof TrafficRow, number>
+    const mapping = {} as Record<TrafficRequiredKey, number>
     let total = 0
     let complete = true
-    for (const key of Object.keys(REQUIRED_COLUMNS) as Array<keyof TrafficRow>) {
+    for (const key of Object.keys(REQUIRED_COLUMNS) as Array<TrafficRequiredKey>) {
       let bestCell = -1
       let cellScore = 0
       cells.forEach((cell, index) => {
@@ -218,7 +241,7 @@ export function parseTrafficCsv(text: string): TrafficParseResult {
   if (bestMapping === null) {
     const header = candidates.find((cells) => !isMetadataRow(cells)) ?? candidates[0]
     const headerCells = header.map(normalizeHeader)
-    const missing = (Object.keys(REQUIRED_COLUMNS) as Array<keyof TrafficRow>)
+    const missing = (Object.keys(REQUIRED_COLUMNS) as Array<TrafficRequiredKey>)
       .filter((key) => !headerCells.some((cell) => scoreAlias(cell, REQUIRED_COLUMNS[key]) > 0))
       .map((key) => REQUIRED_COLUMNS[key][0])
     return {
@@ -235,6 +258,20 @@ export function parseTrafficCsv(text: string): TrafficParseResult {
   const dataRows = records.slice(bestIndex + 1)
   const rows: TrafficRow[] = []
   const rowWarnings: string[] = []
+
+  /** 可选列（投放单元）按下标取第一处命中；没这几列就全是 -1，行为与从前完全一致。 */
+  const headerCells = headerRow.map(normalizeHeader)
+  const optionalIndex: Record<keyof typeof OPTIONAL_COLUMNS, number> = { campaign: -1, adGroup: -1, matchType: -1 }
+  for (const key of Object.keys(OPTIONAL_COLUMNS) as Array<keyof typeof OPTIONAL_COLUMNS>) {
+    headerCells.forEach((cell, index) => {
+      if (optionalIndex[key] < 0 && scoreAlias(cell, OPTIONAL_COLUMNS[key]) > 0) optionalIndex[key] = index
+    })
+  }
+  const optionalText = (column: number, values: string[]): string | null => {
+    if (column < 0) return null
+    const value = (values[column] ?? '').trim()
+    return value === '' ? null : value
+  }
   /**
    * 坏行**跳过并报数**，不再"一行坏就整份拒绝"。
    *
@@ -276,7 +313,13 @@ export function parseTrafficCsv(text: string): TrafficParseResult {
       skipped.push(`第 ${lineNumber} 行 ${broken}`)
       return
     }
-    rows.push({ keyword, ...numbers })
+    rows.push({
+      keyword,
+      ...numbers,
+      campaign: optionalText(optionalIndex.campaign, values),
+      adGroup: optionalText(optionalIndex.adGroup, values),
+      matchType: optionalText(optionalIndex.matchType, values),
+    })
   })
 
   if (rows.length === 0) {

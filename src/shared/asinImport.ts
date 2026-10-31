@@ -12,7 +12,10 @@ import { emptyJudgment, isAsinRiskLevel, isAsinVerdict, normalizeJudgmentInput, 
 
 export interface AsinProduct {
   asin: string
-  site: string
+  /** 站点；`null` = 身份未定（needs_site），不得默认 US。 */
+  site: string | null
+  /** P2 合同：站点是否可用。 */
+  identityState: 'ok' | 'needs_site'
   title: string
   currentTitle: string | null
   imageUrl: string | null
@@ -96,14 +99,18 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim()) : []
 }
 
-function splitId(id: string, raw: Record<string, unknown>): { asin: string; site: string } {
-  const site = str(raw.site).toUpperCase()
+function splitId(id: string, raw: Record<string, unknown>): { asin: string; site: string | null } {
+  const siteText = str(raw.site).toUpperCase()
+  const keyPrefix = /^([A-Z]+)_/.exec(id.toUpperCase())?.[1] ?? ''
+  const normalizedKeySite = /^[A-Z]{2}$/.test(keyPrefix) ? keyPrefix : null
+  const site = /^[A-Z]{2}$/.test(siteText) ? siteText : normalizedKeySite
   const asin = str(raw.asin).toUpperCase()
-  if (/^[A-Z0-9]{10}$/.test(asin)) return { asin, site: site || 'US' }
-  const match = /^([A-Z]{2})_([A-Z0-9]{10})$/i.exec(id)
-  if (match !== null) return { asin: match[2].toUpperCase(), site: site || match[1].toUpperCase() }
-  if (/^[A-Z0-9]{10}$/i.test(id)) return { asin: id.toUpperCase(), site: site || 'US' }
-  return { asin: '', site: site || 'US' }
+  if (/^[A-Z0-9]{10}$/.test(asin)) return { asin, site }
+  /** 旧导出键是 `${site}_${asin}`；`UNKNOWN_${asin}` 表示站点未定，不猜 US。 */
+  const match = /^([A-Z]+)_([A-Z0-9]{10})$/i.exec(id)
+  if (match !== null) return { asin: match[2].toUpperCase(), site }
+  if (/^[A-Z0-9]{10}$/i.test(id)) return { asin: id.toUpperCase(), site }
+  return { asin: '', site }
 }
 
 function bsrRank(raw: unknown): number | null {
@@ -162,6 +169,7 @@ function productOf(id: string, raw: unknown): AsinProduct | null {
   return {
     asin,
     site,
+    identityState: site === null ? 'needs_site' : 'ok',
     title: str(row.title) || str(row.currentTitle),
     currentTitle: str(row.currentTitle) !== '' ? str(row.currentTitle) : null,
     imageUrl: str(row.image) || str(row.imageUrl) || null,
@@ -308,7 +316,8 @@ export function normalizeAsinImport(raw: unknown): AsinImportResult {
       const { asin, site } = splitId(str(id), {})
       if (asin === '') { reject('ASIN 列表里有非法值'); continue }
       result.products.push({
-        asin, site, title: '', currentTitle: null, imageUrl: null, url: null, price: null, currency: null,
+        asin, site, identityState: site === null ? 'needs_site' : 'ok',
+        title: '', currentTitle: null, imageUrl: null, url: null, price: null, currency: null,
         rating: null, reviews: null, bsr: null, brand: null, seller: null, shopId: null, shopName: null,
         category: null, note: null, tags: [], extraJson: '{}', addedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       })

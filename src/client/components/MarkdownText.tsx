@@ -17,7 +17,7 @@
 import { handleExternalLinkClick } from '../externalLink.js'
 import { parseInline, type InlineToken } from '../inlineMarkdown.js'
 
-const LINK_STYLE = { color: 'var(--dsw-alias-state-business-primary,#8fa8c8)' } as const
+const LINK_STYLE = { color: 'var(--wb-accent)' } as const
 const CODE_STYLE = { background: 'rgba(127,127,127,.14)', padding: '0 4px', borderRadius: 4 } as const
 
 /** token → JSX（纯投影，无判定）。 */

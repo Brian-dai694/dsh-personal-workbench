@@ -12,7 +12,7 @@
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
-import { createOplogEntry, deleteOplogEntry, deleteOplogType, getOplogEntry, getTask, importOplogEntries, listOplogDayIndex, listOplogEntries, listOplogTaskOptions, listOplogTypes, oplogFacets, oplogKpiCounts, setOplogPinned, updateOplogEntry, upsertOplogType } from '../../db/repo.js'
+import { createOplogEntry, deleteOplogEntry, deleteOplogType, getOplogEntry, getTask, importOplogEntries, listOplogCompletionCandidates, listOplogDayIndex, listOplogEntries, listOplogEntriesByTask, listOplogTaskOptions, listOplogTypes, localDateString, oplogFacets, oplogKpiCounts, setOplogPinned, updateOplogEntry, upsertOplogType } from '../../db/repo.js'
 import type { OplogDraft } from '../../db/repo.js'
 import { normalizeOplogImport } from '../../shared/oplogImport.js'
 import { OPLOG_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody } from './helpers.js'
@@ -27,6 +27,50 @@ function readDraft(body: Record<string, unknown>): OplogDraft | string {
     const row = item !== null && typeof item === 'object' ? item as Record<string, unknown> : {}
     return { name: str(row.name), size: str(row.size), type: str(row.type), dataUrl: str(row.dataUrl) }
   }).filter((d) => d.name !== '')
+  /**
+   * 结构化关联（P4-B）。
+   *
+   * 与旧 `asins` **只能二选一**：两边都传时静默取一个会让用户以为改生效了。
+   * 角色是封闭枚举；站点只收两位字母，空串表示"继承日志站点"，绝不默认 US。
+   */
+  let associations: NonNullable<OplogDraft['associations']> | undefined
+  if (body.associations !== undefined) {
+    if (!Array.isArray(body.associations)) return 'associations 必须是数组'
+    if (Array.isArray(body.asins) && body.asins.length > 0) return 'asins 与 associations 只能传一个'
+    if (body.associations.length > 50) return '一次最多关联 50 个商品'
+    const rows: NonNullable<OplogDraft['associations']> = []
+    for (const item of body.associations) {
+      if (item === null || typeof item !== 'object') return '关联项必须是对象'
+      const row = item as Record<string, unknown>
+      const asin = str(row.asin).trim().toUpperCase()
+      if (asin === '') return '关联项缺少 asin'
+      const roleRaw = str(row.role).trim().toLowerCase()
+      const role = roleRaw === '' ? 'unknown' : roleRaw
+      if (!['parent', 'child', 'sku', 'unknown'].includes(role)) return `不支持的关联角色：${roleRaw}`
+      /**
+       * 站点三态：字段没给 = 继承日志站点；给了空串/非法值 = **400**，不回退。
+       * 静默回退会让"我明明写了 DE"变成绑到 US，事后无法解释。
+       */
+      const hasSite = Object.prototype.hasOwnProperty.call(row, 'site') && row.site !== undefined
+      let site: string | null | undefined
+      if (!hasSite) {
+        site = undefined
+      } else {
+        const rawSite = str(row.site).trim()
+        if (rawSite === '') return '关联站点要么省略（继承日志站点），要么传两位字母代码'
+        if (!/^[A-Za-z]{2}$/.test(rawSite)) return '关联站点必须是两位字母代码，例如 US / DE'
+        site = rawSite.toUpperCase()
+      }
+      const sku = str(row.sku).trim()
+      rows.push({
+        asin,
+        role,
+        ...(site === undefined ? {} : { site }),
+        sku: sku === '' ? null : sku,
+      })
+    }
+    associations = rows
+  }
   return {
     title,
     logType: str(body.logType) || '其它',
@@ -35,6 +79,7 @@ function readDraft(body: Record<string, unknown>): OplogDraft | string {
     site: str(body.site) === '' ? null : str(body.site),
     logDate: str(body.logDate) === '' ? new Date().toISOString().slice(0, 10) : str(body.logDate),
     asins: Array.isArray(body.asins) ? body.asins.filter((x): x is string => typeof x === 'string') : [],
+    ...(associations === undefined ? {} : { associations }),
     documents,
     taskId: str(body.taskId).trim() || null,
   }
@@ -60,6 +105,7 @@ export function makeOplogRoutes(db: DatabaseSync): WebRoute[] {
             site: url.searchParams.get('site') ?? undefined,
             logDate: url.searchParams.get('date') ?? undefined,
             keyword: url.searchParams.get('q') ?? undefined,
+            listingId: url.searchParams.get('listing') ?? undefined,
             limit: Number.isFinite(limit) ? limit : 200,
           })
           return apiOk(res, { entries, facets: oplogFacets(db), kpi: oplogKpiCounts(db), tasks: listOplogTaskOptions(db) })
@@ -86,6 +132,23 @@ export function makeOplogRoutes(db: DatabaseSync): WebRoute[] {
 
         if (req.method === 'GET' && action === 'types') {
           return apiOk(res, { types: listOplogTypes(db) })
+        }
+
+        /**
+         * 待归档建议：某天完成、但还没写进任何日志的任务（2026-10-27）。
+         *
+         * 只出候选、**不写库** —— 运营日志是事实记录层，写入必须由用户确认。
+         * `date` 缺省用服务器本地日（与每日计划同一把尺子）。
+         */
+        if (req.method === 'GET' && action === 'completion-candidates') {
+          const date = url.searchParams.get('date') ?? localDateString()
+          return apiOk(res, { date, candidates: listOplogCompletionCandidates(db, date) })
+        }
+
+        /** 反向查询：某条任务被哪些日志引用（任务详情「关联日志」）。 */
+        if (req.method === 'GET' && action === 'by-task' && segments[1] !== undefined) {
+          const taskId = decodeURIComponent(segments[1])
+          return apiOk(res, { entries: listOplogEntriesByTask(db, taskId) })
         }
 
         if (req.method === 'POST' && action === 'types') {

@@ -13,6 +13,8 @@ import { Modal } from './Modal.js'
 import { PersonaAdmin } from './PersonaAdmin.js'
 import { ExpertCreateModal } from './ExpertCreateModal.js'
 import { useI18n } from '../i18n.js'
+import { PALETTE } from '../../shared/palette.js'
+import { KEYWORD_RULES } from '../../shared/keywordDecision.js'
 import type { UseWorkbenchExpertsResult } from '../hooks/useWorkbenchExperts.js'
 import { notificationStateText, type NotificationState } from '../notificationCapability.js'
 
@@ -26,7 +28,7 @@ export interface DictionaryLike {
   sortOrder?: number
 }
 
-type Section = 'general' | 'persona' | 'notify' | 'recall' | 'wechat' | 'dict'
+type Section = 'general' | 'amazon' | 'persona' | 'notify' | 'recall' | 'wechat' | 'dict'
 /**
  * 可管理的字典种类。
  *
@@ -48,6 +50,12 @@ const DRAFT_NOTIFY_OPTIONS: Array<{ code: string; label: string }> = [
 
 const SECTIONS: Array<{ key: Section; label: string }> = [
   { key: 'general', label: '通用' },
+  /**
+   * 「搜索词阈值」独立成页签（2026-10-29，Step 0）：
+   * 这是**账号级判定口径**，一旦和"界面语言/工作区"混在一起，用户会以为它只影响当前页。
+   * 放在这里的位置也在表达一件事：改了它，流量分析和报表分析同时变。
+   */
+  { key: 'amazon', label: '搜索词阈值' },
   /**
    * ⚠️ 「角色库」是**独立页签**（2026-10-01 用户要求）。
    *
@@ -165,6 +173,22 @@ export function SettingsModal(props: SettingsModalProps): ReactNode {
 
   const { t } = useI18n()
   const dictOf = (kind: string): DictionaryLike[] => dicts.filter((entry) => entry.kind === kind)
+
+  /**
+   * 搜索词阈值的当前值（`null` = 默认，`KEYWORD_RULES` 是唯一默认来源）。
+   *
+   * 两个输入框用**非受控 + 失焦提交**：判定门槛是 3–10000 的整数，受控写法在
+   * 用户敲 "1" 的瞬间就会被夹到 3，然后把 "2" 接在 3 后面变成 32 —— 这类
+   * "数字输入越改越离谱"的坑比多一个 handler 更贵。`key` 让"恢复默认"能重置输入框。
+   */
+  const keywordThresholds = settings.amazonKeywordThresholds
+  const clicksNow = keywordThresholds?.wasteMinClicks ?? KEYWORD_RULES.negativeMinClicks
+  const acosNow = Math.round((keywordThresholds?.goodAcos ?? KEYWORD_RULES.addMaxAcos) * 100)
+  const commitThresholds = (next: { wasteMinClicks?: number; acosPct?: number }): void => {
+    const clicks = Math.min(10000, Math.max(3, Math.round(next.wasteMinClicks ?? clicksNow)))
+    const acos = Math.min(95, Math.max(10, Math.round(next.acosPct ?? acosNow)))
+    onSettingsChange({ ...settings, amazonKeywordThresholds: { wasteMinClicks: clicks, goodAcos: acos / 100 } })
+  }
   const targets: ReminderBotOption['targets'] = useMemo(
     () => reminderOptions?.bots.find((bot) => bot.botId === reminderChannel?.botId)?.targets ?? [],
     [reminderOptions, reminderChannel?.botId],
@@ -237,6 +261,64 @@ export function SettingsModal(props: SettingsModalProps): ReactNode {
                   <span className="wb-switch-desc">{t('关闭后所有任务共用默认工作区；父任务设了工作区时，未单独设置子任务会跟随父任务。')}</span>
                 </span>
               </label>
+            </section>
+          )}
+
+          {/**
+            * 搜索词判定阈值（Step 0，2026-10-29）。
+            *
+            * 账号级口径：`null` = 默认（8 次 / 30%）。改动后必须先「保存设置」才写库；
+            * 两页读的是同一个值，所以不存在"关掉面板就回退"的问题（这一点与以前的
+            * 面板内校准态不同 —— 那时刷新即丢）。
+            */}
+          {section === 'amazon' && (
+            <section>
+              <h5>{t('搜索词判定阈值')}</h5>
+              <p className="wb-hint">
+                {t('账号级口径：流量分析与报表分析的搜索词结论都按这里算；保存后两页同时生效，不需要各页单独校准。')}
+              </p>
+              <div className="wb-field">
+                <span>{t('点击多少次仍无单算浪费')}</span>
+                <input
+                  key={`clicks-${clicksNow}`}
+                  type="number"
+                  min={3}
+                  max={10000}
+                  defaultValue={clicksNow}
+                  onBlur={(event) => commitThresholds({ wasteMinClicks: Number(event.target.value) })}
+                />
+                <div className="wb-hint">{t('默认 8；校准能力给出的下限是 3 —— 低于 3 次点击的样本不足以下结论。')}</div>
+              </div>
+              <div className="wb-field">
+                <span>{t('加词 ACOS 上限（%）')}</span>
+                <input
+                  key={`acos-${acosNow}`}
+                  type="number"
+                  min={10}
+                  max={95}
+                  defaultValue={acosNow}
+                  onBlur={(event) => commitThresholds({ acosPct: Number(event.target.value) })}
+                />
+                <div className="wb-hint">{t('默认 30%；销售额为 0 时 ACOS 是未知，不参与加词判定。')}</div>
+              </div>
+              <div className="wb-report-actions">
+                <button
+                  type="button"
+                  className="wb-btn"
+                  disabled={keywordThresholds === null}
+                  onClick={() => onSettingsChange({ ...settings, amazonKeywordThresholds: null })}
+                >
+                  {t('恢复默认（{c} 次 / {a}%）', {
+                    c: KEYWORD_RULES.negativeMinClicks,
+                    a: Math.round(KEYWORD_RULES.addMaxAcos * 100),
+                  })}
+                </button>
+                <span className="wb-hint" style={{ margin: 0 }}>
+                  {keywordThresholds === null
+                    ? t('当前使用默认口径')
+                    : t('当前为自定义口径：{c} 次点击 / {a}% ACOS', { c: clicksNow, a: acosNow })}
+                </span>
+              </div>
             </section>
           )}
 
@@ -386,7 +468,7 @@ export function SettingsModal(props: SettingsModalProps): ReactNode {
                   <button className="wb-btn" onClick={onRequestNotifyPermission}>授权浏览器通知</button>
                 )}
                 {notifyPermission === 'granted' && <button className="wb-btn" onClick={onSendTestNotification}>发送测试通知</button>}
-                {notifyPermission === 'granted' && <span style={{ fontSize: 12, color: 'var(--wb-ok, #2E9B7B)' }}>浏览器通知已授权</span>}
+                {notifyPermission === 'granted' && <span style={{ fontSize: 12, color: 'var(--wb-ok-ink)' }}>浏览器通知已授权</span>}
               </div>
             </section>
           )}
@@ -643,7 +725,7 @@ export function SettingsModal(props: SettingsModalProps): ReactNode {
                 <span className="wb-hint" style={{ margin: 0 }}>默认项受保护，不可删除；可编辑名称/颜色/排序/停用</span>
                 <button
                   className="wb-btn primary"
-                  onClick={() => { onDictEditCodeChange(null); onDictFormChange({ name: '', code: '', color: '#4F86F7', sortOrder: 50 }); onDictErrorChange(null) }}
+                  onClick={() => { onDictEditCodeChange(null); onDictFormChange({ name: '', code: '', color: PALETTE.blue, sortOrder: 50 }); onDictErrorChange(null) }}
                 >
                   新增
                 </button>
@@ -664,20 +746,20 @@ export function SettingsModal(props: SettingsModalProps): ReactNode {
                   </div>
                 </form>
               )}
-              {dictError !== null && <div style={{ color: '#E74C3C', fontSize: 12, margin: '6px 0' }}>{dictError}</div>}
+              {dictError !== null && <div style={{ color: 'var(--wb-danger-ink)', fontSize: 12, margin: '6px 0' }}>{dictError}</div>}
               <div className="wb-list wb-scroll-area">
                 {dictOf(dictKind).map((entry) => {
-                  const color = String(entry.config.color ?? '#8a9aa8')
+                  const color = String(entry.config.color ?? PALETTE.neutralDeep)
                   return (
                     <div key={entry.code} className="wb-row" style={{ cursor: 'default', opacity: entry.active === 0 ? 0.55 : undefined, flexWrap: 'wrap' }}>
                       <span className="wb-chip" style={{ background: `color-mix(in srgb, ${color} 14%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`, fontWeight: 600 }}>{entry.name}</span>
                       <code style={{ fontSize: 11, color: 'var(--dsw-alias-label-secondary)' }}>{entry.code}</code>
-                      {entry.builtin === 1 && <span className="wb-chip" style={{ background: 'color-mix(in srgb, #888 12%, transparent)', color: 'var(--dsw-alias-label-secondary)', border: '1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.2))' }}>内置</span>}
+                      {entry.builtin === 1 && <span className="wb-chip" style={{ background: 'color-mix(in srgb, var(--wb-ink-3) 12%, transparent)', color: 'var(--dsw-alias-label-secondary)', border: '1px solid var(--wb-line-soft)' }}>内置</span>}
                       <span style={{ flex: 1 }} />
                       <button className="wb-btn" onClick={() => { onDictEditCodeChange(entry.code); onDictFormChange({ name: entry.name, code: entry.code, color, sortOrder: entry.sortOrder ?? 50 }); onDictErrorChange(null) }}>编辑</button>
                       <button className="wb-btn" onClick={() => void onToggleDictionary(entry)}>{entry.active === 1 ? '停用' : '启用'}</button>
                       {entry.builtin !== 1 && (
-                        <button className="wb-btn" style={{ color: '#E74C3C', borderColor: 'color-mix(in srgb, #E74C3C 45%, transparent)' }} onClick={() => void onDeleteDictionary(entry)}>删除</button>
+                        <button className="wb-btn" style={{ color: 'var(--wb-danger-ink)', borderColor: 'color-mix(in srgb, var(--wb-danger) 45%, transparent)' }} onClick={() => void onDeleteDictionary(entry)}>删除</button>
                       )}
                     </div>
                   )

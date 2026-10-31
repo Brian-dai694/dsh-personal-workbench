@@ -42,6 +42,11 @@ export interface DayPanelProps {
   readOnly: boolean
   /** 「逾期」/「未排期」在该日是否显示（过去日期不显示）。 */
   extraTabsAvailable: boolean
+  /**
+   * 跳到「今日」（可选）。只在过去日期显示出口提示时用到 ——
+   * `undefined` 时提示仍在（说明原因），只是不给按钮。
+   */
+  onGoToday?: () => void
   tab: DayTab
   onTabChange: (tab: DayTab) => void
   /** 该日计划（`null` = 还没有计划）。 */
@@ -113,7 +118,7 @@ export interface DayPanelProps {
 
 export function DayPanel(props: DayPanelProps): JSX.Element {
   const {
-    day, isToday, readOnly, extraTabsAvailable, tab, onTabChange, plan, candidateRows, promptInfo,
+    day, isToday, readOnly, extraTabsAvailable, onGoToday, tab, onTabChange, plan, candidateRows, promptInfo,
     planTree, overdueTree, unscheduledTree, doneTree,
     doneContextIds, overdueContextIds, unscheduledContextIds, planContextIds, groupSummaryOf,
     expanded, onToggleExpanded, sourceLabelOf, tasks, dicts, selectedId, pending, childrenOf,
@@ -178,15 +183,30 @@ export function DayPanel(props: DayPanelProps): JSX.Element {
         ))}
       </div>
 
+      {/**
+        * 过去日期的出口提示（2026-10-27）。
+        *
+        * 用户的真实困惑是："我新建了任务，在日历里看不见。"
+        * 原因不是丢了：新建任务默认没有截止时间 → 不进「计划」；而「逾期 / 未排期」
+        * 两个页签在过去日期**故意不显示**（真做历史快照要回放 task_events，库里只有当前状态，
+        * 把今天的欠账画到 9/20 上就是编造，见 `dayPanelExtraTabsAvailable`）。
+        * 所以这里不给数字（过去日期的计数没有历史意义），只给一句**说明 + 出口**。
+        */}
+      {!extraTabsAvailable && (
+        <div className="wb-day-hint" role="note">
+          <span>{t('过去日期不显示「逾期 / 未排期」。新建或刚完成的任务在「今日」里能看到。')}</span>
+          {onGoToday !== undefined && <button type="button" className="wb-btn" onClick={onGoToday}>{t('去今日')}</button>}
+        </div>
+      )}
       {activeTab === 'plan' && (
         <>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
             {readOnly
-              ? <span style={{ fontSize: 12, color: '#999' }}>{t('过去日期只读；如需为今天/未来排期，请选择今天或之后的日期。')}</span>
+              ? <span style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>{t('过去日期只读；如需为今天/未来排期，请选择今天或之后的日期。')}</span>
               : <button className="wb-btn primary" disabled={busy} onClick={onSort}><Icon name="sparkles" />{plan !== null ? (isToday ? t('继续编辑今日计划') : t('继续编辑该日计划')) : (isToday ? t('AI 智能排序') : t('AI 智能排序（{day}）', { day }))}</button>}
             <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>{t('AI 会先提交顺序提案，确认后才生效')}</span>
             {/* 候选被截断时必须当场说出来：不给"全量排序"的假印象（需求 §5.1） */}
-            {promptInfo.truncated && <span style={{ fontSize: 12, color: '#d9a03f' }} role="status">{promptInfo.notice}</span>}
+            {promptInfo.truncated && <span style={{ fontSize: 12, color: 'var(--wb-warn-ink)' }} role="status">{promptInfo.notice}</span>}
           </div>
           {plan !== null && (
             <PlanPanel

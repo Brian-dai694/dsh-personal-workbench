@@ -73,6 +73,10 @@ _Avoid_: 目录、路径、文件夹
 任务自己的截止时间；自己没有时，沿父链继承到的那个。
 _Avoid_: 继承截止、实际截止
 
+**色系（Palette）**:
+工作台的强调色与语义色**不自己定义**，一律从宿主 DSH 的语义别名派生：强调色 = `--dsw-alias-state-business-primary`（DSH 品牌蓝），状态色 = `--dsw-alias-state-warn / -error / -success-primary` 与 `--dsw-alias-link`，中性色 = `--dsw-alias-label-*`。UI 侧唯一定义处是 `src/client/styles.ts` 的令牌块；字典数据（任务类型/状态/优先级/知识库/点子的圆点色）唯一定义处是 `src/shared/palette.ts`（两端共用，客户端要给兜底色也从它取）。
+_Avoid_: 自定义主题色、墨绿强调色（2026-10-28 随「与 DSH 统一一个色系」下线）
+
 ## Relationships
 
 - 一个 **日历**日期对应恰好一个 **日期面板**
@@ -87,6 +91,8 @@ _Avoid_: 继承截止、实际截止
 - AI 写入进度 **100** 的语义是「提交完成验收申请」，而不是「已完成」；用户在UI选择100是明确的「完成任务」动作，不是普通进度保存
 - **计划项投入状态** 按日独立，不修改任务进度/状态/截止/估时；见 [`ADR0007`](docs/adr/0007-daily-effort-is-not-task-completion.md)
 - 一个 **任务** 至多属于一个 **工作区**；它的 **任务资料夹** 位于默认 **工作区** 之下
+- **强调色** 就是 DSH 品牌色：`--wb-accent` 只允许写 `var(--wb-state-business-primary)`，换色只改这一行；
+  硬编码回字面色会被 `test/tokenScope.test.mjs` 拦下（2026-10-28 定案，此前是自定墨绿）
 
 ## Example dialogue
 

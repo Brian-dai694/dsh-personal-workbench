@@ -22,6 +22,11 @@ const SETTINGS_FALLBACK = {
   autoSummonExperts: false,
   /** 界面语言缺省 auto（旧服务端不返回这个键时跟随浏览器）。 */
   uiLocale: 'auto',
+  /**
+   * 搜索词阈值缺省 null（走默认值）。
+   * 旧服务端不返回这个键时，客户端必须把它补成 null，而不是让 `undefined` 流进判定。
+   */
+  amazonKeywordThresholds: null,
 } as const
 
 /**
@@ -43,5 +48,6 @@ export function withSettingsFallback(settings: WorkbenchSettings): WorkbenchSett
     dailyCapacityIncludeOverdue: settings.dailyCapacityIncludeOverdue ?? SETTINGS_FALLBACK.dailyCapacityIncludeOverdue,
     autoSummonExperts: settings.autoSummonExperts ?? SETTINGS_FALLBACK.autoSummonExperts,
     uiLocale: settings.uiLocale ?? SETTINGS_FALLBACK.uiLocale,
+    amazonKeywordThresholds: settings.amazonKeywordThresholds ?? SETTINGS_FALLBACK.amazonKeywordThresholds,
   }
 }

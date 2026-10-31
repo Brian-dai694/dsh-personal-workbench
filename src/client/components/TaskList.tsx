@@ -13,6 +13,7 @@ import { fmtTime } from '../format.js'
 import { taskProgressView } from '../taskProgressView.js'
 import type { Dict, Task } from '../viewTypes.js'
 import { TaskProgress } from './TaskProgress.js'
+import { PALETTE } from '../../shared/palette.js'
 
 /** 待验收投影（`null` = 服务端不支持，界面不显示徽标）。 */
 export type PendingMap = ReadonlyMap<string, { deferred: boolean }> | null
@@ -34,7 +35,7 @@ const HIGH_PRIORITY = new Set(['p0', 'p1'])
 
 export function Badge({ dict, code, neutral = false }: { dict: Dict[]; code: string; neutral?: boolean }): JSX.Element {
   const entry = dict.find((d) => d.code === code)
-  const color = String(entry?.config.color ?? '#8a9aa8')
+  const color = String(entry?.config.color ?? PALETTE.neutralDeep)
   // 只有「优先级且属于高优先」的徽标保留语义色；状态/类型/低优先级一律中性。
   const isNeutral = neutral || !HIGH_PRIORITY.has(code)
   const label = entry?.name ?? code
@@ -241,9 +242,9 @@ export function MultiSelectDropdown({ label, options, selected, open, onToggle, 
       {open && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 20 }} onClick={onClose} />
-          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: alignRight ? undefined : 0, right: alignRight ? 0 : undefined, zIndex: 30, minWidth: 240, maxHeight: 320, overflowY: 'auto', background: 'var(--dsw-alias-bg-layer-2, #1c1c1f)', border: '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,.22))', borderRadius: 10, padding: 6, boxShadow: '0 12px 32px rgba(0,0,0,.45)' }}>
+          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: alignRight ? undefined : 0, right: alignRight ? 0 : undefined, zIndex: 30, minWidth: 240, maxHeight: 320, overflowY: 'auto', background: 'var(--wb-bg-layer-2)', border: '1px solid var(--wb-border-l1)', borderRadius: 10, padding: 6, boxShadow: 'var(--wb-sh-5)' }}>
             {selected.length > 0 && (
-              <div style={{ padding: '6px 8px 8px', borderBottom: '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,.12))', marginBottom: 6 }}>
+              <div style={{ padding: '6px 8px 8px', borderBottom: '1px solid var(--wb-border-l1)', marginBottom: 6 }}>
                 <div style={{ fontSize: 11, color: 'var(--dsw-alias-label-secondary)', marginBottom: 4 }}>已选（{selected.length}）</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {selected.map((code) => <Badge key={code} dict={options} code={code} />)}
@@ -251,7 +252,7 @@ export function MultiSelectDropdown({ label, options, selected, open, onToggle, 
               </div>
             )}
             {options.map((d) => {
-              const color = String(d.config.color ?? '#8a9aa8')
+              const color = String(d.config.color ?? PALETTE.neutralDeep)
               const checked = selected.includes(d.code)
               return (
                 <label key={d.code} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${checked ? color : 'transparent'}`, background: checked ? `color-mix(in srgb, ${color} 12%, transparent)` : 'transparent' }}>

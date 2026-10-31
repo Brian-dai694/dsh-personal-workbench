@@ -45,6 +45,13 @@ export type TaskDetailPaneProps = {
   settings: WorkbenchSettings
   /** 该任务的关联知识（复盘卡「已沉淀」判据用；不是知识域列表）。 */
   taskKnowledge: KnowledgeEntry[]
+  /**
+   * 关联日志（反向查询）：这条任务被哪些运营日志提到过。
+   * 取数在装配层（`useTaskData`）——本文件不发 HTTP（设计 §3）。
+   */
+  linkedOplog: Array<{ id: string; title: string; logDate: string; logType: string }>
+  /** 点一条关联日志：装配层跳到运营日志那一天的视图。 */
+  onOpenOplogDate: (date: string) => void
   /** 知识域模型：复盘卡里「沉淀为经验 / 打开知识条目」要写知识域的草稿与选中。 */
   knowledge: UseKnowledgeResult
   /** AI 会话是否在跑（复盘/子任务按钮的 disabled）。 */
@@ -86,7 +93,7 @@ export type TaskDetailPaneProps = {
 }
 
 export function TaskDetailPane({
-  selected, detail, dicts, dictOf, pendingMap, settings, taskKnowledge, knowledge, busy,
+  selected, detail, dicts, dictOf, pendingMap, settings, taskKnowledge, linkedOplog, onOpenOplogDate, knowledge, busy,
   editing, onOpenEdit, subtaskParent, onAddSubtask, onCancelSubtask, startAISession, setNotice, patchTask,
   saveProgress, completeTaskFromProgress, archiveSelectedTask, openTask, onRestoreTask, onCreateSubtask,
   setView, isSessionUsable, sessionCandidates, sessionListSnapshot, linkedSessionIds, linkExistingSession,
@@ -122,7 +129,7 @@ export function TaskDetailPane({
           {!selected.task.archived && (
             <button
               className="wb-btn"
-              style={{ color: '#e0645c', borderColor: 'color-mix(in srgb, #e0645c 45%, transparent)' }}
+              style={{ color: 'var(--wb-danger-ink)', borderColor: 'color-mix(in srgb, var(--wb-danger) 45%, transparent)' }}
               title="归档后任务会从工作台列表隐藏（其子任务也会一并从列表隐藏），可在列表页「查看归档」中恢复"
               onClick={archiveSelectedTask}
             ><Icon name="archive" />归档</button>
@@ -137,28 +144,49 @@ export function TaskDetailPane({
         {!selected.task.archived && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '8px 0 4px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary)' }}>状态
-              <select style={{ background: 'var(--dsw-alias-bg-base,#17171a)', color: 'inherit', fontWeight: 600, border: '1px solid var(--dsw-alias-border-l1,rgba(255,255,255,.2))', borderRadius: 8, padding: '6px 10px' }} value={selected.task.statusCode} onChange={(e) => void patchTask(selected.task.id, { statusCode: e.target.value })}>
+              <select style={{ background: 'var(--wb-bg-base)', color: 'inherit', fontWeight: 600, border: '1px solid var(--wb-border-l1)', borderRadius: 8, padding: '6px 10px' }} value={selected.task.statusCode} onChange={(e) => void patchTask(selected.task.id, { statusCode: e.target.value })}>
                 {dictOf('status').map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
               </select>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary)' }}>AI 策略
-              <select style={{ background: 'var(--dsw-alias-bg-base,#17171a)', color: 'inherit', fontWeight: 600, border: '1px solid var(--dsw-alias-border-l1,rgba(255,255,255,.2))', borderRadius: 8, padding: '6px 10px' }} value={selected.task.aiPolicyCode} onChange={(e) => void patchTask(selected.task.id, { aiPolicyCode: e.target.value })}>
+              <select style={{ background: 'var(--wb-bg-base)', color: 'inherit', fontWeight: 600, border: '1px solid var(--wb-border-l1)', borderRadius: 8, padding: '6px 10px' }} value={selected.task.aiPolicyCode} onChange={(e) => void patchTask(selected.task.id, { aiPolicyCode: e.target.value })}>
                 {dictOf('ai_policy').map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
               </select>
             </label>
           </div>
         )}
-        <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>截止：{selected.task.effectiveDueAt === null ? '无' : fmtTime(selected.task.effectiveDueAt)}{selected.task.dueAt === null && selected.task.effectiveDueAt !== null ? '（继承父任务）' : ''}</div>
+        <div style={{ fontSize: 12, color: 'var(--wb-ink-2)', marginBottom: 4 }}>截止：{selected.task.effectiveDueAt === null ? '无' : fmtTime(selected.task.effectiveDueAt)}{selected.task.dueAt === null && selected.task.effectiveDueAt !== null ? '（继承父任务）' : ''}</div>
         {/* 预计耗时（v1.15.1）：直接决定今日容量的「已排」，所以未填时必须说清"按默认算"。 */}
-        <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>预计耗时：{selected.task.estimatedMinutes === null ? `默认 ${settings.defaultEstimateMinutes} 分钟（未单独设置）` : `${selected.task.estimatedMinutes} 分钟`}{selected.task.allDay ? ' · 全天' : ''}</div>
-        <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>AI 工作区：{selected.task.effectiveWorkspacePath ?? (settings.defaultWorkspace || '默认工作区未设置')}{selected.task.workspacePath === null && selected.task.effectiveWorkspacePath !== null ? '（继承父任务）' : ''}</div>
-        <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>
+        <div style={{ fontSize: 12, color: 'var(--wb-ink-2)', marginBottom: 4 }}>预计耗时：{selected.task.estimatedMinutes === null ? `默认 ${settings.defaultEstimateMinutes} 分钟（未单独设置）` : `${selected.task.estimatedMinutes} 分钟`}{selected.task.allDay ? ' · 全天' : ''}</div>
+        <div style={{ fontSize: 12, color: 'var(--wb-ink-2)', marginBottom: 4 }}>AI 工作区：{selected.task.effectiveWorkspacePath ?? (settings.defaultWorkspace || '默认工作区未设置')}{selected.task.workspacePath === null && selected.task.effectiveWorkspacePath !== null ? '（继承父任务）' : ''}</div>
+        <div style={{ fontSize: 12, color: 'var(--wb-ink-2)', marginBottom: 4 }}>
           重复：{dicts.find((d) => d.kind === 'recurrence' && d.code === (selected.task.recurrenceCode ?? 'none'))?.name ?? '不重复'}
           {selected.task.recurrenceMasterId !== null ? '（自动生成的实例）' : selected.task.recurrenceCode !== null && selected.task.recurrenceCode !== 'none' ? `（模板，已生成到 ${selected.task.recurrenceLastGenerated ?? '—'}）` : ''}
         </div>
       </>
     )}
   </div>
+
+  {/**
+    * 关联日志（2026-10-27）：让「任务 ↔ 运营日志」变成**双向**可见。
+    * 在此之前只能从日志侧指过来，任务详情完全不知道自己被哪条日志写过 ——
+    * 复盘时想找"当时那条记录"只能人肉翻日志。
+    * 0 条时整块不渲染，避免每张任务卡都挂一个空区块。
+    */}
+  {linkedOplog.length > 0 && (
+    <div className="wb-card">
+      <h4><Icon name="report" />关联日志<span className="wb-oplog-link-count">{linkedOplog.length}</span></h4>
+      <div className="wb-oplog-links">
+        {linkedOplog.map((entry) => (
+          <button key={entry.id} type="button" className="wb-oplog-link" onClick={() => onOpenOplogDate(entry.logDate)}>
+            <span className="wb-oplog-link-date">{entry.logDate}</span>
+            <span className="wb-oplog-link-type">{entry.logType}</span>
+            <span className="wb-oplog-link-title">{entry.title}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
 
   {/**
     * 进度卡（T1/D04）：**独立组件** `TaskProgress`，列表/详情/计划行共用同一份。
@@ -190,9 +218,9 @@ export function TaskDetailPane({
         ) : (
           <>
             {selected.task.recurrenceMasterId !== null
-              ? <span style={{ fontSize: 12, color: '#999', alignSelf: 'center' }}>这是重复任务自动生成的实例，可直接执行/验收。</span>
+              ? <span style={{ fontSize: 12, color: 'var(--wb-ink-2)', alignSelf: 'center' }}>这是重复任务自动生成的实例，可直接执行/验收。</span>
               : selected.task.recurrenceCode !== null && selected.task.recurrenceCode !== 'none'
-                ? <span style={{ fontSize: 12, color: '#999', alignSelf: 'center' }}>重复任务模板：实例会自动生成到“子任务”中，归档模板即停止重复。</span>
+                ? <span style={{ fontSize: 12, color: 'var(--wb-ink-2)', alignSelf: 'center' }}>重复任务模板：实例会自动生成到“子任务”中，归档模板即停止重复。</span>
                 : selected.task.statusCode === 'done' || selected.task.statusCode === 'cancelled'
                   ? <button className="wb-btn" disabled={busy} onClick={() => {
                       const existing = selected.sessions.find((x) => x.role_code === 'review')
@@ -274,7 +302,7 @@ export function TaskDetailPane({
           <div className="wb-card">
             <h4>子任务（{selected.children.length}）{selected.children.length > 0 ? ` · ${selected.children.filter((c) => c.statusCode === 'done').length}/${selected.children.length} 已完成` : ''}</h4>
             {selected.children.map((c) => <div key={c.id} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}><Badge dict={dictOf('status')} code={c.statusCode} /> <span onClick={() => openTask(c)} {...interactiveProps(() => openTask(c))} style={{ cursor: 'pointer' }}>{c.title}</span></div>)}
-            {selected.children.length === 0 && <div style={{ color: '#999', fontSize: 12 }}>无</div>}
+            {selected.children.length === 0 && <div style={{ color: 'var(--wb-ink-2)', fontSize: 12 }}>无</div>}
           </div>
         </>
       )}
@@ -359,9 +387,9 @@ export function TaskDetailPane({
               )
             })}
             {selected.task.effectiveDueAt === null
-              ? <div style={{ fontSize: 12, color: '#999' }}>任务还没有截止时间，请先在详情里设置截止时间，再添加提醒。</div>
+              ? <div style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>任务还没有截止时间，请先在详情里设置截止时间，再添加提醒。</div>
               : selected.task.statusCode === 'done' || selected.task.statusCode === 'cancelled'
-                ? <div style={{ fontSize: 12, color: '#999' }}>已完成/已取消的任务不再提醒。</div>
+                ? <div style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>已完成/已取消的任务不再提醒。</div>
                 : (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
                     {[{ offset: 0, label: '准时' }, { offset: 15, label: '提前15分' }, { offset: 30, label: '提前30分' }, { offset: 60, label: '提前1小时' }, { offset: 1440, label: '提前1天' }].map((item) => (
@@ -369,7 +397,7 @@ export function TaskDetailPane({
                     ))}
                   </div>
                 )}
-            <div style={{ fontSize: 12, color: '#999', marginTop: 6 }}>到提醒时间后：页内横幅 + 桌面通知（设置中授权）。超出补发窗口（默认 24 小时）的提醒会自动标为「已跳过」；任何一条只要显示为已送达 / 已跳过 / 已确认，都可以点「重新武装」让它重新提醒。</div>
+            <div style={{ fontSize: 12, color: 'var(--wb-ink-2)', marginTop: 6 }}>到提醒时间后：页内横幅 + 桌面通知（设置中授权）。超出补发窗口（默认 24 小时）的提醒会自动标为「已跳过」；任何一条只要显示为已送达 / 已跳过 / 已确认，都可以点「重新武装」让它重新提醒。</div>
           </div>
           <div className="wb-card">
             <h4>复盘记录（{selected.reviews?.length ?? 0}）</h4>
@@ -385,7 +413,7 @@ export function TaskDetailPane({
                 </div>
               )
             })}
-            {(selected.reviews?.length ?? 0) === 0 && <div style={{ fontSize: 12, color: '#999' }}>暂无复盘；已完成任务可用“AI 复盘”。</div>}
+            {(selected.reviews?.length ?? 0) === 0 && <div style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>暂无复盘；已完成任务可用“AI 复盘”。</div>}
           </div>
           <div className="wb-card">
             <h4>变更历史（{selected.events?.length ?? 0}）</h4>
@@ -418,7 +446,7 @@ export function TaskDetailPane({
                       </div>
                     )
                   })}
-                  {events.length === 0 && <div style={{ fontSize: 12, color: '#999' }}>暂无变更记录。</div>}
+                  {events.length === 0 && <div style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>暂无变更记录。</div>}
                   {events.length > 5 && (
                     <button className="wb-btn" style={{ marginTop: 8 }} onClick={() => setEventsExpanded((v) => !v)}>
                       {eventsExpanded ? '收起' : `展开全部（${events.length} 条）`}

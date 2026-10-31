@@ -15,7 +15,11 @@
  * - 「缺投放单元信息」= 没有任何一行同时带广告组与匹配类型 —— 此时词级 0 单不足以直接否词。
  */
 import { aggregateByKeyword, type KeywordAggregateInput } from '../shared/keywordAggregate.js'
-import { KEYWORD_DECISION_CODES, decideKeyword, type KeywordDecisionCode } from '../shared/keywordDecision.js'
+import {
+  KEYWORD_DECISION_CODES, decideKeyword,
+  type KeywordDecisionCode, type KeywordThresholds,
+} from '../shared/keywordDecision.js'
+import type { SearchTermAction } from '../shared/amazonTrafficTools.js'
 
 /** 桶的显示名：顺序与 `KEYWORD_DECISION_CODES` 一致（否定 → 加词 → 观察 → 不动）。 */
 export const DECISION_LABEL: Record<KeywordDecisionCode, string> = {
@@ -23,6 +27,20 @@ export const DECISION_LABEL: Record<KeywordDecisionCode, string> = {
   add: '加词',
   watch: '观察',
   none: '不动',
+}
+
+/**
+ * 结论码 → 搜索词动作码（Step 2，2026-10-29）。
+ *
+ * 报表行**区分不了** exact / phrase（那是投放结构信息，搜索词报表里没有），
+ * 所以这里给的是**派生默认值**：一律取 exact，证据等级恒为 `derived`。
+ * 想要 phrase 必须有人真的看过投放结构再写 —— 不许拿这张表冒充 observed。
+ */
+export const SEARCH_TERM_ACTION_OF: Record<KeywordDecisionCode, SearchTermAction> = {
+  negative: 'negative_exact',
+  add: 'add_exact',
+  watch: 'watch',
+  none: 'none',
 }
 
 /** Top 榜默认取 5 条。 */
@@ -65,8 +83,7 @@ export interface KeywordWordView extends KeywordTopView {
 
 export interface KeywordAnalysis {
   /** 原始行数（报表里的行）。 */
-  rowCount: number
-  /** 聚合后的唯一词数。 */
+  rowCount: number  /** 聚合后的唯一词数。 */
   wordCount: number
   spend: number
   sales: number
@@ -82,7 +99,19 @@ export interface KeywordAnalysis {
   zeroOrderSpendShare: number | null
   /** 报表是否缺少广告组 / 匹配类型（决定是否显示"需按投放单元复核"）。 */
   missingPlacement: boolean
+  /**
+   * 缺投放单元的**原因**（2026-10-29）：界面要把两种情形分开说，否则用户不知道该
+   * 回去重新导出，还是该找我们。
+   *
+   * - `column-absent`：文件里没有这两列（或整列为空）→ 用户侧：去后台按投放单元导出；
+   * - `legacy-rows`：这行数据是旧格式导入的，当时还没有这三列 → 我方历史遗留；重新导入即可带上。
+   * - `null`：投放单元信息齐全，不需要提示。
+   */
+  placementGap: PlacementGapReason | null
 }
+
+/** 投放单元缺失的两种来源，见 `KeywordAnalysis.placementGap`。 */
+export type PlacementGapReason = 'column-absent' | 'legacy-rows'
 
 function nonEmpty(value: unknown): boolean {
   return typeof value === 'string' && value.trim() !== ''
@@ -95,6 +124,21 @@ function nonEmpty(value: unknown): boolean {
  */
 export function hasPlacementDetail(rows: ReadonlyArray<KeywordAnalysisInputRow>): boolean {
   return rows.some((row) => nonEmpty(row.adGroup) && nonEmpty(row.matchType))
+}
+
+/**
+ * 缺投放单元时判断**是哪种缺法**。
+ *
+ * 判据是字段**存在性**而不是值：新导入的行总是带 `adGroup`/`matchType` 键（可能是 null），
+ * 旧数据集的行连键都没有 —— 这两种在界面上要给出完全不同的下一步。
+ */
+export function placementGapOf(rows: ReadonlyArray<KeywordAnalysisInputRow>): PlacementGapReason | null {
+  if (hasPlacementDetail(rows)) return null
+  const hasColumnKey = rows.some(
+    (row) => Object.prototype.hasOwnProperty.call(row, 'adGroup')
+      || Object.prototype.hasOwnProperty.call(row, 'matchType'),
+  )
+  return hasColumnKey ? 'column-absent' : 'legacy-rows'
 }
 
 function toTopView(word: { keyword: string; impressions: number; clicks: number; orders: number; spend: number; sales: number }): KeywordTopView {
@@ -116,9 +160,15 @@ function compareOpportunity(a: KeywordTopView, b: KeywordTopView): number {
   return a.keyword < b.keyword ? -1 : 1
 }
 
+/**
+ * 装配词级结论。
+ *
+ * `thresholds` 缺省走 `DEFAULT_KEYWORD_THRESHOLDS`；两页必须传**同一个**值
+ * （设置域 `amazonKeywordThresholds`），否则同一份数据会得出两种结论。
+ */
 export function buildKeywordAnalysis(
   rows: ReadonlyArray<KeywordAnalysisInputRow>,
-  options: { topLimit?: number } = {},
+  options: { topLimit?: number; thresholds?: KeywordThresholds } = {},
 ): KeywordAnalysis {
   const limit = options.topLimit ?? TOP_LIMIT
   const words = aggregateByKeyword(rows)
@@ -133,7 +183,7 @@ export function buildKeywordAnalysis(
   let zeroOrderSpend = 0
 
   for (const word of words) {
-    const code = decideKeyword(word)
+    const code = decideKeyword(word, options.thresholds)
     counts[code] += 1
     spendBy[code] += word.spend
     spend += word.spend
@@ -168,5 +218,6 @@ export function buildKeywordAnalysis(
     zeroOrderSpend,
     zeroOrderSpendShare: spend > 0 ? zeroOrderSpend / spend : null,
     missingPlacement: !hasPlacementDetail(rows),
+    placementGap: placementGapOf(rows),
   }
 }

@@ -11,22 +11,42 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n.js'
 import { Icon } from '../components/Icon.js'
+import { AmazonDataSourceBar } from '../components/AmazonDataSourceBar.js'
+import { UniverCapabilityHint } from '../components/UniverCapabilityHint.js'
+import { UniverPreviewCard } from '../components/UniverPreviewCard.js'
+import { AmazonTrafficDetailPane } from './AmazonTrafficDetailPane.js'
 import {
   AD_ACTION_LABELS, DEFAULT_RULES, actionsToCsv, analyseAdReport, parseAdReportCsv,
 } from '../../shared/adReport.js'
 import type { AdAnalysis, AdReportKind, AdReportRow, RuleConfig } from '../../shared/adReport.js'
-import { KEYWORD_RULES } from '../../shared/keywordDecision.js'
-import { DECISION_LABEL, buildKeywordAnalysis } from '../keywordAnalysis.js'
+import { thresholdsFromSettings } from '../../shared/keywordDecision.js'
+import { parseTrafficCsv, analyseTraffic } from '../../shared/amazonTrafficTools.js'
+import type { AmazonKeywordThresholds } from '../../shared/contracts.js'
+import type { UseUniverCsvTableResult } from '../hooks/useUniverCsvTable.js'
+import { buildKeywordAnalysis } from '../keywordAnalysis.js'
+import { summariseSliceForCopy, trafficCopyTable } from '../trafficCopy.js'
 import type { UseAmazonDatasetsResult } from '../hooks/useAmazonDatasets.js'
 import type { AdReportDatasetSummary, UseAdReportDatasetsResult } from '../hooks/useAdReportDatasets.js'
 
-const KINDS: ReadonlyArray<{ key: AdReportKind; label: string; hint: string; placeholder: string }> = [
-  { key: 'search_term', label: '搜索词', hint: '搜索词报表：客户搜索词 + 曝光/点击/花费/销售/订单', placeholder: '客户搜索词\t曝光量\t点击量\t花费\t销售额\t订单\nwelding gloves\t1000\t32\t24\t0\t0\ntig gloves\t800\t18\t14\t120\t3' },
-  { key: 'targeting', label: '投放', hint: '投放报表：投放词/商品 + 匹配类型 + 广告活动 + 指标', placeholder: '投放\t匹配类型\t广告活动名称\t曝光量\t点击量\t花费\t销售额\t订单\ntig torch cup\t广泛\tSP-A\t1200\t40\t32\t90\t2' },
-  { key: 'campaign', label: '广告活动', hint: '广告活动报表：活动 + 预算 + 指标（预算使用率用来判加/降预算）', placeholder: '广告活动名称\t预算\t曝光量\t点击量\t花费\t销售额\t订单\nSP-A\t50\t12000\t240\t180\t600\t12' },
-  { key: 'placement', label: '广告位', hint: '广告位报表：活动 × 广告位（搜索结果顶部 / 商品页面 / 其余位置），用来逐活动调加价', placeholder: '广告位\t广告活动名称\t曝光量\t点击量\t花费\t销售额\t订单\n搜索结果顶部\tSP-A\t5000\t60\t48\t150\t4\n商品页面\tSP-A\t7000\t40\t30\t0\t0' },
-  { key: 'budget', label: '预算', hint: '预算报表：活动 + 预算 + 花费（预算使用率 < 低水位=钱没花掉，> 打满线=被卡住）', placeholder: '广告活动名称\t预算\t花费\t曝光量\t点击量\t销售额\t订单\nSP-A\t50\t48\t20000\t200\t300\t10\nSP-B\t100\t20\t900\t9\t0\t0' },
-  { key: 'impression_share', label: '搜索词份额', hint: '搜索词展示量份额报表：份额越低、ACOS 越达标，越是「低份额高效」机会词', placeholder: '客户搜索词\t曝光份额\t曝光量\t点击量\t花费\t销售额\t订单\ntig torch cup\t6.5%\t3000\t45\t30\t120\t3' },
+/**
+ * 六种报表的**导入引导**（2026-10-29 改）。
+ *
+ * 原来这里是 `placeholder` 示例文本，塞进一个 6 行的 textarea 里 —— 那个框已按
+ * 用户要求删掉。示例文本本身有价值（它说明了列名），所以改造成结构化引导：
+ * 「从哪导 + 要哪几列」，由 `AmazonDataSourceBar` 渲染成可读的引导块。
+ */
+const KINDS: ReadonlyArray<{
+  key: AdReportKind
+  label: string
+  where: string
+  columns: ReadonlyArray<string>
+}> = [
+  { key: 'search_term', label: '搜索词', where: '亚马逊广告后台 → 广告报告 → 搜索词报告（Search Term Report）', columns: ['客户搜索词', '曝光量', '点击量', '花费', '销售额', '订单'] },
+  { key: 'targeting', label: '投放', where: '亚马逊广告后台 → 广告报告 → 投放报告（Targeting Report）', columns: ['投放', '匹配类型', '广告活动名称', '曝光量', '点击量', '花费', '销售额', '订单'] },
+  { key: 'campaign', label: '广告活动', where: '亚马逊广告后台 → 广告报告 → 广告活动报告（Campaign Report）', columns: ['广告活动名称', '预算', '曝光量', '点击量', '花费', '销售额', '订单'] },
+  { key: 'placement', label: '广告位', where: '亚马逊广告后台 → 广告报告 → 广告位报告（Placement Report）', columns: ['广告位', '广告活动名称', '曝光量', '点击量', '花费', '销售额', '订单'] },
+  { key: 'budget', label: '预算', where: '亚马逊广告后台 → 广告报告 → 预算报告（Budget Report）', columns: ['广告活动名称', '预算', '花费', '曝光量', '点击量', '销售额', '订单'] },
+  { key: 'impression_share', label: '搜索词份额', where: '亚马逊广告后台 → 广告报告 → 搜索词展示量份额报告（Search Term Impression Share）', columns: ['客户搜索词', '曝光份额', '曝光量', '点击量', '花费', '销售额', '订单'] },
 ]
 
 type Status = { level: 'ok' | 'warn' | 'error'; lines: string[] } | null
@@ -39,12 +59,6 @@ function money(value: number): string {
   return `$${value.toFixed(2)}`
 }
 
-/** CSV 单元格：含逗号/引号/换行时按标准转义，避免复制出去错列。 */
-function csvCell(value: string | number): string {
-  const text = String(value)
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-}
-
 export interface AmazonReportViewProps {
   /**
    * 共享数据集模型（T3）：`search_term` 一路的 current / 列表 / 导入都读它，
@@ -53,16 +67,32 @@ export interface AmazonReportViewProps {
   amazon: UseAmazonDatasetsResult
   /** 其余 5 种报表的本地状态：请求全在 hook 里（视图不发 HTTP）。 */
   reports: UseAdReportDatasetsResult
+  /**
+   * 表格能力（并入 CSV 版块）：把当前结论生成 `.univer` 表格并在本页嵌着看。
+   *
+   * 与「复制 CSV」同一个数据口径 —— 不是第二条导出逻辑，只是把
+   * "复制出去粘进 Excel" 换成 "直接得到一张能加公式/图表的真表格"。
+   * 生成物是**草稿**：合并/放弃由用户在 Viewer 里点，这里不替用户拍板。
+   */
+  table: UseUniverCsvTableResult
+  /**
+   * 搜索词判定阈值（Step 0/2）：账号级设置，`null` = 默认。
+   *
+   * 必须由装配层传入、两页读同一个值；视图**不许**再自己引用 `KEYWORD_RULES` 做判定。
+   */
+  thresholds: AmazonKeywordThresholds | null
+  /** 把当前搜索词情况交给 AI（由装配层注入会话入口）。 */
+  onSendToAI?: (text: string) => void
+  /** 跳到关键词页并定位到某个词（由装配层注入导航）。 */
+  onOpenKeyword?: (keyword: string) => void
 }
 
-export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JSX.Element {
+export function AmazonReportView({ amazon, reports, table, thresholds, onSendToAI, onOpenKeyword }: AmazonReportViewProps): JSX.Element {
   const { t } = useI18n()
   const [kind, setKind] = useState<AdReportKind>('search_term')
-  const [text, setText] = useState('')
   const [status, setStatus] = useState<Status>(null)
   const [busy, setBusy] = useState(false)
   const [rules, setRules] = useState<RuleConfig>(DEFAULT_RULES)
-  const fileRef = useRef<HTMLInputElement | null>(null)
 
   const kindMeta = KINDS.find((item) => item.key === kind) ?? KINDS[0]!
 
@@ -92,9 +122,13 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
    * 这里不再调用 `analyseAdReport`（它是按行、按另一套阈值），否则同一份 1243 行报表
    * 会在报表页显示「建议 1 条」、在流量页显示「否定 7 / 加词 3」—— 用户无法判断信谁。
    */
+  /** 设置域 → 判定阈值（`null` 走默认）：判定与文案都用这一份，避免两处各算一次。 */
+  const keywordThresholds = useMemo(() => thresholdsFromSettings(thresholds), [thresholds])
   const keywordAnalysis = useMemo(
-    () => kind === 'search_term' && rows.length > 0 ? buildKeywordAnalysis(rows) : null,
-    [kind, rows],
+    () => kind === 'search_term' && rows.length > 0
+      ? buildKeywordAnalysis(rows, { thresholds: keywordThresholds })
+      : null,
+    [kind, rows, keywordThresholds],
   )
   /** 其余 5 种报表：沿用多表统一规则（投放 / 活动 / 广告位 / 预算 / 份额）。 */
   const adAnalysis: AdAnalysis | null = useMemo(
@@ -112,6 +146,46 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
   const analysis = adAnalysis
 
   const ingest = useCallback(async (raw: string, source: string): Promise<void> => {
+    /**
+     * 解析器统一（Step ①，2026-10-29）：**搜索词只有一个解析器** —— `parseTrafficCsv`。
+     *
+     * 判据是"更宽"而不是"哪页在用"：它能跳过 Reporting Range 之类的元数据行、
+     * 在前 6 行里认出表头、引号不闭合时容错重解析、坏行跳过并报数（一坏行不再整份拒绝）。
+     * `parseAdReportCsv` 保留给另外五类报表（它们需要投放/活动/广告位这些列）。
+     *
+     * 代价与保障：`parseTrafficCsv` 现在也会读 campaign / adGroup / matchType，
+     * 所以「否词需按投放单元复核」的判断不会因为换解析器而永远为真。
+     */
+    if (kind === 'search_term') {
+      const parsed = parseTrafficCsv(raw)
+      if (!parsed.ok) {
+        setStatus({ level: 'error', lines: [`导入未通过：${parsed.errors.join('；')}`] })
+        return
+      }
+      setBusy(true)
+      try {
+        const title = `${kindMeta.label}报表 ${new Date().toLocaleString('zh-CN', { hour12: false })}`
+        const saved = await amazon.actions.importRows({
+          title,
+          period: parsed.period ?? null,
+          rows: parsed.rows,
+          sourceCode: source,
+        })
+        if (saved === null) {
+          setStatus({ level: 'error', lines: [`解析成功，但保存到工作台失败（${amazon.error ?? '未知原因'}）`] })
+          return
+        }
+        const lines = [`已导入 ${parsed.rows.length} 行${parsed.period === undefined ? '' : ` · ${parsed.period}`}`]
+        if (parsed.warnings.length > 0) lines.push(parsed.warnings.join('；'))
+        setStatus({ level: parsed.warnings.length > 0 ? 'warn' : 'ok', lines })
+      } catch (error) {
+        setStatus({ level: 'error', lines: [error instanceof Error ? error.message : String(error)] })
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+
     const parsed = parseAdReportCsv(raw, kind)
     if (!parsed.ok) {
       setStatus({ level: 'error', lines: [`导入未通过：${parsed.errors.join('；')}`] })
@@ -120,15 +194,11 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
     setBusy(true)
     try {
       const title = `${kindMeta.label}报表 ${new Date().toLocaleString('zh-CN', { hour12: false })}`
-      const saved = kind === 'search_term'
-        ? await amazon.actions.importRows({ title, period: parsed.period, rows: parsed.rows, sourceCode: source })
-        : await reports.actions.importRows(kind, { title, period: parsed.period, rows: parsed.rows, sourceCode: source })
+      const saved = await reports.actions.importRows(kind, { title, period: parsed.period, rows: parsed.rows, sourceCode: source })
       if (saved === null) {
-        const reason = (kind === 'search_term' ? amazon.error : reports.error) ?? '未知原因'
-        setStatus({ level: 'error', lines: [`解析成功，但保存到工作台失败（${reason}）`] })
+        setStatus({ level: 'error', lines: [`解析成功，但保存到工作台失败（${reports.error ?? '未知原因'}）`] })
         return
       }
-      setText('')
       const lines = [`已导入 ${parsed.rows.length} 行${parsed.period === null ? '' : ` · ${parsed.period}`}`]
       if (parsed.warnings.length > 0) lines.push(parsed.warnings.join('；'))
       setStatus({ level: parsed.warnings.length > 0 ? 'warn' : 'ok', lines })
@@ -139,16 +209,19 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
     }
   }, [kind, kindMeta.label, amazon.actions, amazon.error, reports.actions, reports.error])
 
+  /**
+   * 拾到文件 → 读文本 → 解析 → 落库。
+   *
+   * 2026-10-29：`readFile` 从 `file.text()` 换成 `reports.actions.parseUpload`，
+   * 让 `.xlsx` 也能用（原来只有流量页能吃 Excel，同一份报表两页行为不一致）。
+   */
   const pickFile = (file: File | undefined): void => {
     if (file === undefined) return
-    if (/\.(xlsx|xls)$/i.test(file.name)) {
-      setStatus({ level: 'warn', lines: ['暂不支持 Excel 直读：请在表格里另存为 CSV/TSV 后导入（Excel 支持在下一批）'] })
-      return
-    }
     void (async () => {
       setBusy(true)
       try {
-        await ingest(await file.text(), file.name)
+        const parsed = await reports.actions.parseUpload(file)
+        await ingest(parsed.text, file.name)
       } catch (error) {
         setStatus({ level: 'error', lines: [error instanceof Error ? error.message : String(error)] })
       } finally {
@@ -158,7 +231,30 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
   }
 
   /**
-   * 导出 = **复制 CSV 到剪贴板**。
+   * 当前结论 → 导出文本（**唯一构造口径**）。
+   *
+   * 2026-10-29 收尾：搜索词不再有自己那份 8 列 CSV —— 它和右栏「复制结果」
+   * 现在用**同一个函数、同一组列、同一套空值写法**（11 列 TSV，`—` 表示无数据）。
+   * 同一页两个导出对不上，比少几列更糟：用户会以为其中一份是错的。
+   *
+   * 行粒度仍是"当前可见行"：报表页这里是全量，右栏是筛选后的子集 —— 那是筛选
+   * 功能的语义，不是两套口径。
+   */
+  const buildCsv = (): { csv: string; count: number } => {
+    if (kind === 'search_term') {
+      if (amazon.current === null || rows.length === 0) return { csv: '', count: 0 }
+      const annotations = new Map(amazon.current.annotations.map((item) => [item.keyword, item]))
+      return {
+        csv: summariseSliceForCopy(analyseTraffic(rows), annotations),
+        count: rows.length,
+      }
+    }
+    if (adAnalysis === null) return { csv: '', count: 0 }
+    return { csv: actionsToCsv(adAnalysis.actions, kind), count: adAnalysis.actions.length }
+  }
+
+  /**
+   * 导出 = **复制 CSV 到剪贴板**（既有口径，保留）。
    *
    * 仓库有两条硬约束：客户端只允许 `MarkdownText` 里出现 `<a>`；
    * 也不允许把数据当成文件下载（避免"看起来导出了、其实没落地"的歧义）。
@@ -166,42 +262,67 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
    * 复制出去可直接粘进 Excel / 广告后台的批量表格。
    */
   const copyCsv = async (): Promise<void> => {
-    let csv = ''
-    let copied = 0
-    if (kind === 'search_term') {
-      if (keywordAnalysis === null || wordActions.length === 0) return
-      const lines = ['搜索词,结论,点击,订单,花费,销售额,ACOS,原始行数']
-      for (const word of wordActions) {
-        lines.push([
-          word.keyword,
-          DECISION_LABEL[word.code],
-          word.clicks,
-          word.orders,
-          word.spend.toFixed(2),
-          word.sales.toFixed(2),
-          word.acos === null ? '' : `${(word.acos * 100).toFixed(1)}%`,
-          word.rowCount,
-        ].map(csvCell).join(','))
-      }
-      csv = lines.join('\n')
-      copied = wordActions.length
-    } else {
-      if (adAnalysis === null) return
-      csv = actionsToCsv(adAnalysis.actions, kind)
-      copied = adAnalysis.actions.length
-    }
+    const { csv, count } = buildCsv()
+    if (count === 0) return
     try {
       await navigator.clipboard.writeText(csv)
-      setStatus({ level: 'ok', lines: [`已复制 ${copied} 条建议到剪贴板（人工确认清单，未修改广告账户）`] })
+      setStatus({ level: 'ok', lines: [`已复制 ${count} 条建议到剪贴板（人工确认清单，未修改广告账户）`] })
     } catch (error) {
       setStatus({ level: 'error', lines: [`复制失败：${error instanceof Error ? error.message : String(error)}`] })
     }
   }
 
+  /**
+   * 在 Univer 表格里打开当前结论。
+   *
+   * 为什么补这一条：上面那条导出只到剪贴板，"落地成文件、还能加公式图表"要用户自己完成。
+   * 这里把**同一份 CSV** 直接变成 `.univer` 草稿，并在本页嵌着看；合并/放弃仍由用户在
+   * Viewer 里点（生成物是草稿，不是已确认版本）。
+   */
+  const openInTable = async (): Promise<void> => {
+    const { csv, count } = buildCsv()
+    if (csv === '' || count === 0) {
+      setStatus({ level: 'warn', lines: ['当前没有可导出的结论行，先生成分析结果。'] })
+      return
+    }
+    const tableData = kind === 'search_term'
+      ? trafficCopyTable(analyseTraffic(rows), new Map(amazon.current!.annotations.map((item) => [item.keyword, item])))
+      : (() => {
+        const campaignOnly = kind === 'campaign' || kind === 'budget'
+        const columns = campaignOnly
+          ? ['广告活动', '建议动作', '优先级', '理由']
+          : [kind === 'targeting' ? '投放' : '广告位', '广告活动', '建议动作', '优先级', '理由']
+        return {
+          columns,
+          rows: (adAnalysis?.actions ?? []).map((action) => {
+            const label = AD_ACTION_LABELS[action.code]
+            return campaignOnly
+              ? [action.entity, label, action.priority, action.reason]
+              : [action.entity, action.campaign ?? '', label, action.priority, action.reason]
+          }),
+        }
+      })()
+    await table.actions.openTable(
+      tableData.columns,
+      tableData.rows,
+      kind === 'search_term' ? '搜索词结论' : '广告建议',
+    )
+  }
+
+  /**
+   * 当前数据集（两种来源合成一条：搜索词走共享 `amazon.current`，其余走 `reports.current`）。
+   *
+   * 2026-10-30 补：`openDataset`（数据集 → `.univer`，服务端带 `univer_file` 复用）
+   * 之前只有实现、没有任何按钮触发 —— 流量页左栏退休后那个入口一起没了。
+   * 它和上面「生成表格并预览」不是一回事：那条把**结论**做成表，这条把**原始数据**做成表。
+   */
+  const currentDataset = kind === 'search_term'
+    ? (amazon.current === null ? null : { id: amazon.current.id, title: amazon.current.title, rows: amazon.current.rows.length })
+    : (reports.current === null ? null : { id: reports.current.id, title: reports.current.title, rows: reports.current.rows.length })
+
   const switchKind = (next: AdReportKind): void => {
     setKind(next)
     setStatus(null)
-    setText('')
   }
 
   return (
@@ -211,10 +332,39 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
           <h2>{t('广告报表分析')}</h2>
           <p>{t('导入后台导出的报表，按同一套规则出「加/否词、提/降价、加/降预算」的人工确认清单；只读分析，不碰账户。')}</p>
         </div>
-        <button type="button" className="wb-btn" disabled={actionCount === 0} onClick={() => void copyCsv()}>
-          <Icon name="file" size={13} />{t('复制建议 CSV')}
+        {/**
+         * 搜索词不再给本页的「复制建议 CSV」：右栏组件自带「复制结果」（11 列 TSV，含筛选）。
+         * 两个复制按钮同时存在，就是两个口径并存 —— 宁可少一个按钮。
+         * 非搜索词五类报表仍用这一条（8 列结论 CSV）。
+         */}
+        {kind !== 'search_term' && (
+          <button type="button" className="wb-btn" disabled={actionCount === 0} onClick={() => void copyCsv()}>
+            <Icon name="file" size={13} />{t('复制建议 CSV')}
+          </button>
+        )}
+        {/**
+         * 落地那一半：同一份 CSV → `.univer` 草稿 → 本页嵌着看。
+         * 不可用时**禁用并说明原因**（而不是点下去才报错），因为"没装 Univer"
+         * 是环境问题，用户看到按钮变灰比看到失败弹窗更容易理解。
+         */}
+        <button
+          type="button"
+          className="wb-btn primary"
+          /** 搜索词的导出是**全量 11 列**（不再依赖"有几条否词/加词"），所以判据是行数。 */
+          disabled={(kind === 'search_term' ? rows.length === 0 : actionCount === 0) || table.available === false || table.busy}
+          title={table.available === false ? t('当前 profile 未检测到 dsh-univer-office') : undefined}
+          onClick={() => void openInTable()}
+        >
+          <Icon name="chart" size={13} />{table.busy ? t('生成表格中…') : t('生成表格并预览')}
         </button>
       </div>
+
+      {/* 能力提示（A/D 两态 + 重新检测）由共用组件负责，四页同一句口径。 */}
+      <UniverCapabilityHint
+        available={table.available}
+        contentRead={table.contentRead}
+        onRetry={() => void table.actions.refreshAvailability()}
+      />
 
       <div className="wb-report-tabs" role="tablist">
         {KINDS.map((item) => (
@@ -229,41 +379,45 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
         ))}
       </div>
 
-      <div className="wb-card">
-        <h4><Icon name="list" size={14} />{t('导入报表')}</h4>
-        <p className="wb-hint">{t(kindMeta.hint)}</p>
-        <div className="wb-report-actions">
-          <button type="button" className="wb-btn" disabled={busy || text.trim() === ''} onClick={() => void ingest(text, 'paste')}>
-            {t('解析并导入')}
-          </button>
-          <label className="wb-btn">
-            <Icon name="file" size={13} />{t('选择 CSV / TSV')}
-            <input
-              type="file"
-              accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values"
-              hidden
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0]
-                pickFile(file)
-                event.currentTarget.value = ''
-              }}
-            />
-          </label>
-          {history.length > 0 && (
-            <span className="wb-hint" style={{ margin: 0 }}>
-              {t('最近一份：')}{history[0]!.title}（{history[0]!.rowCount} 行）
-            </span>
-          )}
+      {/**
+       * 数据入口（2026-10-29 改）：粘贴框按用户要求彻底删除，只剩拖文件 / 选文件。
+       * 引导（从哪导、要哪几列）由 `AmazonDataSourceBar` 统一渲染，六种报表各说各的列。
+       */}
+      <AmazonDataSourceBar
+        guide={{
+          reportName: `${kindMeta.label}报表`,
+          where: kindMeta.where,
+          columns: kindMeta.columns,
+          note: 'CSV / Excel 均可；表头保持首行。',
+        }}
+        accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+        busy={busy}
+        latest={history.length > 0 ? `${history[0]!.title}（${history[0]!.rowCount} 行）` : null}
+        onFile={pickFile}
+      />
+
+      {/**
+       * 当前数据集 → 原始数据表。与上面「生成表格并预览」分工：
+       * 这里给的是**导入的那份数据本身**（服务端会记住 `univer_file`，
+       * 文件还在就复用，不会每点一次多一份草稿）；上面给的是**分析结论**。
+       */}
+      {currentDataset !== null && (
+        <div className="wb-amazon-dataset-bar">
+          <div>
+            <strong>{currentDataset.title}</strong>
+            <span>{currentDataset.rows.toLocaleString('en-US')} 行 · {kindMeta.label}</span>
+          </div>
+          <div className="wb-amazon-dataset-actions">
+            <button
+              type="button"
+              className="wb-btn"
+              disabled={table.busy || table.available === false}
+              title={table.available === false ? t('当前 profile 未检测到 dsh-univer-office') : t('把这份原始数据做成表格打开（已生成过就复用，不会重复生成）')}
+              onClick={() => void table.actions.openDataset(currentDataset.id)}
+            ><Icon name="table" size={13} />{table.busy ? t('打开中…') : t('原始数据在表格里打开')}</button>
+          </div>
         </div>
-        <textarea
-          className="wb-report-textarea"
-          value={text}
-          spellCheck={false}
-          placeholder={kindMeta.placeholder}
-          onChange={(event) => setText(event.target.value)}
-          rows={6}
-        />
-      </div>
+      )}
 
       {status !== null && (
         <div className={`wb-report-status is-${status.level}`}>
@@ -275,7 +429,11 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
         <h4><Icon name="chart" size={14} />{t('规则阈值')}</h4>
         {kind === 'search_term' ? (
           <p className="wb-hint">
-            搜索词统一口径（与流量分析、关键词页同一份）：点击 ≥ {KEYWORD_RULES.negativeMinClicks} 且 0 单 = 否定；订单 ≥ {KEYWORD_RULES.addMinOrders} 且 ACOS ≤ {Math.round(KEYWORD_RULES.addMaxAcos * 100)}% = 加词。此处不可单独修改。
+            {t('搜索词统一口径（与流量分析、关键词页同一份）：点击 ≥ {c} 且 0 单 = 否定；订单 ≥ {o} 且 ACOS ≤ {a}% = 加词。在「设置 → 搜索词阈值」里修改，改完两页同时生效。', {
+              c: keywordThresholds.negativeMinClicks,
+              o: keywordThresholds.addMinOrders,
+              a: Math.round(keywordThresholds.addMaxAcos * 100),
+            })}
           </p>
         ) : (
         <div className="wb-report-rules">
@@ -318,83 +476,43 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
         )}
       </div>
 
+      {/**
+       * 没数据时的引导（2026-10-29）：原来只有一句"粘贴到上面或选文件导入"，
+       * 而粘贴框已经删了，那句话指向不存在的入口 —— 空态等于死路。
+       * 现在三步都指向**页面上真实存在的控件**，不写没有的按钮。
+       */}
       {rows.length === 0 && (
         <div className="wb-empty">
           <div className="wb-empty-title">{t('还没有 {k} 报表', { k: kindMeta.label })}</div>
-          <div className="wb-empty-desc">{t('从亚马逊广告后台导出对应报表（CSV/TSV），粘贴到上面或选文件导入。')}</div>
+          <div className="wb-empty-desc">{t('三步就能出结论：')}</div>
+          <ol className="wb-hint" style={{ display: 'inline-block', margin: '0 auto', textAlign: 'left', lineHeight: 1.8 }}>
+            <li>{t('在亚马逊广告后台导出这张报表：')}{kindMeta.where}{t('（CSV / Excel 均可）。')}</li>
+            <li>{t('点上面的「选择文件」，或把文件拖进虚线框。')}</li>
+            <li>{t('解析完成后本页直接给出「词级分析」与指标表；要一张能加公式、图表的表，再点右上「生成表格并预览」。')}</li>
+          </ol>
+          <div className="wb-hint">
+            {t('每导入一次会新建一张表（文件名带时间戳），不会覆盖上一张。')}
+          </div>
         </div>
       )}
 
-      {kind === 'search_term' && keywordAnalysis !== null && (
-        <>
-          <div className="wb-stats">
-            <div className="wb-stat"><span>花费</span><b>{money(keywordAnalysis.spend)}</b></div>
-            <div className="wb-stat"><span>销售额</span><b>{money(keywordAnalysis.sales)}</b></div>
-            <div className="wb-stat"><span>ACOS</span><b>{pct(keywordAnalysis.acos)}</b></div>
-            <div className="wb-stat"><span>无单花费占比</span><b>{pct(keywordAnalysis.zeroOrderSpendShare)}</b></div>
-            <div className="wb-stat"><span>唯一词</span><b>{keywordAnalysis.wordCount.toLocaleString('en-US')}</b></div>
-          </div>
-
-          <div className="wb-card">
-            <h4><Icon name="trend" size={14} />建议清单（{wordActions.length}）</h4>
-            <div className="wb-report-quadrants">
-              {keywordAnalysis.buckets.map((bucket) => <span key={bucket.code} className="wb-chip is-neutral">{bucket.label} · {bucket.count}</span>)}
-            </div>
-            {wordActions.length === 0
-              ? <p className="wb-hint">按统一口径没有需要处理的词。</p>
-              : (
-                <div className="wb-report-tablewrap">
-                  <table className="wb-report-table">
-                    <thead>
-                      <tr><th>优先级</th><th>搜索词</th><th>动作</th><th>理由</th></tr>
-                    </thead>
-                    <tbody>
-                      {wordActions.map((word) => (
-                        <tr key={`${word.code}-${word.keyword}`}>
-                          <td><span className={`wb-report-prio p${word.code === 'negative' ? 1 : 2}`}>P{word.code === 'negative' ? 1 : 2}</span></td>
-                          <td>{word.keyword}</td>
-                          <td><span className="wb-chip">{DECISION_LABEL[word.code]}</span></td>
-                          <td className="is-reason">
-                            {word.code === 'negative'
-                              ? `${word.clicks} 次点击 / 0 单 / $${word.spend.toFixed(2)}`
-                              : `${word.orders} 单 / ACOS ${word.acos === null ? '—' : `${(word.acos * 100).toFixed(1)}%`}`}
-                            {keywordAnalysis.missingPlacement ? '（否词需按投放单元复核）' : ''}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-          </div>
-
-          <div className="wb-card">
-            <h4><Icon name="list" size={14} />明细（{keywordAnalysis.wordCount} 词，按花费排序）</h4>
-            <p className="wb-hint">{keywordAnalysis.rowCount.toLocaleString('en-US')} 行原始报表按词合并为 {keywordAnalysis.wordCount.toLocaleString('en-US')} 个词；与流量分析、关键词页同一份结果。</p>
-            <div className="wb-report-tablewrap">
-              <table className="wb-report-table">
-                <thead>
-                  <tr><th>搜索词</th><th>结论</th><th>花费</th><th>销售额</th><th>ACOS</th><th>点击</th><th>订单</th><th>行数</th></tr>
-                </thead>
-                <tbody>
-                  {keywordAnalysis.words.slice(0, 100).map((word) => (
-                    <tr key={word.keyword}>
-                      <td>{word.keyword}</td>
-                      <td><span className="wb-chip is-neutral">{DECISION_LABEL[word.code]}</span></td>
-                      <td className="is-num">{money(word.spend)}</td>
-                      <td className="is-num">{money(word.sales)}</td>
-                      <td className="is-num">{pct(word.acos)}</td>
-                      <td className="is-num">{word.clicks}</td>
-                      <td className="is-num">{word.orders}</td>
-                      <td className="is-num">{word.rowCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {keywordAnalysis.words.length > 100 && <p className="wb-hint">只显示前 100 个词，共 {keywordAnalysis.wordCount.toLocaleString('en-US')} 个。</p>}
-          </div>
-        </>
+      {/**
+       * 搜索词右栏（Step ③，2026-10-29）：**直接复用 `AmazonTrafficDetailPane`**，
+       * 不是把它的 JSX 复制过来。这样筛选预设、ABA 分层、AI 报表结论、
+       * 11 列指标表与「复制结果」都只有一份实现，"两页一致"是结构保证而不是靠自觉。
+       *
+       * 本页原先的 KPI 条、词级块、「明细」100 行表在这里一并撤掉 ——
+       * 它们要么被组件覆盖（指标/分层/表格），要么就是重复的第二套口径。
+       * 只在**有当前数据集**时渲染：没数据时上面的三步引导负责说话，
+       * 否则会出现两个空态。
+       */}
+      {kind === 'search_term' && amazon.current !== null && (
+        <AmazonTrafficDetailPane
+          model={amazon}
+          thresholds={thresholds}
+          onSendToAI={onSendToAI}
+          onOpenKeyword={onOpenKeyword}
+        />
       )}
 
       {analysis !== null && (
@@ -468,6 +586,12 @@ export function AmazonReportView({ amazon, reports }: AmazonReportViewProps): JS
           </div>
         </>
       )}
+
+      {/**
+       * 生成后的就地预览：草稿语义、iframe 与滚动都由共用组件负责（2026-10-30）。
+       * 四页各写一份时，改一句「提交待审阅」要改四处，漏一处就两页说法不同。
+       */}
+      <UniverPreviewCard table={table} />
     </div>
   )
 }

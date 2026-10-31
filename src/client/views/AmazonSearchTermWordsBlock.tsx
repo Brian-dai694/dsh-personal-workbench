@@ -45,9 +45,9 @@ export function AmazonSearchTermWordsBlock({ model, onOpenTraffic, onClearKeywor
     return (
       <section className="wb-amazon-empty" aria-label="搜索词表现">
         <strong>还没有搜索词报表</strong>
-        <span>去「流量分析」导入一份，导入完成后这里会直接显示词级结论。</span>
+        <span>去「报表分析 · 搜索词」导入一份，导入完成后这里会直接显示词级结论。</span>
         {onOpenTraffic !== undefined && (
-          <button className="wb-btn" type="button" style={{ marginTop: 8 }} onClick={() => onOpenTraffic('')}>去流量分析导入</button>
+          <button className="wb-btn" type="button" style={{ marginTop: 8 }} onClick={() => onOpenTraffic('')}>去报表分析导入</button>
         )}
       </section>
     )
@@ -64,7 +64,7 @@ export function AmazonSearchTermWordsBlock({ model, onOpenTraffic, onClearKeywor
             </span>
           )}
         </div>
-        <div>结论来自共享报表与统一规则（点击 ≥ 8 且 0 单 = 否定；≥ 2 单且 ACOS ≤ 30% = 加词），与流量分析同一份计算结果。</div>
+        <div>结论与「报表分析 · 搜索词」同一份计算，阈值在「设置 → 搜索词阈值」里改，改完这里同时生效。</div>
       </div>
 
       <AmazonKeywordAnalysisBlock analysis={analysis} />
@@ -82,7 +82,7 @@ export function AmazonSearchTermWordsBlock({ model, onOpenTraffic, onClearKeywor
                 <td className="text" title={word.keyword}>
                   {onOpenTraffic === undefined
                     ? word.keyword
-                    : <button className="wb-keyword-link" type="button" title="在流量分析查看这个词" onClick={() => onOpenTraffic(word.keyword)}>{word.keyword}</button>}
+                    : <button className="wb-keyword-link" type="button" title="在报表分析里查看这个词" onClick={() => onOpenTraffic(word.keyword)}>{word.keyword}</button>}
                 </td>
                 <td><span className={`wb-kw-decision is-${word.code}`}>{DECISION_LABEL[word.code]}</span></td>
                 <td>{count(word.clicks)}</td>

@@ -95,7 +95,7 @@ export function IdeasDetailPane({ model, dictOf, busy, startAISession }: IdeasDe
     </div>
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
       <Badge dict={dictOf('idea_kind')} code={selectedIdea.kindCode} />
-      {selectedIdea.tags.map((tag) => <span key={tag} style={{ fontSize: 12, color: '#999' }}>#{tag}</span>)}
+      {selectedIdea.tags.map((tag) => <span key={tag} style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>#{tag}</span>)}
     </div>
     <MarkdownText text={selectedIdea.contentMd || '（暂无内容）'} />
   </div>

@@ -14,6 +14,9 @@ import {
 } from '../db/repo.js'
 import { makeAiSessionRoutes } from './routes/ai-sessions.js'
 import { makeAmazonDatasetRoutes } from './routes/amazon-datasets.js'
+import { makeAmazonTablePreviewRoutes } from './routes/amazon-table-preview.js'
+import { makeAmazonImportRoutes } from './routes/amazon-import.js'
+import { makeUniverOfficeRoutes } from './routes/univer-office.js'
 import { makeDraftRoutes } from './routes/drafts.js'
 import { makeExpertRoutes } from './routes/experts.js'
 import { isLoopbackRequest, readJsonBody, todayRange, writeJson } from './routes/helpers.js'
@@ -24,6 +27,7 @@ import { makeKnowledgeRecallRoutes } from './knowledgeRecallRoute.js'
 import type { KnowledgeRecallManager } from '../knowledge/recall.js'
 import { makeModelModalityRoutes, type LlmModalityProbe } from './routes/model-modalities.js'
 import { makeAsinRoutes } from './routes/asin.js'
+import { makeProductRoutes } from './routes/products.js'
 import { makeInventoryRoutes } from './routes/inventory.js'
 import { makeOplogRoutes } from './routes/oplog.js'
 import { makeKeywordPlanRoutes } from './routes/keyword-plans.js'
@@ -113,6 +117,15 @@ export interface WorkbenchRouteDeps extends ReminderRouteDeps {
    * 草稿确认的 `expert` 分支也不接管 —— 其余路由照常，插件不会 pending。
    */
   experts?: ExpertService
+  /**
+   * Univer 软探测（并入 CSV 版块的表格能力）。
+   *
+   * 传的是 `() => ctx.get('univer')` —— **每次请求现探**，而不是启动时探一次缓存：
+   * 用户可能在运行中装上/卸掉 `dsh-univer-office`，缓存会让界面一直说"没装"。
+   *
+   * 未注入（测试里的朴素用法）时这两条路由不注册，其余路由照常。
+   */
+  probeUniver?: () => unknown
 }
 
 export function makeRoutes(db: DatabaseSync, deps: WorkbenchRouteDeps = {}): WebRoute[] {
@@ -273,9 +286,20 @@ export function makeRoutes(db: DatabaseSync, deps: WorkbenchRouteDeps = {}): Web
     ...makeIdeaRoutes(db),
     ...makeIdeaClusterRoutes(db),
     ...makeKnowledgeRoutes(db),
-    ...makeAmazonDatasetRoutes(db),
+    ...makeAmazonDatasetRoutes(db, { probeUniver: deps.probeUniver }),
+    // 统一导入（P2-2）：六种报表同一套列校验；旧 datasets 写入路由内部也调它。
+    ...makeAmazonImportRoutes(db),
+    /**
+     * 无持久化表格预览（2026-10-30）：产品库/付款对账这类派生视图的表格出口。
+     * **总是注册**（即便没装配探测函数）：这样未装 Univer 时前端收到的是 503 UNIVER_MISSING，
+     * 而不是 404 —— 404 会被误读成"接口写错了"。
+     */
+    ...makeAmazonTablePreviewRoutes(deps.probeUniver),
+    // 表格能力桥：CSV -> .univer（并入报表/关键词页的 CSV 出口）。未装配探测函数时整段不注册。
+    ...(deps.probeUniver === undefined ? [] : makeUniverOfficeRoutes(deps.probeUniver)),
     ...makeOplogRoutes(db),
     ...makeAsinRoutes(db),
+     ...makeProductRoutes(db),
     ...makeInventoryRoutes(db),
     ...makeKeywordPlanRoutes(db),
     ...makeCalculatorScenarioRoutes(db),

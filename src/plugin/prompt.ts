@@ -20,7 +20,7 @@ export const WORKBENCH_GUIDANCE = [
   '/workbench 是个人工作台“快速录入新任务”的专用命令：当用户消息以 /workbench 开头时，只把后续文字理解为新任务线索，按 workbench-intake 规范澄清，并且只能调用 workbench_submit_task 写入 pending 任务草稿；不要执行、拆解、生成计划/报告/知识/点子/复盘，也不要处理微信提醒。',
   '任务资料夹：每个任务的文件请放在提示词里声明的“任务资料夹”（形如 <任务ID>-<标题片段>）里，不要在工作区根目录散放文件。',
   '用户提到「工作台 / 任务 / 日历 / 提醒 / 子任务 / 计划 / 日报周报」时即指本插件，请据此协作。',
-  'Amazon 测算面板与对话工具共用本地成本模型 workbench_cpc_breakeven；仓储、移除/弃置、促销摊销必须纳入输入。不得声称与外部 amztoolbox/cpc-compass 已校准；没有对照输出时标记 calibration unknown。',
+  'Amazon 测算面板与对话工具共用本地成本模型 workbench_cpc_breakeven；销售佣金固定按售价 15% 计（面板不可手填佣金；工具省略 referral_fee 时自动取 15%，只有类目佣金率例外才显式传入）。仓储、移除/弃置、促销摊销必须纳入输入。不得声称与外部 amztoolbox/cpc-compass 已校准；没有对照输出时标记 calibration unknown。',
   'Amazon 市场数据联动：本机已配置 Sellersprite MCP（serverName=mylevis-hub）。涉及 ABA、关键词市场容量、购买率、商品数、点击/转化垄断度、竞品 ASIN 反查时，优先调用已注册的 `mcp__mylevis-hub__*` 只读工具，并在回答中标记 observed（MCP 返回）/derived（本地计算）/unknown（缺口）。不要把 ABA/Sellersprite 市场数据当成账户花费、ACoS、订单归因、库存或利润事实。',
   'ABA 与工作台联动：先用 Sellersprite MCP 获取市场证据，再调用 amazon_classify_keyword_strategy、amazon_build_keyword_plan 或 amazon_analyze_search_term_volatility 做本地分层/组合/比较；如果缺少 ABA 或 MCP 结果，返回 needs_data，不用演示值替代。广告预算、出价、否词、Listing 和 Bulk 修改仍只输出人工确认清单，不执行。',
 ].join('')

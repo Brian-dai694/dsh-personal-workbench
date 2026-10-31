@@ -145,8 +145,10 @@ export type {
 
 // Amazon 报表数据集域（v1.18）：搜索词报表的导入 / 读取 / AI 建议写回
 export {
-  AMAZON_DATASET_KINDS, createAmazonDataset, getAmazonDataset, getLatestAmazonDataset, isAmazonDatasetKind,
+  AMAZON_DATASET_KINDS, createAmazonDataset, findDuplicateAmazonDataset, getAmazonDataset,
+  getLatestAmazonDataset, isAmazonDatasetKind,
   listAmazonDatasets, saveAmazonDatasetSummary, saveSearchTermReview, deleteAmazonDataset,
+  setAmazonDatasetUniverFile,
 } from './repo/amazonDatasets.js'
 export type {
   AmazonDatasetKind, AmazonDatasetRow, AmazonDatasetSummary, AmazonDatasetSummaryPayload,
@@ -162,6 +164,8 @@ export {
   importOplogEntries,
   listOplogTypes,
   listOplogTaskOptions,
+  listOplogCompletionCandidates,
+  listOplogEntriesByTask,
   listOplogDayIndex,
   oplogKpiCounts,
   setOplogPinned,
@@ -170,12 +174,20 @@ export {
   listOplogEntries,
   oplogFacets,
 } from './repo/oplog.js'
-export type { OplogDraft, OplogEntry, OplogFacets, OplogFilter, OplogImportSummary, OplogKpiCounts, OplogTaskOption, OplogDayIndexEntry, OplogType } from './repo/oplog.js'
+export type { OplogCompletionCandidate, OplogAssociation, OplogDraft, OplogEntry, OplogFacets, OplogFilter, OplogImportSummary, OplogKpiCounts, OplogTaskOption, OplogDayIndexEntry, OplogType } from './repo/oplog.js'
 
 // ASIN 域
-export { asinFacets, asinTrend, batchUpdateAsins, deleteAsinStore, findOpenTaskByAsin, getAsinTaskSource, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinJudgments, listAsinProducts, listAsinStoreSummaries, listAsinStores, setAsinStoreWatch, queryAsinPage, setAsinJudgment, setAsinWatch, trendsFor } from './repo/asin.js'
+export { AsinConflictError, asinFacets, asinTrend, batchUpdateAsins, createAsinProduct, createAsinStore, deleteAsinStore, findOpenTaskByAsin, getAsinProduct, getAsinStore, getAsinTaskSource, importAsinProducts, importAsinStores, listAllAsinProducts, listAsinJudgments, listAsinProducts, listAsinStoreSummaries, listAsinStores, normalizeAsinCode, setAsinStoreWatch, queryAsinPage, setAsinJudgment, setAsinWatch, trendsFor, updateAsinProduct, updateAsinStore } from './repo/asin.js'
 export type { AsinBatchAction, AsinBatchResult, AsinStoreSummary, AsinTaskSource } from './repo/asin.js'
 export type { AsinFacets, AsinFilter, AsinImportSummary, AsinJudgment, AsinJudgmentInput, AsinPage, AsinTrendPoint, AsinVerdict } from './repo/asin.js'
+
+// 独立产品库（migration 39）：不读取/写入 asin_products
+export {
+  DEFAULT_PRODUCT_PAGE_SIZE, MAX_PRODUCT_PAGE_SIZE, ProductConflictError, ProductFieldError,
+  createProduct, deleteProduct, getProduct, getProductById, listProducts, productFacets,
+  queryProductPage, updateProduct,
+} from './repo/products.js'
+export type { ProductFacets, ProductFilter, ProductPage, ProductPatch, ProductRecord } from './repo/products.js'
 
 // 库存补货看板（migration 31）：只存盘点输入，结论现算
 export { createInventorySnapshot, deleteInventorySnapshot, getInventorySnapshot, getLatestInventorySnapshot, listInventorySnapshots } from './repo/inventory.js'

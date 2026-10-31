@@ -28,7 +28,7 @@ export function TaskListView({ model, dictOf, dicts, selectedId, pending, childr
     <>
               <div style={{ position: 'relative', zIndex: 25, display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input
-                  style={{ position: 'relative', zIndex: 25, flex: 1, minWidth: 140, background: 'var(--dsw-alias-bg-base,#17171a)', border: '1px solid var(--dsw-alias-border-l1,rgba(255,255,255,.15))', color: 'inherit', borderRadius: 8, padding: '7px 10px' }}
+                  style={{ position: 'relative', zIndex: 25, flex: 1, minWidth: 140, background: 'var(--wb-bg-base)', border: '1px solid var(--wb-border-l1)', color: 'inherit', borderRadius: 8, padding: '7px 10px' }}
                   placeholder={t('搜索标题 / 描述')}
                   value={model.filter.keyword}
                   onChange={(e) => model.actions.patchFilter({ keyword: e.target.value })}
@@ -63,7 +63,7 @@ export function TaskListView({ model, dictOf, dicts, selectedId, pending, childr
               <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>{t('排序')}</span>
                 <select
-                  style={{ background: 'var(--dsw-alias-bg-base,#17171a)', border: '1px solid var(--dsw-alias-border-l1,rgba(255,255,255,.15))', color: 'inherit', borderRadius: 8, padding: '7px 10px' }}
+                  style={{ background: 'var(--wb-bg-base)', border: '1px solid var(--wb-border-l1)', color: 'inherit', borderRadius: 8, padding: '7px 10px' }}
                   value={model.sortKey}
                   onChange={(e) => model.actions.setSortKey(e.target.value as TaskSortKey)}
                 >

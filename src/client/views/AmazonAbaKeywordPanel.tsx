@@ -271,14 +271,14 @@ export function AmazonAbaKeywordPanel({ onSendToAI, model, aba }: AmazonAbaKeywo
           </div>
           <div className="wb-aba-report-foot">
             已写回建议 <b>{searchMeta.advice}</b> 条
-            {searchMeta.advice === 0 && <em>（去「流量分析」点「生成本地建议」，或用下面的「带入 DSH 比对」让助手用市场证据写回）</em>}
+            {searchMeta.advice === 0 && <em>（去「报表分析 · 搜索词」点「生成本地建议」，或用下面的「带入 DSH 比对」让助手用市场证据写回）</em>}
             {searchRows.size > 0 && searchMeta !== null && <span> · 与本页词表可匹配 {searchMeta.rows > 0 ? `（词表 ${rows.length} 个）` : ''}</span>}
           </div>
         </div>
       )}
       <div className="wb-aba-linkstate" role="status">
         <span className={`wb-aba-linkstate-item${searchTitle === '' ? ' is-missing' : ''}`}>
-          搜索词报表：{searchTitle === '' ? '未导入（去「流量分析」导入一份）' : `${searchTitle} · ${searchRows.size} 个词`}
+          搜索词报表：{searchTitle === '' ? '未导入（去「报表分析 · 搜索词」导入一份）' : `${searchTitle} · ${searchRows.size} 个词`}
         </span>
         <span className={`wb-aba-linkstate-item${sets.length === 0 ? ' is-missing' : ''}`}>
           ABA 词表：{sets.length === 0 ? '尚未保存（选文件导入后点「保存词表」）' : `${sets.length} 份`}

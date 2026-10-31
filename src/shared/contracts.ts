@@ -251,6 +251,19 @@ export interface ReminderQueueEntry {
 // 设置
 // ---------------------------------------------------------------------------
 
+/**
+ * 搜索词判定阈值（Step 0）：`null` = 用 `KEYWORD_RULES` 默认值。
+ *
+ * 口径是**账号级**的（不是某份报表的），所以挂在设置域而不是数据集上；
+ * 两页必须读同一个值，否则同一份数据会得出两种结论。
+ */
+export interface AmazonKeywordThresholds {
+  /** 点击达到多少次仍无单算浪费（校准下限 3）。 */
+  wasteMinClicks: number
+  /** 加词 ACOS 上限（0.1–0.95）。 */
+  goodAcos: number
+}
+
 export interface WorkbenchSettings {
   defaultWorkspace: string
   autoCreateTypeFolders: boolean
@@ -288,6 +301,13 @@ export interface WorkbenchSettings {
    * 开关状态与规则文案一起呈现（见 `CapacityRulePanel`），避免"数字变了但不知道谁改的"。
    */
   dailyCapacityIncludeOverdue: boolean
+  /**
+   * 搜索词判定阈值：账号级共享口径，`null` = 未校准、走默认值。
+   *
+   * 为什么放在设置里：阈值一改，两页必须同时变；留在某个面板的内存 state 里刷新就丢，
+   * 还会出现"同一批词换一页就换一套阈值"。
+   */
+  amazonKeywordThresholds: AmazonKeywordThresholds | null
   /**
    * 外部角色目录（D11/§6.3）：可配置的一等角色来源，如 `（外部角色目录）`。
    *

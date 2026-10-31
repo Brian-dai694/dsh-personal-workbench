@@ -223,6 +223,7 @@ test('关联：ABA 词表与搜索词报表按词精确联接（大小写不敏�
   await withServer(async ({ request }) => {
     // 1) 先落一份搜索词报表（走到真实导入路由）
     const dataset = await request('POST', '/api/workbench/amazon/datasets', {
+      kindCode: 'search_term',
       title: '搜索词报表 自检',
       period: '2026-10-01~2026-10-21',
       sourceCode: 'paste',

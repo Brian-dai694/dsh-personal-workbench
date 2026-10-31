@@ -268,3 +268,103 @@ test('间距：日期面板任务页签与下方内容必须留出间隔（写�
    */
   assert.match(dayPanel, /data-day-tree=\{activeTab\}/, '内容区必须带 data-day-tree（间距判据要能量到它），且值取兜底后的页签')
 })
+
+/**
+ * 视觉对齐（2026-10-27，选品库「编辑店铺」弹框实测截图）：
+ *
+ * 截图里那张表有三处"看着就是没做完"的破绽，根因都不是缺样式，而是**两条通用规则
+ * 在错误的容器里生效**：
+ *
+ * | 现象 | 根因 |
+ * |---|---|
+ * | 勾选框被撑成整行宽、标签文字挤到右边竖排、弹窗底部多出一条空白 | `.wb-oplog-form` 的"整行宽度"输入框规则把 `input[type=checkbox]` 也算进来了 |
+ * | 右列「站点 / 店铺链接」比左列低半个字段，头顶还多一条孤线 | `.wb-dialog .wb-field + .wb-field`（给单列堆叠分组用的分隔线）在两列网格里也命中 |
+ *
+ * 两条都是**权重/兄弟关系**导致的静默命中，肉眼只能看到"歪了"，所以这里把判据钉在源码上：
+ * 分隔线要留着（设置弹窗的真单列堆叠靠它分组），但网格容器里必须显式中和。
+ */
+test('表单：整行宽度的输入框规则不得吞掉勾选框/单选框', () => {
+  const styles = readFileSync(new URL('../src/client/styles.ts', import.meta.url), 'utf8')
+  const rule = /\.wb-dialog \.wb-oplog-form input([^{]*)\{/.exec(styles)
+  assert.ok(rule !== null, '找不到 .wb-dialog .wb-oplog-form 的输入框规则（选择器被改名了？判据要跟着改）')
+  const selectors = rule[1]
+  for (const type of ['checkbox', 'radio']) {
+    assert.ok(selectors.includes(`:not([type='${type}'])`),
+      `输入框的整行宽度规则必须排除 [type='${type}']：\n`
+      + '被它命中后勾选框会撑满一行、标签被挤成 min-content 竖排，弹窗底部多出一条空白')
+  }
+  // 判据之外还要保证"没被排除后没人接管"：勾选框的规格仍在
+  assert.match(styles, /\.wb-dialog input\[type='checkbox'\][^{]*\{[^}]*width:\s*15px/,
+    '勾选框必须有 15px 的显式规格（原生灰块是"没设计"最强的信号）')
+})
+
+test('表单：两列网格里的相邻字段不得继承"堆叠字段分隔线"', () => {
+  const styles = readFileSync(new URL('../src/client/styles.ts', import.meta.url), 'utf8')
+  // ① 分隔线本体要留着：设置弹窗那种单列堆叠靠它分组，不能被"顺手删掉"
+  assert.match(styles, /\.wb-dialog \.wb-field \+ \.wb-field\s*\{[^}]*border-top:\s*1px/,
+    '单列堆叠字段之间的分隔线被删了 —— 设置弹窗会变成一堵没有分组的墙')
+  // ② 网格容器里必须中和（两列同行 → 右列不该被推下 28px）
+  for (const container of ['\\.wb-oplog-form-row', '\\.wb-field-grid']) {
+    const neutral = new RegExp(`\\.wb-dialog ${container} > \\.wb-field \\+ \\.wb-field[^{]*\\{([^}]*)\\}`).exec(styles)
+    assert.ok(neutral !== null,
+      `${container} 里缺少对相邻字段分隔线的中和规则：右列会被 margin-top 16 + padding-top 12`
+      + ' 推下半个字段并多出一条孤线（截图里「站点」正好比「店铺名称」低）')
+    for (const [prop, value] of [['margin-top', '0'], ['padding-top', '0'], ['border-top', '0']]) {
+      assert.match(neutral[1], new RegExp(`${prop}:\\s*${value}`),
+        `${container} 的中和规则缺少 ${prop}: ${value} —— 少一条，现象就还在`)
+    }
+  }
+})
+
+/**
+ * 同行内勾选的文案必须是**显式 flex 子项**。
+ *
+ * 裸文本在 flex 容器里是匿名项，一旦邻居（那个坏掉的勾选框）占了整行，它会被压到
+ * min-content：中文没有断词机会 → 一个字一行，竖着排到弹窗外面去（截图里的
+ * 「关注这家店铺」就是这么竖在那儿的）。包一层 span 才有可用的 min-width: 0。
+ */
+test('表单：行内勾选的文案必须是显式 flex 子项（不能是裸文本）', () => {
+  const forms = readFileSync(new URL('../src/client/components/AsinManualForms.tsx', import.meta.url), 'utf8')
+  const labels = [...forms.matchAll(/className="wb-inline-check"([\s\S]*?)<\/label>/g)]
+  assert.equal(labels.length, 2, `两个手工维护弹框各有一个行内勾选，实际扫到 ${labels.length} 个`)
+  for (const [, body] of labels) {
+    assert.match(body, /<span>/, '行内勾选的文案要用 <span> 包住，否则会被压成竖排（见上方说明）')
+  }
+  assert.match(forms, /<input type="checkbox"/, '勾选框必须还在（别为了"对齐"把控件删了）')
+})
+
+/**
+ * 视觉对齐（2026-10-27，会话标题栏）：**宿主 chrome 里的元素也必须在令牌作用域内**。
+ *
+ * 用户截图："标准模式 | 工作台 | 8 个后台任务" 那一排里，只有「工作台」大一圈。
+ * 真因不是字号写错，而是**作用域**：
+ *
+ * | 事实 | 后果 |
+ * |---|---|
+ * | `--wb-sp-* / --wb-fs-* / --wb-r-*` **只定义在令牌作用域块里**（`--wb-label-*` 等则由 tokenLayerCss 铺到 :root） | 作用域外的元素拿不到比例令牌 |
+ * | `.wb-header-entry` 挂在宿主 `conversation.session.header.actions` 槽位，**不在**面板子树 / portal 浮层里 | `font-size: var(--wb-fs-1)` 变成"无效值"，退回**继承**（宿主 16px）；`padding` / `border-radius` 退回初始值 |
+ *
+ * 判据两条：① 那枚入口必须被列进作用域选择器；② 字号取 fs-2（13px，与同排宿主 chip 实测一致）。
+ * 这两条一起才挡得住"看上去只是字号小一号"的复发。
+ */
+test('会话标题栏入口必须在令牌作用域内，且字号与同排宿主 chip 一致', () => {
+  const styles = readFileSync(new URL('../src/client/styles.ts', import.meta.url), 'utf8')
+  /**
+   * 作用域块按**内容**定位（含 `--wb-accent:` 的那条规则），不按选择器前缀猜 ——
+   * 文件里 `[data-dsh-personal-workbench-view] {` 另有一处（container-type），
+   * 按前缀匹配会抓到那条空壳规则，判据就永远通过。
+   * 锚点选 --wb-accent 而不是 --wb-sp-1：块中间有一处 ${zLayerCss()} 插值，
+   * 它自带一个 `}`，用 `[^}]*` 抠块的写法在那里就会断掉（sp-* 在插值之后）。
+   */
+  const scopeRule = /[^}]*\{[^}]*--wb-accent:[^}]*\}/.exec(styles)
+  assert.ok(scopeRule !== null, '找不到定义令牌（--wb-accent）的作用域规则块')
+  const scopeSelectors = scopeRule[0].slice(0, scopeRule[0].indexOf('{'))
+  for (const cls of ['.wb-dialog', '.wb-overlay', '.wb-toasts', '.wb-header-entry']) {
+    assert.ok(scopeSelectors.includes(cls),
+      `令牌作用域的选择器列表里缺 ${cls}：它在面板子树/portal 之外，`
+      + '拿不到 --wb-sp-* / --wb-fs-* / --wb-r-*，字号与内边距会静默退回初始值')
+  }
+  assert.match(styles, /\.wb-header-entry \{[^}]*font-size:\s*(var\(--wb-fs-2\)|13px)/,
+    '.wb-header-entry 的字号必须是 var(--wb-fs-2)（13px）—— 用 fs-1(12px) 会比旁边那排小一号，'
+    + '用裸继承会比旁边大一圈（两个方向都被用户反馈过）')
+})

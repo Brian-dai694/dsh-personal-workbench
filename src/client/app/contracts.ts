@@ -9,7 +9,7 @@
  */
 
 /** 左侧主视图（拆分前是 `index.tsx` 里 `useState` 的内联联合类型，逐字保留）。 */
-export type WorkbenchView = 'today' | 'calendar' | 'list' | 'knowledge' | 'ideas' | 'amazon' | 'keywords' | 'traffic' | 'reports' | 'inventory' | 'payments' | 'oplog' | 'asin'
+export type WorkbenchView = 'today' | 'calendar' | 'list' | 'knowledge' | 'ideas' | 'amazon' | 'keywords' | 'traffic' | 'reports' | 'inventory' | 'payments' | 'oplog' | 'asin' | 'products'
 
 /**
  * 「编辑任务」表单草稿（拆分前是入口 `useState<{ … } | null>` 的内联对象类型，逐字保留）。

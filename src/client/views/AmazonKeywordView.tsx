@@ -21,8 +21,11 @@ import type { KeywordPlan, KeywordPlanSummary } from '../../db/repo/keywordPlans
 import type { UseKeywordPlansResult } from '../hooks/useKeywordPlans.js'
 import type { UseAmazonDatasetsResult } from '../hooks/useAmazonDatasets.js'
 import type { UseAbaKeywordSetsResult } from '../hooks/useAbaKeywordSets.js'
+import type { UseUniverCsvTableResult } from '../hooks/useUniverCsvTable.js'
 import { AmazonAbaKeywordPanel } from './AmazonAbaKeywordPanel.js'
 import { AmazonSearchTermWordsBlock } from './AmazonSearchTermWordsBlock.js'
+import { UniverCapabilityHint } from '../components/UniverCapabilityHint.js'
+import { UniverPreviewCard } from '../components/UniverPreviewCard.js'
 
 const MATCHES: Array<{ code: KeywordMatch; label: string }> = [
   { code: 'exact', label: '精准' },
@@ -46,12 +49,13 @@ export interface AmazonKeywordViewProps {
   amazon: UseAmazonDatasetsResult
   /** ABA 词表域（D17）：请求在 hook 里，视图只拿列表与意图。 */
   aba: UseAbaKeywordSetsResult
+  table: UseUniverCsvTableResult
   onSendToAI?: (text: string) => void
   /** 跳到流量分析并定位到这个搜索词（T12 联动）。 */
   onOpenTraffic?: (keyword: string) => void
 }
 
-export function AmazonKeywordView({ model, amazon, aba, onSendToAI, onOpenTraffic }: AmazonKeywordViewProps): JSX.Element {
+export function AmazonKeywordView({ model, amazon, aba, table, onSendToAI, onOpenTraffic }: AmazonKeywordViewProps): JSX.Element {
   const [seed, setSeed] = useState('welding gloves')
   const [modifiers, setModifiers] = useState('tig, mig, heat resistant')
   const [negatives, setNegatives] = useState('cheap, free')
@@ -158,6 +162,13 @@ export function AmazonKeywordView({ model, amazon, aba, onSendToAI, onOpenTraffi
     setSavedNote(`已导出「${current.title}」共 ${result.rows} 行到本机`)
   }
 
+  async function openPlanInUniver(): Promise<void> {
+    if (current === null) return
+    const columns = ['关键词', '匹配', '建议活动', '理由']
+    const snapshot = current.rows.map((row) => [row.keyword, row.match, row.campaign, row.rationale])
+    await table.actions.openTable(columns, snapshot, `关键词分析 · ${current.title}`)
+  }
+
   return (
     <section className="wb-amazon-tools" aria-label="关键词规划">
       <header className="wb-amazon-heading">
@@ -225,7 +236,17 @@ export function AmazonKeywordView({ model, amazon, aba, onSendToAI, onOpenTraffi
         <div className="wb-amazon-negatives">
           <h3 className="wb-amazon-section-title">否词清单（{negativeList.length}）</h3>
           <div className="wb-amazon-chips">{negativeList.map((word) => <span key={word} className="wb-chip is-neutral">{word}</span>)}</div>
-          <p className="wb-amazon-footnote">否词只作为人工复核线索：本页不读取搜索词报表，不判断某个词是否真的该否。</p>
+          {current !== null && (
+         <>
+           <div className="wb-amazon-result-actions">
+             <button className="wb-btn" type="button" disabled={table.available !== true || table.busy} onClick={() => void openPlanInUniver()}>在 Univer 中分析</button>
+             <small className="wb-package-unit-note">来源：当前已保存关键词方案快照；原生词库仍是正本，Univer 草稿合并不会自动写回词库。</small>
+           </div>
+           <UniverCapabilityHint available={table.available} contentRead={table.contentRead} onRetry={() => void table.actions.refreshAvailability()} subject="library" />
+           <UniverPreviewCard table={table} title="关键词分析快照" />
+         </>
+       )}
+       <p className="wb-amazon-footnote">否词只作为人工复核线索：本页不读取搜索词报表，不判断某个词是否真的该否。</p>
         </div>
       )}
 

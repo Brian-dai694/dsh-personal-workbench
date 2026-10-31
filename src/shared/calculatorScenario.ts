@@ -45,13 +45,22 @@ export function normalizeCalculatorInput(raw: unknown): CalculatorInputRecord {
   return out
 }
 
-/** 两个方案之间**改了哪些字段**（只报数值不同的项）。 */
+/**
+ * **由别的字段推导**的字段：不参与"两个方案差在哪"。
+ *
+ * 销售佣金恒定 = 售价 × 15%（见下方 REFERRAL_FEE_RATE），两份方案售价不同时佣金必然
+ * 跟着变 —— 把它列进 diff 只是在重复"售价差了"，还会让人误以为佣金是能自己填的输入项。
+ */
+export const CALCULATOR_DERIVED_FIELDS: ReadonlySet<string> = new Set(['referralFee'])
+
+/** 两个方案之间**改了哪些字段**（只报数值不同的项；推导字段不报）。 */
 export function diffCalculatorInputs(
   a: CalculatorInputRecord,
   b: CalculatorInputRecord,
 ): Array<{ field: CalculatorField | 'calibrationCpc'; from: number | null; to: number | null }> {
   const diffs: Array<{ field: CalculatorField | 'calibrationCpc'; from: number | null; to: number | null }> = []
   for (const field of [...CALCULATOR_FIELDS, ...CALCULATOR_OPTIONAL_FIELDS]) {
+    if (CALCULATOR_DERIVED_FIELDS.has(field)) continue
     const from = a[field]
     const to = b[field]
     const fromValue = typeof from === 'number' ? from : null
@@ -84,6 +93,35 @@ export const CALCULATOR_FIELD_LABELS: Record<CalculatorField | 'calibrationCpc',
 /** 比例类字段：表格里要显示成百分比，不能显示 0.25。 */
 export const CALCULATOR_RATE_FIELDS: ReadonlySet<string> = new Set(['returnRate', 'targetAcos', 'conversionRate', 'adOrderShare'])
 
+/**
+ * 销售佣金比例：**固定 15%**（用户口径，2026-10-27）。
+ *
+ * 为什么固定成比例、而不是留一个可改的金额：佣金按售价比例计，把金额做成可填项时，
+ * 改了售价佣金不跟着变，盈亏 CPC 会安静地算错（结果看着依然合法，最难发现）。
+ * 现在佣金只由售价推导；类目佣金率不同（如 8%）属于例外，那时改的是这个常量，
+ * 不是界面上临时编一个金额。
+ */
+export const REFERRAL_FEE_RATE = 0.15
+
+/** 售价对应的佣金；非法/非正售价按 0 处理，让校验层去报"售价必须大于 0"。 */
+export function referralFeeOf(price: number): number {
+  if (!Number.isFinite(price) || price <= 0) return 0
+  return Math.round(price * REFERRAL_FEE_RATE * 100) / 100
+}
+
+/**
+ * 把一份测算输入里的佣金覆盖成「售价 × 15%」。
+ *
+ * 面板、方案库载入、多方案对比三条路径都必须过这里：否则会出现
+ * 「面板上佣金是 15%，对比表里还是老方案存下的另一个数」——
+ * 同一款货两张表两个结论，比算错更糟。
+ */
+export function withFixedReferralFee<T extends { price?: number; referralFee?: number }>(
+  input: T,
+): T & { referralFee: number } {
+  return { ...input, referralFee: referralFeeOf(input.price ?? 0) }
+}
+
 /** 方案名归一：去空白 + 截断（过长的名字会把列表行撑爆）。 */
 export function normalizeScenarioName(value: unknown): string {
   const text = typeof value === 'string' ? value.trim() : ''
@@ -101,6 +139,7 @@ export const CALCULATOR_DEFAULTS: Required<Omit<CalculatorInputRecord, 'calibrat
   unitCost: 8,
   freight: 3,
   fbaFee: 6,
+  /** 仅作占位：佣金恒定由售价推导（referralFeeOf(39.99) = 6.00）。 */
   referralFee: 6,
   storageFee: 0,
   removalFee: 0,

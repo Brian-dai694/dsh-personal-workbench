@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
+import { parseUploadFile, type ParseUploadResult } from '../parseUpload.js'
 import { WORKBENCH_BUILD_ID } from '../buildId.js'
 import type { AmazonDatasetKind, AmazonDatasetRow, AmazonDatasetSummary } from '../../db/repo/amazonDatasets.js'
 import type { TrafficRow } from '../../shared/amazonTrafficTools.js'
@@ -32,13 +33,17 @@ export interface UseAmazonDatasetsActions {
   /** 导入一份报表并把它设为当前数据集；失败返回 null（错误写进 error）。 */
   importRows: (input: ImportDatasetInput) => Promise<AmazonDatasetRow | null>
   /**
-   * 读一个用户选的文件，返回**文本**（TSV/CSV 原文）。
+   * 读一个文件，返回**正文 + 文件元信息**（`text` / `format` / `sheetCount` / `sheetName`）。
    *
    * 为什么放在 hook 而不是视图：视图不许发 HTTP（D17 结构硬门）。
-   * 文本类扩展名本机 `file.text()`；`.xlsx/.xls` 一律交给服务端按魔数解析 ——
-   * 二进制文件用 `readAsText` 读会得到乱码，正是"第 657 行 clicks 不是数字"的成因。
+   * 实现只有一份（`client/parseUpload.ts`）：文本类本机 `file.text()`，
+   * `.xlsx/.xls` 交服务端按魔数解析 —— `readAsText` 读二进制会得到乱码，
+   * 正是"第 657 行 clicks 不是数字"的成因。
+   *
+   * 2026-10-29：返回从 `string` 改成对象 —— 服务端早就在回 `sheetCount`/`sheetName`，
+   * 以前被丢掉，导致"多工作表只导第一张"在界面上无法提示。调用方取 `.text`。
    */
-  parseUpload: (file: File) => Promise<string>
+  parseUpload: (file: File) => Promise<ParseUploadResult>
   /** 切到某个已导入的数据集（含 AI 最新写回的建议）。 */
   select: (id: string) => Promise<void>
   remove: (id: string) => Promise<void>
@@ -168,7 +173,11 @@ export function useAmazonDatasets(): UseAmazonDatasetsResult {
           period: input.period,
           rows: input.rows,
           sourceCode: input.sourceCode ?? 'paste',
-          ...(input.kindCode === undefined ? {} : { kindCode: input.kindCode }),
+          /**
+           * `kindCode` 必须显式上线：服务端已不再接受“缺 kind 默认 search_term”。
+           * 这个 hook 只服务搜索词，所以缺省值在这里补上（而不是留给服务端猜）。
+           */
+          kindCode: input.kindCode ?? 'search_term',
         }),
       })
       if (!alive.current) return null
@@ -214,24 +223,13 @@ export function useAmazonDatasets(): UseAmazonDatasetsResult {
     setCurrentKeywordState(next === '' ? null : next)
   }, [])
 
-  const parseUpload = useCallback(async (file: File): Promise<string> => {
-    const lower = file.name.toLowerCase()
-    if (/\.(csv|tsv|txt)$/.test(lower)) return await file.text()
-    const buffer = await file.arrayBuffer()
-    const bytes = new Uint8Array(buffer)
-    let binary = ''
-    const chunk = 0x8000
-    for (let offset = 0; offset < bytes.length; offset += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunk))
-    }
-    const res = await api<{ ok: boolean; tsv: string }>('/api/workbench/amazon/datasets/parse-file', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ filename: file.name, base64: btoa(binary) }),
-    })
-    if (typeof res.tsv !== 'string' || res.tsv === '') throw new Error('这个文件里没有可用的表格数据')
-    return res.tsv
-  }, [])
+  /**
+   * 文件 → 文本：唯一实现在 `client/parseUpload.ts`（报表页用同一份）。
+   *
+   * 视图不许发 HTTP（D17），所以入口留在 hook；但"怎么读文件"不归本域，
+   * 两份拷贝已经出现过一次（报表页另抄了一遍），改规则漏一处就是两页行为不一致。
+   */
+  const parseUpload = useCallback((file: File): Promise<ParseUploadResult> => parseUploadFile(file), [])
 
   /**
    * 本地规则建议：算（纯函数）→ PATCH 写回 → 重新读回整份数据集。

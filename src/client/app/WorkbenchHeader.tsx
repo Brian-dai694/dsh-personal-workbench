@@ -24,7 +24,7 @@ import { useI18n } from '../i18n.js'
  * 并给每项配语义图标 —— 原先 3 个 `chart`、2 个 `list`、2 个 `search` 复用同一图形，
  * 图标等于没有信息量（"选品"和"关键词"长得一样）。
  */
-type AdView = 'amazon' | 'keywords' | 'traffic' | 'reports' | 'inventory' | 'payments' | 'oplog' | 'asin'
+type AdView = 'amazon' | 'keywords' | 'traffic' | 'reports' | 'asin' | 'products' | 'inventory' | 'payments' | 'oplog'
 
 /** 组内同一工作节奏，组间是不同节奏：① 看广告与流量，② 看商品与经营。 */
 const AD_GROUPS: ReadonlyArray<{
@@ -32,19 +32,15 @@ const AD_GROUPS: ReadonlyArray<{
   views: ReadonlyArray<{ key: AdView; label: string; icon: string }>
 }> = [
   {
-    label: '广告分析',
+    /** 内部仍保留 group 元数据，但不渲染售前/售中/售后或业务分组标题。 */
+    label: '',
     views: [
       { key: 'amazon', label: '测算', icon: 'calculator' },
-      { key: 'keywords', label: '关键词', icon: 'search' },
-      { key: 'traffic', label: '流量分析', icon: 'trend' },
-      { key: 'reports', label: '报表分析', icon: 'report' },
-    ],
-  },
-  {
-    label: '商品与经营',
-    views: [
+      { key: 'keywords', label: '关键词库', icon: 'search' },
       { key: 'asin', label: '选品', icon: 'target' },
+      { key: 'reports', label: '报表分析', icon: 'report' },
       { key: 'inventory', label: '库存', icon: 'package' },
+      { key: 'products', label: '产品库', icon: 'table' },
       { key: 'payments', label: '付款对账', icon: 'receipt' },
       { key: 'oplog', label: '运营日志', icon: 'journal' },
     ],
@@ -57,7 +53,8 @@ const AD_DEFAULT: AdView = 'amazon'
 function readLastAdView(): AdView {
   try {
     const saved = globalThis.localStorage?.getItem(AD_LAST_KEY)
-    if (saved === 'amazon' || saved === 'keywords' || saved === 'traffic' || saved === 'reports' || saved === 'inventory' || saved === 'payments' || saved === 'oplog' || saved === 'asin') return saved
+    if (saved === 'traffic') return 'reports' // migrate the retired tab to its replacement
+    if (saved === 'amazon' || saved === 'keywords' || saved === 'reports' || saved === 'inventory' || saved === 'payments' || saved === 'oplog' || saved === 'asin') return saved
   } catch {
     // localStorage 被禁用（隐私模式/宿主限制）时退回默认，不影响功能
   }
@@ -94,21 +91,22 @@ export function WorkbenchHeader(props: WorkbenchAssembly): JSX.Element {
           <button
             className={`wb-seg ${inAds ? 'on' : ''}`}
             data-ad-parent
-            title={t('亚马逊：广告分析（测算 / 关键词 / 流量分析 / 报表分析）· 商品与经营（选品 / 库存 / 付款对账 / 运营日志）')}
+            title={t('亚马逊：测算 / 关键词库 / 选品 / 报表分析 / 库存 / 产品库 / 付款对账 / 运营日志')}
             onClick={() => setView(lastAd)}
           ><Icon name="chart" />{inAds ? `${t('亚马逊')} · ${t(adView.label)}` : t('亚马逊')}</button>
         </div>
-        <div style={{ flex: 1 }} />
-        {pendingCount > 0 && (
-          <button className="wb-pending-pill" onClick={() => setPendingOpen(true)} title={t('待你处理的草稿与提醒')}>
-            <Icon name="bell" size={13} />{t('待处理')} <span className="count">{pendingCount}</span>
-          </button>
-        )}
-        <button className="wb-btn primary" onClick={openQuickEntry} disabled={busy}><Icon name="sparkles" /><span className="wb-label">{t('快速录入')}</span></button>
-        <button className="wb-btn" onClick={() => forms.actions.toggleCreate()}><Icon name="plus" /><span className="wb-label">{t('新建')}</span></button>
-        <button className="wb-btn" onClick={() => setShowSettings((v) => !v)}><Icon name="settings" /><span className="wb-label">{t('设置')}</span></button>
-        <button className="wb-btn" onClick={collapseAll}><Icon name="list" /><span className="wb-label">{t('收起全部')}</span></button>
-        <button className="wb-btn" onClick={() => closePanel()}><Icon name="back" /><span className="wb-label">{t('返回对话')}</span></button>
+        <div className="wb-h-actions">
+          {pendingCount > 0 && (
+            <button className="wb-pending-pill" onClick={() => setPendingOpen(true)} title={t('待你处理的草稿与提醒')}>
+              <Icon name="bell" size={13} />{t('待处理')} <span className="count">{pendingCount}</span>
+            </button>
+          )}
+          <button className="wb-btn primary" onClick={openQuickEntry} disabled={busy}><Icon name="sparkles" /><span className="wb-label">{t('快速录入')}</span></button>
+          <button className="wb-btn" onClick={() => forms.actions.toggleCreate()}><Icon name="plus" /><span className="wb-label">{t('新建')}</span></button>
+          <button className="wb-btn" onClick={() => setShowSettings((v) => !v)}><Icon name="settings" /><span className="wb-label">{t('设置')}</span></button>
+          <button className="wb-btn" onClick={collapseAll}><Icon name="list" /><span className="wb-label">{t('收起全部')}</span></button>
+          <button className="wb-btn" onClick={() => closePanel()}><Icon name="back" /><span className="wb-label">{t('返回对话')}</span></button>
+        </div>
     </div>
     {inAds && (
       <div className="wb-h wb-h-sub" data-ad-subtabs>
@@ -116,9 +114,9 @@ export function WorkbenchHeader(props: WorkbenchAssembly): JSX.Element {
           <div
             key={group.label}
             className="wb-segmented wb-sub-segmented"
-            data-ad-group={group.label}
+            data-ad-group={group.label || 'amazon'}
             role="group"
-            aria-label={t(group.label)}
+            aria-label={group.label === '' ? t('Amazon 导航') : t(group.label)}
           >
             {group.views.map((entry) => (
               <button

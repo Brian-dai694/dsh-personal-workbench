@@ -12,6 +12,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
+import { parseUploadFile, type ParseUploadResult } from '../parseUpload.js'
 import type { AdReportKind, AdReportRow } from '../../shared/adReport.js'
 
 /** 只有这些类型归本 hook；搜索词归 `useAmazonDatasets`。 */
@@ -46,6 +47,18 @@ export interface UseAdReportDatasetsActions {
   loadLatest: (kind: LocalAdReportKind) => Promise<void>
   /** 导入一份报表并设为当前；失败返回 null（原因写进 error）。 */
   importRows: (kind: LocalAdReportKind, input: ImportAdReportInput) => Promise<AdReportDatasetDetail | null>
+  /**
+   * 读一个文件，返回**正文 + 文件元信息**（`text` / `format` / `sheetCount` / `sheetName`）。
+   *
+   * 2026-10-29：粘贴框删掉以后，报表页只剩"拖文件"这一条路，而它原来只认
+   * `.csv/.tsv/.txt`（`.xlsx` 直接被拒）。同一个入口在流量页能吃 Excel、在报表页
+   * 不能，用户会以为是自己文件的问题 —— 两边现在走同一条服务端解析
+   * （`POST /api/workbench/amazon/datasets/parse-file`，按魔数解析，不靠扩展名猜）。
+   *
+   * 返回对象而不是纯字符串：服务端早就在回 `sheetCount`/`sheetName`，丢掉它们
+   * 就没法提示"这份文件有 N 个工作表、只导入了第一张"。调用方取 `.text`。
+   */
+  parseUpload: (file: File) => Promise<ParseUploadResult>
   clearError: () => void
 }
 
@@ -93,7 +106,8 @@ export function useAdReportDatasets(): UseAdReportDatasetsResult {
           title: input.title,
           period: input.period,
           rows: input.rows,
-          sourceCode: input.sourceCode ?? 'paste',
+          // 2026-10-29：粘贴入口已删除，没有 sourceCode 时不该再标成 'paste'。
+          sourceCode: input.sourceCode ?? 'file',
         }),
       })
       if (!alive.current) return null
@@ -111,5 +125,13 @@ export function useAdReportDatasets(): UseAdReportDatasetsResult {
 
   const clearError = useCallback(() => setError(null), [])
 
-  return { current, history, busy, error, actions: { loadLatest, importRows, clearError } }
+  /**
+   * 文本类文件本机直接读；其余（`.xlsx` 等二进制）交给服务端按魔数解析。
+   *
+   * 实现已抽到 `client/parseUpload.ts`：流量分析与报表分析共用一份，
+   * 支持的文件类型与错误文案不可能再分叉。
+   */
+  const parseUpload = useCallback((file: File): Promise<ParseUploadResult> => parseUploadFile(file), [])
+
+  return { current, history, busy, error, actions: { loadLatest, importRows, parseUpload, clearError } }
 }

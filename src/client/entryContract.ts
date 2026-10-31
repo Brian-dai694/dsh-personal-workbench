@@ -118,17 +118,39 @@ export const ENTRY_TITLE = '打开工作台（任务 / 日历 / 知识库 / 点�
  * 改写就会整段跳过，宿主一改名就只剩那个写死的回退值 —— 而历史回退值多是**纯深色**
  * （`rgba(255,255,255,.12)` 这种），浅色主题下等于不可见。`test/panelCss.test.mjs`
  * 里有一条守卫把"样式表引用了但没登记的别名"钉死，别绕过它。
+ *
+ * ## 回退值口径（2026-10-28 修订：与 DSH 统一色系）
+ *
+ * 回退值**不再是我们自己挑的一组近似色**，而是直接抄宿主自己的色阶取值：
+ * 底色/文字/边框取 `--dsw-static-neutral-bluish-*`，语义色取
+ * `--dsw-static-deepseek-* / green-* / amber-* / red-*`（见 DSH 主题包
+ * `dsh-client-ui-theme` 里的 `--dsw-alias-*` 定义）。这样"宿主令牌缺失"这个最坏情况
+ * 退化出来的也是一套和 DSH 同色系的界面，而不是"宿主一套、我们另一套"。
+ *
+ * 为什么以前会偏：`bg-base` 写 `#17171a`、`border-l1` 写 `rgba(0,0,0,.16)` ——
+ * 都是凭观感挑的，和宿主真实的 `#151517` / `#0000000a` 差一档；浅色主题下 16% 的
+ * 黑边框比宿主的 4% 明显更重，于是面板看起来"不是同一个应用里的东西"。
  */
 const TOKENS: Record<string, string> = {
-  'bg-base': 'light-dark(#ffffff, #17171a)',
-  'bg-layer-1': 'light-dark(#f7f7f8, #202024)',
-  'bg-layer-2': 'light-dark(#ffffff, #1c1c1f)',
-  'bg-layer-3': 'light-dark(#ffffff, #26262a)',
-  'border-l1': 'light-dark(rgba(0,0,0,.16), rgba(255,255,255,.20))',
-  'border-l2': 'light-dark(rgba(0,0,0,.10), rgba(255,255,255,.12))',
-  'label-primary': 'light-dark(#1a1a1c, #eeeeef)',
-  'label-secondary': 'light-dark(rgba(0,0,0,.58), rgba(255,255,255,.64))',
-  'state-business-primary': 'light-dark(#2f6fe0, #6f9df0)',
+  // 底色与层（DSH neutral-bluish 00 / 875 / 850 / 800）
+  'bg-base': 'light-dark(#ffffff, #151517)',
+  'bg-layer-1': 'light-dark(#ffffff, #232324)',
+  'bg-layer-2': 'light-dark(#ffffff, #2c2c2e)',
+  'bg-layer-3': 'light-dark(#ffffff, #353638)',
+  // 边框：与宿主同名同值（发丝线 4% / 10% / 12%）
+  'border-l1': 'light-dark(#0000000a, #ffffff0f)',
+  'border-l2': 'light-dark(#0000001a, #ffffff1f)',
+  'border-l3': 'light-dark(#0000001f, #ffffff29)',
+  // 文字（DSH neutral-bluish 1000 / 700 / 600）
+  'label-primary': 'light-dark(#0f1115, #f9fafb)',
+  'label-secondary': 'light-dark(#61666b, #cfd3d6)',
+  'label-tertiary': 'light-dark(#81858c, #adb2b8)',
+  // 语义色（DSH deepseek-500/400、red-600/400、amber-500、green-500）
+  'state-business-primary': 'light-dark(#4176e6, #7aaaff)',
+  'state-error-primary': 'light-dark(#ec1313, #f25a5a)',
+  'state-warn-primary': 'light-dark(#f59e0b, #f59e0b)',
+  'state-success-primary': 'light-dark(#22c55e, #22c55e)',
+  'link': 'light-dark(#4176e6, #7aaaff)',
 }
 
 const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", sans-serif'

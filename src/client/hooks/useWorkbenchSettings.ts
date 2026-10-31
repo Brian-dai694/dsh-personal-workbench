@@ -111,7 +111,7 @@ export function useWorkbenchSettings(input: UseWorkbenchSettingsInput): UseWorkb
   // 注入回调改回域内原名（见文件头「为什么注入回调要在这里改回原名」）。
   const { dictOf, refresh, onError: setError, onNotice: setNotice, onToast: pushToast } = input
 
-  const [settings, setSettings] = useState<WorkbenchSettings>({ defaultWorkspace: '', autoCreateTypeFolders: true, desktopNotify: true, dailyCapacityMinutes: 390, quickWorkspaceRecent: [], autoKnowledgeRecall: true, defaultEstimateMinutes: DEFAULT_ESTIMATE_MINUTES, dailyCapacityIncludeOverdue: false, personaExternalDir: '', personaFavorites: [], personaDisabledIds: [], autoSummonExperts: false, uiLocale: 'auto' })
+  const [settings, setSettings] = useState<WorkbenchSettings>({ defaultWorkspace: '', autoCreateTypeFolders: true, desktopNotify: true, dailyCapacityMinutes: 390, quickWorkspaceRecent: [], autoKnowledgeRecall: true, defaultEstimateMinutes: DEFAULT_ESTIMATE_MINUTES, dailyCapacityIncludeOverdue: false, amazonKeywordThresholds: null, personaExternalDir: '', personaFavorites: [], personaDisabledIds: [], autoSummonExperts: false, uiLocale: 'auto' })
   const [showSettings, setShowSettings] = useState(false)
   const [settingsSaving, setSettingsSaving] = useState(false)
   /** 知识库召回回执：人类可读的日志行 + 每个会话的开关覆盖（设置页「知识库召回」分区用）。 */

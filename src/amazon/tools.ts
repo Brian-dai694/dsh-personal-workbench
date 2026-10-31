@@ -1,6 +1,7 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { DatabaseSync } from 'node:sqlite'
 import { calculateAmazonBid, calculateAmazonEconomics, type AmazonCalculatorInput } from '../shared/amazonCalculator.js'
+import { REFERRAL_FEE_RATE, referralFeeOf } from '../shared/calculatorScenario.js'
 import { buildKeywordPlan, type KeywordMatch } from '../shared/amazonKeywordTools.js'
 import { analyseTraffic, parseTrafficCsv } from '../shared/amazonTrafficTools.js'
 import { getAmazonDataset, getLatestAmazonDataset, listAsinJudgments, saveAmazonDatasetSummary, saveSearchTermReview, setAsinJudgment } from '../db/repo.js'
@@ -63,7 +64,7 @@ export function amazonCpcBreakevenTool() {
       unit_cost: { type: 'number', required: true, description: '采购成本 USD' },
       freight: { type: 'number', required: true, description: '头程运费 USD' },
       fba_fee: { type: 'number', required: true, description: 'FBA 费用 USD' },
-      referral_fee: { type: 'number', required: true, description: '佣金 USD' },
+      referral_fee: { type: 'number', description: '销售佣金 USD；省略时按工作台口径取售价 15%' },
       storage_fee: { type: 'number', required: true, description: '按单件摊销仓储费 USD' },
       removal_fee: { type: 'number', required: true, description: '按单件摊销移除/弃置费 USD' },
       promotion_cost: { type: 'number', required: true, description: '按单件摊销促销折扣及活动费用 USD' },
@@ -78,12 +79,17 @@ export function amazonCpcBreakevenTool() {
     },
     output: { schema: { type: 'string' }, render: (_args, value: string) => text(value) },
     async execute(args: Record<string, unknown>) {
+      const price = numberArg(args, 'price')
+      /** 工作台口径：佣金按售价 15%。显式传 referral_fee 时照传入值（类目佣金率例外），并在结果里写明。 */
+      const referralFee = typeof args.referral_fee === 'number' && Number.isFinite(args.referral_fee)
+        ? args.referral_fee
+        : referralFeeOf(price)
       const input: AmazonCalculatorInput = {
-        price: numberArg(args, 'price'),
+        price,
         unitCost: numberArg(args, 'unit_cost'),
         freight: numberArg(args, 'freight'),
         fbaFee: numberArg(args, 'fba_fee'),
-        referralFee: numberArg(args, 'referral_fee'),
+        referralFee,
         storageFee: numberArg(args, 'storage_fee'),
         removalFee: numberArg(args, 'removal_fee'),
         promotionCost: numberArg(args, 'promotion_cost'),
@@ -100,6 +106,9 @@ export function amazonCpcBreakevenTool() {
       if (!result.valid) return `needs_data/invalid_input：${result.errors.join('；')}`
       return [
         'Amazon 利润/CPC 联动结果（derived；仅建议，不修改广告账户）',
+        typeof args.referral_fee === 'number' && Number.isFinite(args.referral_fee)
+          ? `销售佣金：${money(referralFee)}（按调用方传入值）`
+          : `销售佣金：${money(referralFee)}（售价 × ${REFERRAL_FEE_RATE * 100}%，工作台口径）`,
         `有效单件毛利：${money(result.effectiveProfit)}；有效毛利率：${percent(result.marginRate)}`,
         `盈亏平衡 ACOS：${percent(result.breakEvenAcos)}；盈亏平衡 CPC：${money(result.breakEvenCpc)}`,
         `目标 ACOS 对应建议 CPC：${money(result.suggestedCpc)}；盈亏平衡 CPC 安全值（80%）：${money(result.breakEvenCpc === null ? null : result.breakEvenCpc * 0.8)}`,
@@ -378,6 +387,14 @@ export function readSearchTermsTool(db: DatabaseSync) {
       const id = typeof args.dataset_id === 'string' ? args.dataset_id.trim() : ''
       const dataset = id === '' ? getLatestAmazonDataset(db) : getAmazonDataset(db, id)
       if (dataset === undefined) return 'needs_data：工作台里还没有导入搜索词报表（请在「搜索词」面板导入 CSV/TSV 后再调用）'
+      /**
+       * kind 守卫：按 id 读取时也必须确认是搜索词报表。
+       * 只靠调用方“不会传错”的约定不够 —— agent 拿 campaign 的 id 进来时，
+       * 这里会把它按搜索词口径分析并输出，属于合并后仍存在的旁路。
+       */
+      if (dataset.kindCode !== 'search_term') {
+        return `invalid_input：dataset_id=${dataset.id} 是 ${dataset.kindCode}，不是搜索词报表；请改用对应报表页查看，不能按搜索词口径分析。`
+      }
       const limitRaw = numberArg(args, 'limit', 200)
       const limit = Math.min(1000, Math.max(1, Math.floor(limitRaw)))
       const keywordLimitRaw = numberArg(args, 'keyword_limit', 1000)

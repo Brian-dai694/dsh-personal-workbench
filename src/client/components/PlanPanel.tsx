@@ -218,7 +218,7 @@ export function PlanPanel({
       <h4>
         <Icon name="sparkles" />
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title ?? `${plan.planDate} 计划`}</span>
-        {editing && <span style={{ fontSize: 11, color: '#d9a03f', border: '1px solid rgba(217,160,63,.4)', borderRadius: 6, padding: '1px 6px' }}>编辑模式</span>}
+        {editing && <span style={{ fontSize: 11, color: 'var(--wb-warn-ink)', border: '1px solid color-mix(in srgb, var(--wb-warn) 40%, transparent)', borderRadius: 6, padding: '1px 6px' }}>编辑模式</span>}
         <span style={{ flex: 1 }} />
         {!editing && overflowing && (
           <button className="wb-btn" onClick={() => setExpanded((v) => !v)}>
@@ -228,12 +228,12 @@ export function PlanPanel({
       </h4>
       {plan.summary !== '' && !editing && <div style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 6 }}>{plan.summary}</div>}
       {plan.diagnostics !== undefined && plan.diagnostics.length > 0 && (
-        <div style={{ fontSize: 12, lineHeight: 1.7, color: '#d9a03f', padding: '2px 2px 6px' }}>
+        <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--wb-warn-ink)', padding: '2px 2px 6px' }}>
           {plan.diagnostics.map((text) => <div key={text}>⚠️ {text}</div>)}
         </div>
       )}
       {rowError !== null && (
-        <div role="alert" style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--wb-danger, #d9534f)', padding: '2px 2px 6px' }}>{rowError}</div>
+        <div role="alert" style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--wb-danger-ink)', padding: '2px 2px 6px' }}>{rowError}</div>
       )}
       <div ref={scrollRef} className="wb-plan-scroll">
         {editing ? (

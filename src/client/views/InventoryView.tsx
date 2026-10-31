@@ -7,106 +7,56 @@
  * - **数据过期就不给断货日**：盘点超过 30 天只给可售天数的相对判断并标黄，
  *   不拿旧盘点抄一个精确日期。
  * - **在途不算库存**：`在途/计划` 只从补货缺口里扣，不参与"当前在手"。
+ *
+ * ⚠️ 2026-10-27 批次 8：本文件**不再直接发 HTTP**。数据、参数、忙碌与三档状态行
+ * 全部搬进 `hooks/useInventory.ts`（`GET`/`POST /api/workbench/inventory` 也在那里），
+ * 视图只剩渲染 + 意图 + 文案。派生结论 `analysis` 仍由 hook 用 `useMemo` 现算 —— 不落库。
+ *
+ * 2026-10-29：按报表页同一口径改造 ——
+ * 1. 撤掉「导入盘点」大卡片与粘贴框，入口交给 `AmazonDataSourceBar`；
+ * 2. 文件读取走 `actions.ingestFile`（hook 内调 `/parse-file`），`.xlsx` 因此可用；
+ * 3. 补货明细可生成 `.univer` 草稿并在本页预览（与「复制补货 CSV」同一个 CSV 口径）。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api } from '../api.js'
+import { useEffect, useRef } from 'react'
 import { useI18n } from '../i18n.js'
 import { Icon } from '../components/Icon.js'
-import { analyseInventory, inventoryToCsv, parseInventoryCsv } from '../../shared/inventoryForecast.js'
-import type { InventoryRow } from '../../shared/inventoryForecast.js'
+import { AmazonDataSourceBar } from '../components/AmazonDataSourceBar.js'
+import { UniverCapabilityHint } from '../components/UniverCapabilityHint.js'
+import { UniverPreviewCard } from '../components/UniverPreviewCard.js'
+import type { UseInventoryResult } from '../hooks/useInventory.js'
+import type { UseUniverCsvTableResult } from '../hooks/useUniverCsvTable.js'
 
-interface Snapshot { id: string; title: string; countedAt: string; windowDays: number; leadTimeDays: number; safetyDays: number; rows: InventoryRow[] }
-interface Summary { id: string; title: string; countedAt: string; windowDays: number; rowCount: number }
+/** `parse-file` 接受的类型：文本类本地读，二进制交给服务端按魔数解析。 */
+const ACCEPT = '.csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,text/plain,'
+  + 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
 
-const SAMPLE = 'SKU\t期初库存\t期间到货\t期间销量\t在途\nTIG-CUP-9\t600\t200\t450\t0\nTIG-CUP-20\t120\t0\t300\t200'
-const TODAY = new Date().toISOString().slice(0, 10)
+export interface InventoryViewProps {
+  /** 库存域模型（数据、参数、派生结论与动作都在里面）。 */
+  model: UseInventoryResult
+  /** 表格能力域：把补货清单落成 `.univer` 草稿并在本页嵌着看。 */
+  table: UseUniverCsvTableResult
+}
 
-type Status = { level: 'ok' | 'warn' | 'error'; lines: string[] } | null
-
-export function InventoryView(): JSX.Element {
+export function InventoryView(props: InventoryViewProps): JSX.Element {
   const { t } = useI18n()
-  const [text, setText] = useState('')
-  const [status, setStatus] = useState<Status>(null)
-  const [busy, setBusy] = useState(false)
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
-  const [history, setHistory] = useState<Summary[]>([])
-  const [windowDays, setWindowDays] = useState(30)
-  const [countedAt, setCountedAt] = useState(TODAY)
-  const [leadTimeDays, setLeadTimeDays] = useState(30)
-  const [safetyDays, setSafetyDays] = useState(15)
+  const { model, table } = props
+  const { snapshot, history, analysis, windowDays, countedAt, leadTimeDays, safetyDays, status, busy, actions } = model
 
-  const loadLatest = useCallback(async (): Promise<void> => {
-    try {
-      const data = await api<{ latest: Snapshot | null; snapshots: Summary[] }>('/api/workbench/inventory')
-      setHistory(data.snapshots ?? [])
-      setSnapshot(data.latest ?? null)
-      if (data.latest !== null) {
-        setWindowDays(data.latest.windowDays)
-        setCountedAt(data.latest.countedAt.slice(0, 10))
-        setLeadTimeDays(data.latest.leadTimeDays)
-        setSafetyDays(data.latest.safetyDays)
-      }
-    } catch (error) {
-      setStatus({ level: 'error', lines: [error instanceof Error ? error.message : String(error)] })
-    }
-  }, [])
-
-  useEffect(() => { void loadLatest() }, [loadLatest])
-
-  const analysis = useMemo(() => {
-    if (snapshot === null) return null
-    return analyseInventory(snapshot.rows, {
-      windowDays,
-      countedAt,
-      leadTimeDays,
-      safetyDays,
-      today: new Date(`${TODAY}T00:00:00Z`),
-    })
-  }, [snapshot, windowDays, countedAt, leadTimeDays, safetyDays])
-
-  const ingest = useCallback(async (raw: string): Promise<void> => {
-    const parsed = parseInventoryCsv(raw)
-    if (!parsed.ok) {
-      setStatus({ level: 'error', lines: [`导入未通过：${parsed.errors.join('；')}`] })
-      return
-    }
-    if (parsed.windowDays !== null) setWindowDays(parsed.windowDays)
-    if (parsed.countedAt !== null) setCountedAt(parsed.countedAt)
-    setBusy(true)
-    try {
-      const created = await api<{ snapshot: Snapshot; snapshots: Summary[] }>('/api/workbench/inventory', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          title: `库存盘点 ${new Date().toLocaleString('zh-CN', { hour12: false })}`,
-          countedAt: parsed.countedAt ?? countedAt,
-          windowDays: parsed.windowDays ?? windowDays,
-          leadTimeDays,
-          safetyDays,
-          rows: parsed.rows,
-        }),
-      })
-      setSnapshot(created.snapshot)
-      setHistory(created.snapshots ?? [])
-      setText('')
-      const lines = [`已保存 ${parsed.rows.length} 个 SKU 的盘点`]
-      if (parsed.warnings.length > 0) lines.push(parsed.warnings.join('；'))
-      setStatus({ level: parsed.warnings.length > 0 ? 'warn' : 'ok', lines })
-    } catch (error) {
-      setStatus({ level: 'error', lines: [error instanceof Error ? error.message : String(error)] })
-    } finally {
-      setBusy(false)
-    }
-  }, [countedAt, leadTimeDays, safetyDays, windowDays])
-
-  const copyCsv = async (): Promise<void> => {
+  /** 滚动与草稿说明已收进 `UniverPreviewCard`（2026-10-30），本页不再持有 viewer 状态。 */
+  const openInTable = async (): Promise<void> => {
     if (analysis === null) return
-    try {
-      await navigator.clipboard.writeText(inventoryToCsv(analysis.rows))
-      setStatus({ level: 'ok', lines: [`已复制 ${analysis.rows.length} 行补货清单（人工确认用，不写任何平台）`] })
-    } catch (error) {
-      setStatus({ level: 'error', lines: [`复制失败：${error instanceof Error ? error.message : String(error)}`] })
-    }
+    const columns = ['SKU', 'ASIN', '在手', '日均', '可售天数', '断货日', '建议补货', '缺口']
+    const rows = analysis.rows.map((row) => [
+      row.sku,
+      row.asin ?? '',
+      row.currentStock,
+      row.dailyRate === null ? '' : row.dailyRate,
+      row.daysOfCover === null ? '' : row.daysOfCover,
+      row.stockoutDate ?? '',
+      row.replenishQty === null ? '' : row.replenishQty,
+      row.gaps.join(' / '),
+    ])
+    await table.actions.openTable(columns, rows, '补货清单')
   }
 
   return (
@@ -116,62 +66,53 @@ export function InventoryView(): JSX.Element {
           <h2>{t('库存补货看板')}</h2>
           <p>{t('期初 + 已到仓 − 销量 → 可售天数与补货量；盘点超过 30 天不给断货日，在途不算库存。')}</p>
         </div>
-        <button type="button" className="wb-btn" disabled={analysis === null} onClick={() => void copyCsv()}>
+        <button type="button" className="wb-btn" disabled={analysis === null} onClick={() => void actions.copyCsv()}>
           <Icon name="file" size={13} />{t('复制补货 CSV')}
+        </button>
+        <button
+          type="button"
+          className="wb-btn primary"
+          disabled={analysis === null || table.available === false || table.busy}
+          title={table.available === false ? t('当前 profile 未检测到 dsh-univer-office') : undefined}
+          onClick={() => void openInTable()}
+        >
+          <Icon name="chart" size={13} />{table.busy ? t('生成表格中…') : t('生成表格并预览')}
         </button>
       </div>
 
-      <div className="wb-card">
-        <h4><Icon name="list" size={14} />{t('导入盘点')}</h4>
-        <p className="wb-hint">{t('列：SKU / 期初库存 / 期间到货 / 期间销量（可选 在途、日均目标）。统计天数与盘点日期可在表头前用「统计天数: 30」「盘点日期: 2026-10-01」写。')}</p>
-        <div className="wb-report-actions">
-          <button type="button" className="wb-btn" disabled={busy || text.trim() === ''} onClick={() => void ingest(text)}>
-            {t('解析并保存')}
-          </button>
-          <label className="wb-btn">
-            <Icon name="file" size={13} />{t('选择 CSV / TSV')}
-            <input
-              type="file"
-              accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values"
-              hidden
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0]
-                if (file !== undefined) {
-                  void (async () => {
-                    setBusy(true)
-                    try { await ingest(await file.text()) } finally { setBusy(false) }
-                  })()
-                }
-                event.currentTarget.value = ''
-              }}
-            />
-          </label>
-          {history.length > 0 && <span className="wb-hint" style={{ margin: 0 }}>{t('最近一次：')}{history[0]!.title}（{history[0]!.rowCount} 个 SKU）</span>}
-        </div>
-        <textarea
-          className="wb-report-textarea"
-          rows={5}
-          value={text}
-          spellCheck={false}
-          placeholder={SAMPLE}
-          onChange={(event) => setText(event.target.value)}
-        />
-      </div>
+      <UniverCapabilityHint
+        available={table.available}
+        contentRead={table.contentRead}
+        onRetry={() => void table.actions.refreshAvailability()}
+      />
+
+      <AmazonDataSourceBar
+        guide={{
+          reportName: t('盘点表'),
+          where: t('卖家平台 → 库存 → 库存报告，或你自己的进销存导出'),
+          columns: ['SKU', '期初库存', '期间到货', '期间销量', '在途'],
+          note: t('表头前可写「统计天数: 30」「盘点日期: 2026-10-01」；CSV / Excel 均可。'),
+        }}
+        accept={ACCEPT}
+        busy={busy}
+        latest={history.length > 0 ? `${history[0]!.title}（${history[0]!.rowCount} 个 SKU）` : null}
+        onFile={(file) => void actions.ingestFile(file)}
+      />
 
       <div className="wb-card">
         <h4><Icon name="chart" size={14} />{t('测算参数')}</h4>
         <div className="wb-report-rules">
           <label>{t('统计天数')}
-            <input type="number" min={1} max={365} value={windowDays} onChange={(event) => setWindowDays(Math.max(1, Number(event.target.value) || 1))} />
+            <input type="number" min={1} max={365} value={windowDays} onChange={(event) => actions.setWindowDays(Math.max(1, Number(event.target.value) || 1))} />
           </label>
           <label>{t('盘点日期')}
-            <input type="date" value={countedAt} onChange={(event) => setCountedAt(event.target.value)} />
+            <input type="date" value={countedAt} onChange={(event) => actions.setCountedAt(event.target.value)} />
           </label>
           <label>{t('到仓天数')}
-            <input type="number" min={0} max={365} value={leadTimeDays} onChange={(event) => setLeadTimeDays(Math.max(0, Number(event.target.value) || 0))} />
+            <input type="number" min={0} max={365} value={leadTimeDays} onChange={(event) => actions.setLeadTimeDays(Math.max(0, Number(event.target.value) || 0))} />
           </label>
           <label>{t('安全库存天数')}
-            <input type="number" min={0} max={365} value={safetyDays} onChange={(event) => setSafetyDays(Math.max(0, Number(event.target.value) || 0))} />
+            <input type="number" min={0} max={365} value={safetyDays} onChange={(event) => actions.setSafetyDays(Math.max(0, Number(event.target.value) || 0))} />
           </label>
         </div>
         <p className="wb-hint">{t('改参数即时重算；结论不落库，避免隔天还看着「导入那天算的断货日」。')}</p>
@@ -183,10 +124,20 @@ export function InventoryView(): JSX.Element {
         </div>
       )}
 
+      {/**
+       * 空态（2026-10-29）：原来写"把进销存表粘进来，或在表格里另存为 CSV" ——
+       * 粘贴框已按用户要求删除，这句话指向不存在的入口，且把 Excel 用户赶去另存。
+       */}
       {snapshot === null && (
         <div className="wb-empty">
           <div className="wb-empty-title">{t('还没有盘点数据')}</div>
-          <div className="wb-empty-desc">{t('把进销存表按上面五列粘进来，或在表格里另存为 CSV 后导入。')}</div>
+          <div className="wb-empty-desc">{t('三步就能出补货结论：')}</div>
+          <ol className="wb-hint" style={{ display: 'inline-block', margin: '0 auto', textAlign: 'left', lineHeight: 1.8 }}>
+            <li>{t('导出盘点表：至少含 SKU / 期初库存 / 期间到货 / 期间销量，可加「在途」。')}</li>
+            <li>{t('点上面的「选择文件」，或把文件拖进虚线框（CSV / Excel 均可）。')}</li>
+            <li>{t('解析后上面的参数可继续调，下面直接出「补货明细」；要能加公式的表，再点右上「生成表格并预览」。')}</li>
+          </ol>
+          <div className="wb-hint">{t('盘点超过 30 天时只给相对判断、不给断货日——用旧盘点算日期比不给更危险。')}</div>
         </div>
       )}
 
@@ -232,6 +183,12 @@ export function InventoryView(): JSX.Element {
           </div>
         </>
       )}
+
+      {/**
+       * 就地预览：草稿语义与滚动行为都由共用组件负责（2026-10-30 抽出），
+       * 本页不再自己写一份 iframe —— 四页各写一份时，文案一定会分叉。
+       */}
+      <UniverPreviewCard table={table} />
     </div>
   )
 }

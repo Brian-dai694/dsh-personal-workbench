@@ -74,7 +74,7 @@ export function KnowledgeDetailPane(props: KnowledgeDetailPaneProps): JSX.Elemen
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
           <Badge dict={dictOf('knowledge_kind')} code={selected.kindCode} />
-          {selected.tags.map((tag) => <span key={tag} style={{ fontSize: 12, color: '#999' }}>#{tag}</span>)}
+          {selected.tags.map((tag) => <span key={tag} style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>#{tag}</span>)}
         </div>
         {fileLink !== null && fileLink !== '' && (
           <div style={{ margin: '8px 0', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

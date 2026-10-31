@@ -11,6 +11,7 @@ import { Icon } from '../components/Icon.js'
 import { Modal } from '../components/Modal.js'
 import { colorForType, groupEntries } from '../../shared/oplogView.js'
 import type { Task } from '../viewTypes.js'
+import { PALETTE } from '../../shared/palette.js'
 
 interface OplogDoc { name: string; size: string; type: string; dataUrl?: string }
 interface OplogEntry {
@@ -32,6 +33,13 @@ interface OplogEntry {
   taskId: string | null
 }
 interface OplogTask { id: string; title: string; statusCode: string; dueAt: string | null }
+
+/**
+ * 「待归档」建议：某天完成、但**还没写进任何日志**的任务。
+ *
+ * 后端只出候选、不写库 —— 运营日志是事实记录层，落库必须由用户点开表单确认。
+ */
+interface CompletionCandidate { id: string; title: string; typeCode: string; completedAt: string }
 interface OplogType { name: string; color: string; sort: number }
 interface Facet { value: string; count: number }
 interface Facets { types: Facet[]; shops: Facet[]; sites: Facet[]; total: number }
@@ -96,7 +104,10 @@ export function OpsLogView(props: {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [typeOpen, setTypeOpen] = useState(false)
   const [newTypeName, setNewTypeName] = useState('')
-  const [newTypeColor, setNewTypeColor] = useState('#007bff')
+  const [newTypeColor, setNewTypeColor] = useState<string>(PALETTE.blue)
+  /** 待归档建议；`candHidden` 是"本次不再提示"，纯前端状态，不写库。 */
+  const [candidates, setCandidates] = useState<CompletionCandidate[]>([])
+  const [candHidden, setCandHidden] = useState(false)
 
   /**
    * 日历再点一次"同一天"时把日期重新套上。
@@ -139,6 +150,24 @@ export function OpsLogView(props: {
 
   useEffect(() => { void load() }, [load])
 
+  /**
+   * 待归档建议：只读候选、不写库。
+   *
+   * 跟着当前筛选日期走（清空日期 = 看今天）。失败就安静地不显示 ——
+   * 建议是锦上添花，不该占用主流程的错误位、更不该挡住日志本身。
+   */
+  const loadCandidates = useCallback(async (): Promise<void> => {
+    try {
+      const q = day === '' ? '' : `?date=${encodeURIComponent(day)}`
+      const data = await api<{ candidates: CompletionCandidate[] }>(`/api/workbench/oplog/completion-candidates${q}`)
+      setCandidates(data.candidates ?? [])
+    } catch {
+      setCandidates([])
+    }
+  }, [day])
+
+  useEffect(() => { void loadCandidates() }, [loadCandidates])
+
   const save = useCallback(async (): Promise<void> => {
     if (draft === null) return
     const body = {
@@ -162,11 +191,12 @@ export function OpsLogView(props: {
       }
       setDraft(null)
       await load()
+      await loadCandidates()
       onChanged?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
-  }, [draft, load, t, onChanged])
+  }, [draft, load, loadCandidates, t, onChanged])
 
   const remove = useCallback(async (entry: OplogEntry): Promise<void> => {
     if (!window.confirm(t('删除这条日志？删除后不可恢复：{title}', { title: entry.title }))) return
@@ -231,6 +261,10 @@ export function OpsLogView(props: {
         </div>
       </div>
 
+      {/**
+       * 筛选与动作分开（2026-10-29）：原来 4 个筛选 + 新建/类型/导入 挤在一行，
+       * 窄屏时"新建"会被挤到第二行末尾。筛选回答"看哪些"，动作回答"做什么"。
+       */}
       <div className="wb-oplog-bar">
         <select className="wb-oplog-select" value={shop} onChange={(e) => setShop(e.target.value)} aria-label={t('店铺')}>
           <option value="">{t('全部店铺')}</option>
@@ -246,6 +280,9 @@ export function OpsLogView(props: {
           <input type="date" value={day} onChange={(e) => setDay(e.target.value)} aria-label={t('按业务日期筛选')} />
         </label>
         {day !== '' && <button type="button" className="wb-oplog-card-open" onClick={() => setDay('')}>{t('清除日期')}</button>}
+      </div>
+
+      <div className="wb-report-actions">
         <button type="button" className="wb-btn primary" onClick={() => { setDraft(emptyDraft(types)); setError('') }}>{t('新建')}</button>
         <button type="button" className="wb-btn" onClick={() => setTypeOpen(true)}>{t('类型')}</button>
         <label className="wb-btn wb-oplog-import"><Icon name="file" size={13} />{t('导入 JSON')}
@@ -253,14 +290,72 @@ export function OpsLogView(props: {
         </label>
       </div>
 
+      {candidates.length > 0 && !candHidden && (
+        <div className="wb-oplog-suggest">
+          <span className="wb-oplog-suggest-title">
+            <Icon name="sparkles" size={13} />
+            {day === ''
+              ? t('今天有 {n} 个任务完成了，还没写进日志', { n: candidates.length })
+              : t('{day} 有 {n} 个任务完成了，还没写进日志', { day, n: candidates.length })}
+          </span>
+          {/* 按钮必须排在 chip 行**前面**：chip 行是 flex-basis:100%，排在它后面就会掉到第三行 */}
+          <button type="button" className="wb-oplog-card-open wb-oplog-suggest-dismiss" onClick={() => setCandHidden(true)}>{t('本次不再提示')}</button>
+          <div className="wb-oplog-suggest-list">
+            {candidates.map((c) => (
+              <button key={c.id} type="button" className="wb-oplog-suggest-chip"
+                title={t('用这条任务开写日志')}
+                onClick={() => {
+                  setError('')
+                  setDraft({
+                    ...emptyDraft(types),
+                    title: c.title,
+                    taskId: c.id,
+                    logDate: day === '' ? fmtDay(new Date().toISOString()) : day,
+                  })
+                }}>
+                <Icon name="plus" size={12} />{c.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {note !== '' && <div className="wb-oplog-note">{note}</div>}
       {error !== '' && <div className="wb-oplog-error">{error}</div>}
       {loading && <div className="wb-skill-hint">{t('读取运营日志…')}</div>}
 
+      {/**
+       * 空态三条路（2026-10-29）：新建 / 从已完成任务生成 / 导入旧数据。
+       * 前两条本来就在页面上（候选条与「新建」），但空态里一个字都没提，
+       * 用户只看到"没有日志"。
+       */}
       {!loading && entries.length === 0 && (
         <div className="wb-empty">
           <div className="wb-empty-title">{t('还没有运营日志')}</div>
-          <div className="wb-empty-desc">{t('点「新建」写一条，或用「导入 JSON」把旧应用导出的数据导进来。')}</div>
+          <div className="wb-empty-desc">
+            {t('写一条，或从今天已完成的任务生成一条，也可以把旧应用导出的 JSON 导进来。')}
+          </div>
+          <div className="wb-report-actions" style={{ justifyContent: 'center' }}>
+            <button type="button" className="wb-btn primary" onClick={() => { setDraft(emptyDraft(types)); setError('') }}>{t('新建')}</button>
+            <label className="wb-btn">
+              <Icon name="file" size={13} />{t('导入 JSON')}
+              <input
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => {
+                  const f = e.currentTarget.files?.[0]
+                  if (f !== undefined) void onImport(f)
+                  e.currentTarget.value = ''
+                }}
+              />
+            </label>
+          </div>
+          <div className="wb-hint">
+            {candidates.length > 0
+              ? t('今天有 {n} 个已完成任务可一键生成日志（在上面的提示条里）。', { n: candidates.length })
+              : t('完成了任务后，本页会自动提示「把任务写进日志」。')}
+          </div>
         </div>
       )}
 
@@ -372,7 +467,7 @@ export function OpsLogView(props: {
               <textarea rows={6} value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} placeholder={t('发生了什么、做了什么、下一步')} />
             </label>
             <label className="wb-field"><span>{t('ASIN（空格或逗号分隔）')}</span>
-              <input value={draft.asins} onChange={(e) => setDraft({ ...draft, asins: e.target.value })} placeholder="B0FY5677XC B0FM7GWXYN" />
+              <input value={draft.asins} onChange={(e) => setDraft({ ...draft, asins: e.target.value })} placeholder="B0XXXXXXXX B0XXXXXXXX" />
             </label>
             <div className="wb-field">
               <span>{t('附件')}<span className="wb-field-note">{t('单个 ≤ 2MB，最多 5 个')}</span></span>

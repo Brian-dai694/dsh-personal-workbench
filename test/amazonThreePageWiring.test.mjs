@@ -40,9 +40,10 @@ test('T3：三页读的是同一个 amazonData（props 链不各拉一份）', (
   // 唯一所有者：装配层只声明一次 amazonData
   assert.match(assembly, /amazonData: ReturnType<typeof useAmazonDatasets>/, '装配层必须有 amazonData（唯一所有者）')
 
-  // 流量分析：本来就吃这份模型
-  assert.match(body, /view === 'traffic' && <AmazonTrafficView model=\{props\.amazonData\} \/>/,
-    '流量分析必须继续读 props.amazonData')
+  // 搜索词：2026-10-29 起「流量分析」页签并入报表分析，唯一入口是报表页的
+  // search_term 分支；它吃同一份 model，并内嵌同一个右栏组件（不复制一份）。
+  assert.match(read(REPORT_VIEW), /<AmazonTrafficDetailPane\s+model=\{amazon\}/,
+    '报表页的搜索词分支必须内嵌 AmazonTrafficDetailPane，并传同一份 model')
 
   // 关键词页：把同一份 amazonData 往下交给 ABA 面板
   assert.match(body, /<AmazonKeywordView model=\{props\.keywordPlans\} amazon=\{props\.amazonData\} aba=\{props\.abaKeywordSets\}/,
@@ -52,8 +53,9 @@ test('T3：三页读的是同一个 amazonData（props 链不各拉一份）', (
   assert.match(read(ABA_PANEL), /model: UseAmazonDatasetsResult/, '面板的 model 就是共享模型的类型')
 
   // 报表分析：搜索词一路同源；其余类型走独立 hook（类型上已排除 search_term）
-  assert.match(body, /<AmazonReportView amazon=\{props\.amazonData\} reports=\{props\.adReportData\} \/>/,
-    '报表页的搜索词一路必须读同一个 amazonData')
+  // 表格能力域（并入 CSV 版块）与阈值（账号级设置）也在这条装配线上，因此一并断言。
+  assert.match(body, /<AmazonReportView amazon=\{props\.amazonData\} reports=\{props\.adReportData\} table=\{props\.univerTable\} thresholds=\{settings\.amazonKeywordThresholds\}/,
+    '报表页的搜索词一路必须读同一个 amazonData，且表格能力域与阈值都从装配层下发')
   assert.match(read(REPORT_VIEW), /kind === 'search_term' \? \(amazon\.current\?\.rows \?\? \[\]\)/,
     'search_term 的 row 来源必须是共享 current')
   assert.match(read('src/client/hooks/useAdReportDatasets.ts'),
@@ -71,4 +73,5 @@ test('T3：AmazonReportView 的必填 props 只有 WorkbenchBody 一处装配', 
   // 两个 props 都是必填（可选会让"忘了传"静默变成空数据）
   assert.match(report, /\bamazon: UseAmazonDatasetsResult/, 'amazon 必填')
   assert.match(report, /\breports: UseAdReportDatasetsResult/, 'reports 必填')
+  assert.match(report, /\btable: UseUniverCsvTableResult/, 'table 必填（可选会让"忘了传"静默变成没有表格能力）')
 })

@@ -51,8 +51,9 @@ const aiSessionsSource = read('src/client/hooks/useWorkbenchAISessions.ts')
 const schemaSource = read('src/db/schema.ts')
 const routesSource = read('src/api/routes.ts')
 const datasetRoutesSource = read('src/api/routes/amazon-datasets.ts')
-const trafficViewSource = read('src/client/views/AmazonTrafficView.tsx')
 const trafficDetailSource = read('src/client/views/AmazonTrafficDetailPane.tsx')
+/** 搜索词右栏的**新家**（2026-10-29 流量页并入后；左栏视图文件已删除）。 */
+const REPORT_VIEW_SRC = 'src/client/views/AmazonReportView.tsx'
 /** Excel 导入：解析模块与被 TypeScript 构建清单收录的事实。 */
 const xlsxSource = read('src/lib/xlsx.ts')
 const buildTsconfigSource = read('tsconfig.build.json')
@@ -180,7 +181,8 @@ test('搜索词「接入表格 + agent 读写」的接线：落库、双向工�
   // 1. 数据集落库：表 + 迁移号 + 路由前缀都在
   assert.match(schemaSource, /version: 20,\s*\n\s*name: 'amazon-datasets'/)
   assert.match(schemaSource, /CREATE TABLE amazon_datasets/)
-  assert.match(routesSource, /makeAmazonDatasetRoutes\(db\)/)
+  // 签名只要求"用 db 注册"：P2-3 起还带了 Univer 软探测入参，断言别锁死参数表
+  assert.match(routesSource, /makeAmazonDatasetRoutes\(db[,)]/)
   assert.match(datasetRoutesSource, /\/api\/workbench\/amazon\/datasets/)
 
   // 2. 双向工具：读原始行 + 写回建议，且都注册到 DSH
@@ -188,18 +190,28 @@ test('搜索词「接入表格 + agent 读写」的接线：落库、双向工�
   assert.match(amazonToolsSource, /name: 'workbench_save_search_term_review'/)
   assert.match(serverEntrySource, /readSearchTermsTool\(db\), saveSearchTermReviewTool\(db\)/)
 
-  // 3. 视图只拿意图、不发 HTTP（D17 结构硬门）：导入/刷新都走 hook 的 actions
-  assert.doesNotMatch(stripComments(trafficViewSource), /\bapi\(|fetch\(/, '搜索词视图不许自己发请求')
-  assert.match(trafficViewSource, /model\.actions\.importRows/)
-  assert.match(trafficViewSource, /model\.actions\.select/)
-  assert.match(trafficViewSource, /import type \{ UseAmazonDatasetsResult \}/)
+  // 3. 视图只拿意图、不发 HTTP（D17 结构硬门）：导入/刷新都走 hook 的 actions。
+  // 2026-10-29：流量页左栏已删除，判据搬到它的接任者（报表页搜索词分支）。
+  const reportViewSource = read(REPORT_VIEW_SRC)
+  assert.doesNotMatch(stripComments(reportViewSource), /\bapi\(|fetch\(/, '搜索词视图不许自己发请求')
+  assert.match(reportViewSource, /amazon\.actions\.importRows/)
+  assert.match(reportViewSource, /import type \{ UseAmazonDatasetsResult \}/)
   assert.match(amazonDatasetsHookSource, /\/api\/workbench\/amazon\/datasets/)
 
   // 3b. Excel 导入（v1.20）：文件读取在 hook 里，`.xlsx` 走服务端转 TSV，旧版 .xls 给提示
-  assert.match(trafficViewSource, /model\.actions\.parseUpload/)
-  assert.doesNotMatch(stripComments(trafficViewSource), /\bapi\(|FileReader|fetch\(/, '文件读取与请求都在 hook 里')
-  assert.match(amazonDatasetsHookSource, /\/api\/workbench\/amazon\/datasets\/parse-file/)
-  assert.match(trafficViewSource, /\.xlsx,\.xls/, '文件选择器要放行 Excel')
+  assert.match(reportViewSource, /reports\.actions\.parseUpload/)
+  assert.doesNotMatch(stripComments(reportViewSource), /\bapi\(|FileReader|fetch\(/, '文件读取与请求都在 hook 里')
+  /**
+   * 2026-10-29：两份 `parseUpload` 合成一份（`client/parseUpload.ts`）。
+   * 判据跟着 owner 走：路由只在 helper 里出现一次，两个 hook 都引它。
+   * 这仍然钉着原来要防的事 —— "文件读取与请求在本域内，不散到视图"。
+   */
+  const uploadHelperSource = read('src/client/parseUpload.ts')
+  assert.match(uploadHelperSource, /\/api\/workbench\/amazon\/datasets\/parse-file/)
+  assert.match(amazonDatasetsHookSource, /parseUploadFile/)
+  assert.match(read('src/client/hooks/useAdReportDatasets.ts'), /parseUploadFile/)
+  assert.doesNotMatch(amazonDatasetsHookSource, /base64: btoa/, '编码只许在共享 helper 里做一份')
+  assert.match(reportViewSource, /\.xlsx,\.xls/, '文件选择器要放行 Excel')
   assert.match(datasetRoutesSource, /id === 'parse-file'/)
   assert.match(datasetRoutesSource, /readXlsx\(buffer\)/)
   assert.match(xlsxSource, /export function readXlsx/)
@@ -208,14 +220,25 @@ test('搜索词「接入表格 + agent 读写」的接线：落库、双向工�
   )
   assert.ok(read('lib/lib/xlsx.js').includes('readXlsx'), 'xlsx 必须有产物（否则服务端 import 会 404）')
 
-  // 4. 结果在右栏（用户要求）：左栏只做接入，右栏渲染指标表与 AI 建议
-  assert.match(appBodySource, /view === 'traffic' && <AmazonTrafficView model=\{props\.amazonData\} \/>/)
-  assert.match(appBodySource, /view === 'traffic'\s*\n\s*\? <AmazonTrafficDetailPane model=\{props\.amazonData\}/)
-  assert.doesNotMatch(trafficViewSource, /wb-amazon-table-grid/, '左栏不许再渲染结果表')
+  // 4. 结果区（用户要求）：左栏只做接入，右栏渲染指标表与 AI 建议。
+  // 2026-10-29：流量页并入报表分析 —— 右栏组件由**报表页内嵌**，
+  // WorkbenchBody 不再单独装配 traffic 的左右栏（旧值只给一个去处提示）。
+  assert.match(read(REPORT_VIEW_SRC), /<AmazonTrafficDetailPane\s+model=\{amazon\}/,
+    '搜索词右栏必须由报表页内嵌，且传同一份 model')
+  assert.doesNotMatch(appBodySource, /<AmazonTrafficView/, '流量页左栏不再由 WorkbenchBody 渲染')
   assert.match(trafficDetailSource, /wb-amazon-table-grid/)
   assert.match(trafficDetailSource, /summarizeTrafficForAI/)
   assert.doesNotMatch(stripComments(trafficDetailSource), /\bapi\(|fetch\(/, '结果区同样只拿意图，不发请求')
   assert.match(assemblySource, /amazonData: ReturnType<typeof useAmazonDatasets>/)
+
+  /**
+   * 5. 导出口径统一（2026-10-29）：同一页两个导出必须同函数、同列。
+   * 报表页=全量行，右栏=筛选后的行 —— 差异只在"选了多少行"，不在格式。
+   */
+  assert.match(reportViewSource, /summariseSliceForCopy\(analyseTraffic\(rows\)/,
+    '报表页的导出必须复用右栏那个 11 列格式化函数')
+  assert.match(trafficDetailSource, /summariseSliceForCopy\(visible/,
+    '右栏「复制结果」也走同一函数；两处各写一份就会再次对不上')
 })
 
 test('「带入 AI 协助」的投递路径把面板文本真的写进提示词（consult 无任务分支）', () => {

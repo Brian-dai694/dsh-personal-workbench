@@ -34,6 +34,19 @@ import { pendingCompletionMap } from '../taskProgressView.js'
 import type { PendingCompletionView, PendingCompletionsResponse } from '../../shared/contracts.js'
 import type { Bootstrap, Dict, KnowledgeEntry, Task, TaskDetail } from '../viewTypes.js'
 
+/**
+ * 任务详情「关联日志」用的一条记录（运营日志里指向本任务的一行）。
+ *
+ * 只取展示需要的字段：详情面板不画日志正文，点一下要跳到运营日志那天去看 ——
+ * 所以真正需要的是 `logDate`（跳转锚点），其余只用于让人能认出是哪一条。
+ */
+export interface LinkedOplogEntry {
+  id: string
+  title: string
+  logDate: string
+  logType: string
+}
+
 export type UseTaskDataInput = {
   /** 反馈域注入：详情加载失败时把消息交给入口的错误条（逐字保留拆分前的取值方式）。 */
   onError: (message: string) => void
@@ -58,6 +71,8 @@ export type UseTaskDataResult = {
   selected: TaskDetail | null
   /** 当前选中任务关联的知识条目（由详情加载链维护，**不**由知识库列表覆盖）。 */
   taskKnowledge: KnowledgeEntry[]
+  /** 当前选中任务被哪些运营日志引用（反向查询，与详情同一条加载链）。 */
+  linkedOplog: LinkedOplogEntry[]
   dicts: Dict[]
   dictOf: (kind: string) => Dict[]
   pendingMap: ReadonlyMap<string, { deferred: boolean }> | null
@@ -142,6 +157,13 @@ export function useTaskData({ onError, onNotice, onTaskCreated, onSubtaskParentC
   const [pendingCompletions, setPendingCompletions] = useState<PendingCompletionView | null>(null)
   const [selected, setSelected] = useState<TaskDetail | null>(null)
   const [taskKnowledge, setTaskKnowledge] = useState<KnowledgeEntry[]>([])
+  /**
+   * 关联日志（反向查询）：这条任务被哪些运营日志提到过。
+   *
+   * 在此之前关联是**单向**的 —— 日志能指向任务，任务详情却看不到自己出现在哪些日志里。
+   * 取数仍在本域（`useTaskData`），视图只负责画（设计 §3：视图不发 HTTP）。
+   */
+  const [linkedOplog, setLinkedOplog] = useState<LinkedOplogEntry[]>([])
   const selectedRef = useRef<string | null>(null)
 
   const dicts = useMemo(() => bootstrap?.dictionaries ?? [], [bootstrap])
@@ -191,6 +213,7 @@ export function useTaskData({ onError, onNotice, onTaskCreated, onSubtaskParentC
           api<{ events: Array<Record<string, unknown>> }>(`/api/workbench/tasks/${selectedRef.current}/events`).catch(() => ({ events: [] })),
           api<{ reviews: Array<Record<string, unknown>> }>(`/api/workbench/tasks/${selectedRef.current}/reviews`).catch(() => ({ reviews: [] })),
           loadTaskKnowledge(selectedRef.current).catch(() => setTaskKnowledge([])),
+          loadTaskOplog(selectedRef.current).catch(() => setLinkedOplog([])),
         ])
         setSelected({ ...detail, events: ev.events, reviews: rv.reviews })
       } catch { setSelected(null); selectedRef.current = null }
@@ -200,6 +223,12 @@ export function useTaskData({ onError, onNotice, onTaskCreated, onSubtaskParentC
   const loadTaskKnowledge = async (taskId: string): Promise<void> => {
     const res = await api<{ entries: KnowledgeEntry[] }>(`/api/workbench/knowledge?source_task_id=${encodeURIComponent(taskId)}`)
     setTaskKnowledge(res.entries)
+  }
+
+  /** 反向查询：这条任务被哪些运营日志引用（任务详情「关联日志」）。 */
+  const loadTaskOplog = async (taskId: string): Promise<void> => {
+    const res = await api<{ entries: LinkedOplogEntry[] }>(`/api/workbench/oplog/by-task/${encodeURIComponent(taskId)}`)
+    setLinkedOplog(res.entries)
   }
   /**
    * 只**刷新详情数据**，不碰视图、不碰页签。
@@ -226,6 +255,7 @@ export function useTaskData({ onError, onNotice, onTaskCreated, onSubtaskParentC
       api<{ events: Array<Record<string, unknown>> }>(`/api/workbench/tasks/${taskId}/events`).catch(() => ({ events: [] })),
       api<{ reviews: Array<Record<string, unknown>> }>(`/api/workbench/tasks/${taskId}/reviews`).catch(() => ({ reviews: [] })),
       loadTaskKnowledge(taskId).catch(() => setTaskKnowledge([])),
+      loadTaskOplog(taskId).catch(() => setLinkedOplog([])),
     ]).then(([detail, ev, rv]) => setSelected({ ...detail, events: ev.events, reviews: rv.reviews })).catch((e: unknown) => onError(e instanceof Error ? e.message : String(e)))
   }
   const patchTask = async (id: string, patch: Record<string, unknown>): Promise<void> => {
@@ -380,6 +410,7 @@ export function useTaskData({ onError, onNotice, onTaskCreated, onSubtaskParentC
     pendingCompletions,
     selected,
     taskKnowledge,
+    linkedOplog,
     dicts,
     dictOf,
     pendingMap,

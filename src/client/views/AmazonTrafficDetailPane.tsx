@@ -23,6 +23,8 @@ import {
   type TrafficFilterState, type TrafficPreset, type TrafficSortKey,
 } from '../../shared/trafficFilter.js'
 import type { UseAmazonDatasetsResult } from '../hooks/useAmazonDatasets.js'
+import type { AmazonKeywordThresholds } from '../../shared/contracts.js'
+import { thresholdsFromSettings } from '../../shared/keywordDecision.js'
 import { buildKeywordAnalysis } from '../keywordAnalysis.js'
 import { AmazonKeywordAnalysisBlock } from './AmazonKeywordAnalysisBlock.js'
 import { AmazonAiSummaryBlock } from './AmazonAiSummaryBlock.js'
@@ -61,9 +63,11 @@ export interface AmazonTrafficDetailPaneProps {
   onSendToAI?: (text: string) => void
   /** 跳到关键词页并定位到这个搜索词（T12 联动）。 */
   onOpenKeyword?: (keyword: string) => void
+  /** 搜索词判定阈值（账号级设置）；`null` = 默认。报表页内嵌时也走同一个值。 */
+  thresholds?: AmazonKeywordThresholds | null
 }
 
-export function AmazonTrafficDetailPane({ model, onSendToAI, onOpenKeyword }: AmazonTrafficDetailPaneProps): JSX.Element {
+export function AmazonTrafficDetailPane({ model, onSendToAI, onOpenKeyword, thresholds }: AmazonTrafficDetailPaneProps): JSX.Element {
   const dataset = model.current
   const metrics = useMemo(() => analyseTraffic(dataset?.rows ?? []), [dataset])
   const annotations = useMemo(() => new Map((dataset?.annotations ?? []).map((item) => [item.keyword, item])), [dataset])
@@ -72,7 +76,10 @@ export function AmazonTrafficDetailPane({ model, onSendToAI, onOpenKeyword }: Am
    * 词级结论（T5）：聚合 + 分层都是 shared/ 的纯函数，视图只做装配。
    * 放在汇总条与筛选栏之间 —— 先看整份表的分层，再用筛选下钻。
    */
-  const keywordAnalysis = useMemo(() => buildKeywordAnalysis(dataset?.rows ?? []), [dataset])
+  const keywordAnalysis = useMemo(
+    () => buildKeywordAnalysis(dataset?.rows ?? [], { thresholds: thresholdsFromSettings(thresholds) }),
+    [dataset, thresholds],
+  )
 
   const [filter, setFilter] = useState<TrafficFilterState>(DEFAULT_TRAFFIC_FILTER)
   const [sortKey, setSortKey] = useState<TrafficSortKey>('spend')

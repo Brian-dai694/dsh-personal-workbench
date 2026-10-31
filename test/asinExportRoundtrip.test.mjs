@@ -236,8 +236,8 @@ test('导出仅选中：?asins= 只导那些', async () => {
   }
 })
 
-test('productKey：缺站点按 US，ASIN 大写', () => {
-  assert.equal(productKey({ asin: 'b0abc', site: '' }), 'US_B0ABC')
+test('productKey：缺站点用 UNKNOWN（不默认 US），ASIN 大写', () => {
+  assert.equal(productKey({ asin: 'b0abc', site: '' }), 'UNKNOWN_B0ABC')
   assert.equal(productKey({ asin: 'b0abc', site: 'jp' }), 'JP_B0ABC')
 })
 

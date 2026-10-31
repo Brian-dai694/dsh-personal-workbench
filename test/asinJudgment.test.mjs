@@ -99,6 +99,21 @@ test('只改结论不会抹掉已有的 VOC / 评分卡 / 风险 / 覆盖词数'
   assert.equal(row.judgment.keywordCount, 37)
 })
 
+test('写判断不碰产品事实：updated_at / price / title / shop 不变（P3 验收 B2）', () => {
+  const db = openMemoryDb()
+  seed(db)
+  const snapshot = () => db.prepare(
+    'SELECT updated_at, title, price, shop_id, shop_name, site FROM asin_products WHERE asin = ?',
+  ).get('B0JUDGE001')
+  const before = snapshot()
+  setAsinJudgment(db, 'B0JUDGE001', { verdict: 'do', score: 82, nextAction: '小批量验证气密性' })
+  setAsinJudgment(db, 'B0JUDGE001', { verdict: 'watch' })
+  assert.deepEqual(snapshot(), before, '判断只能改 verdict/score/judgment_json/judged_at/judged_source，不能改产品事实列')
+  const judged = db.prepare('SELECT verdict, judged_at FROM asin_products WHERE asin = ?').get('B0JUDGE001')
+  assert.equal(judged.verdict, 'watch')
+  assert.ok(judged.judged_at !== null, '判断自己的时间戳记在 judged_at')
+})
+
 test('非法写入被拒绝：结论枚举 / 分数越界 / 负词数 / 不存在的 ASIN', () => {
   const db = openMemoryDb()
   seed(db)

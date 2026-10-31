@@ -15,6 +15,7 @@
 import { CapacityRulePanel, capacityAriaLabel } from '../components/CapacityRulePanel.js'
 import { interactiveProps } from '../a11y.js'
 import { DayPanel, type DayPanelProps } from '../components/DayPanel.js'
+import { DashboardPane, type DashboardAmazonFacts } from './DashboardPane.js'
 import { Icon } from '../components/Icon.js'
 import type { CapacityLedger } from '../capacity.js'
 import type { Bootstrap } from '../viewTypes.js'
@@ -45,6 +46,25 @@ export type TodayPaneProps = {
   dayPanelProps: Omit<DayPanelProps, 'emptyPlanAction'>
   onQuickEntry: () => void
   onNewTask: () => void
+  /**
+   * 仪表盘（2026-10-27，方案 A）：取代原来那 4 张统计卡。
+   *
+   * 数据全部由装配层取好传进来（视图不发 HTTP）。运营日志摘要来自
+   * `useOplogDayIndex`，亚马逊事实来自 `compactData` / `keywordPlans` / `inventory`，
+   * 最近完成由 `tasks` 派生。
+   */
+  dashboard: {
+    pendingArchive: number
+    oplog: { week: number; month: number; total: number; recent: Array<{ date: string; title: string }> }
+    amazon: DashboardAmazonFacts
+    recentDone: Array<{ date: string; title: string }>
+  }
+  /** 待我处理里的任务类项 → 任务页。 */
+  onOpenTasks: () => void
+  /** 待归档项 → 运营日志页。 */
+  onOpenOplog: () => void
+  /** 亚马逊数据卡 → 关键词页（数据入口在那）。 */
+  onOpenAmazon: () => void
 }
 
 export function TodayPane(props: TodayPaneProps): JSX.Element {
@@ -53,23 +73,16 @@ export function TodayPane(props: TodayPaneProps): JSX.Element {
     stats, capacity, capacityEdit, dailyCapacityMinutes, defaultEstimateMinutes, includeOverdue,
     capacityExpanded, onCapacityEditStart, onCapacityEditChange, onCapacityEditCommit, onCapacityEditCancel,
     onIncludeOverdueChange, onCapacityExpandedChange, onAddToPlan, addingTaskId, dayPanelProps,
-    onQuickEntry, onNewTask,
+    onQuickEntry, onNewTask, dashboard, onOpenTasks, onOpenOplog, onOpenAmazon,
   } = props
 
-  return (
-    <>
-      <div className="wb-stats wb-stats-sticky">
-        <div className="wb-stat"><b>{stats?.overdue ?? 0}</b><span>{t('逾期')}</span></div>
-        <div className="wb-stat"><b>{stats?.todayDue ?? 0}</b><span>{t('今天到期')}</span></div>
-        <div className="wb-stat"><b>{stats?.doing ?? 0}</b><span>{t('进行中')}</span></div>
-        <div className="wb-stat"><b>{stats?.total ?? 0}</b><span>{t('总数')}</span></div>
-      </div>
-
-      {/*
-        今日容量（v1.15.1）：把"今天投得进多少时间"及其**算法**显式化。
-        这里只负责画：算全在 `computeTodayCapacity`（纯函数），
-        口径偏好只在 `settings`（见 CapacityRulePanel 的注释）。
-      */}
+  /**
+   * 容量面板：今日视图原本内联在顶部的那一块，现在**原样**交给 DashboardPane 放进右栏。
+   *
+   * 为什么不在这里重画一份"轻量容量条"：这块自带行内编辑（改每日可投入时长）、
+   * 规则面板与未排入清单 —— 重画就是第二份实现，两边迟早算出不同的"已排"。
+   */
+  const capacityPane = (
       <div className="wb-cap">
         <div className="wb-cap-head">
           <h3>{t('今日容量')}</h3>
@@ -133,15 +146,34 @@ export function TodayPane(props: TodayPaneProps): JSX.Element {
           />
         </div>
       </div>
+  )
+
+  return (
+    <>
+      <DashboardPane
+        day={dayPanelProps.day}
+        stats={stats}
+        unscheduledCount={capacity.unscheduledCount}
+        pendingArchive={dashboard.pendingArchive}
+        oplog={dashboard.oplog}
+        amazon={dashboard.amazon}
+        recentDone={dashboard.recentDone}
+        capacityPane={capacityPane}
+        onQuickEntry={onQuickEntry}
+        onNewTask={onNewTask}
+        onOpenTasks={onOpenTasks}
+        onOpenOplog={onOpenOplog}
+        onOpenAmazon={onOpenAmazon}
+      />
       {/**
         * 今日 = 日期面板的 **today 实例**（ADR0001 口径冻结 / D15）。
-        * 上面两张卡（统计 + 容量）是今日视图独有的，面板本身与日历共用一份。
+        * 上面仪表盘是今日视图独有的，面板本身与日历共用同一份装配。
         */}
       <DayPanel
         {...dayPanelProps}
         emptyPlanAction={(
           <div className="wb-empty" style={{ padding: '28px 18px' }}>
-            <div style={{ marginBottom: 6, color: 'var(--dsw-alias-state-business-primary, #4f8ef7)' }}><Icon name="today" size={30} /></div>
+            <div style={{ marginBottom: 6, color: 'var(--wb-accent)' }}><Icon name="today" size={30} /></div>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('今天没有需要关注的任务')}</div>
             <div style={{ fontSize: 12, opacity: .8, marginBottom: 12 }}>{t('可以快速录入一个新任务，或新建一个待办')}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>

@@ -50,22 +50,61 @@ export interface KeywordDecisionInput {
   sales: number
 }
 
+/**
+ * 判定用的阈值（Step 2，2026-10-29）：`KEYWORD_RULES` 从"唯一口径"降级为**默认值**。
+ *
+ * 为什么必须参数化：账号级校准（设置域 `amazonKeywordThresholds`）已存在，
+ * 而判定函数当时只读常量，于是"校准了也不生效"。参数化后，两页传同一个值，
+ * 常量只负责没设置时的兜底。
+ */
+export interface KeywordThresholds {
+  negativeMinClicks: number
+  addMinOrders: number
+  addMaxAcos: number
+}
+
+export const DEFAULT_KEYWORD_THRESHOLDS: KeywordThresholds = {
+  negativeMinClicks: KEYWORD_RULES.negativeMinClicks,
+  addMinOrders: KEYWORD_RULES.addMinOrders,
+  addMaxAcos: KEYWORD_RULES.addMaxAcos,
+}
+
+/**
+ * 设置域的形状（`AmazonKeywordThresholds`）→ 判定阈值。
+ *
+ * `null`/缺省 = 默认；只覆盖可校准的两项，`addMinOrders` 仍是常量 ——
+ * 设置里没有这一项，就不该在别处偷偷给它一个"可调"的错觉。
+ */
+export function thresholdsFromSettings(
+  settings: { wasteMinClicks: number; goodAcos: number } | null | undefined,
+): KeywordThresholds {
+  if (settings === null || settings === undefined) return DEFAULT_KEYWORD_THRESHOLDS
+  return {
+    negativeMinClicks: settings.wasteMinClicks,
+    addMinOrders: KEYWORD_RULES.addMinOrders,
+    addMaxAcos: settings.goodAcos,
+  }
+}
+
 /** 脏值归零：只有有限的正数参与判定（负数 / NaN / Infinity 一律按 0）。 */
 function metric(row: KeywordDecisionInput, key: keyof KeywordDecisionInput): number {
   const value = row[key]
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0
 }
 
-/** 单个词的分层结论。入参是**词级**聚合行，不是原始行。 */
-export function decideKeyword(row: KeywordDecisionInput): KeywordDecisionCode {
+/** 单个词的分层结论。入参是**词级**聚合行，不是原始行；阈值缺省走 `DEFAULT_KEYWORD_THRESHOLDS`。 */
+export function decideKeyword(
+  row: KeywordDecisionInput,
+  thresholds: KeywordThresholds = DEFAULT_KEYWORD_THRESHOLDS,
+): KeywordDecisionCode {
   const impressions = metric(row, 'impressions')
   const clicks = metric(row, 'clicks')
   const orders = metric(row, 'orders')
   const spend = metric(row, 'spend')
   const sales = metric(row, 'sales')
 
-  if (clicks >= KEYWORD_RULES.negativeMinClicks && orders === 0 && spend > 0) return 'negative'
-  if (orders >= KEYWORD_RULES.addMinOrders && sales > 0 && spend / sales <= KEYWORD_RULES.addMaxAcos) return 'add'
+  if (clicks >= thresholds.negativeMinClicks && orders === 0 && spend > 0) return 'negative'
+  if (orders >= thresholds.addMinOrders && sales > 0 && spend / sales <= thresholds.addMaxAcos) return 'add'
   if (impressions > 0 || spend > 0) return 'watch'
   return 'none'
 }

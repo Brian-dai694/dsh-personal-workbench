@@ -37,12 +37,20 @@ const VIEWS_DIR = 'src/client/views'
  * 一个守卫如果数不准，它守住的就只是"看起来干净"。
  *
  * 已收回（不在表里，必须为 0）：`KnowledgeDetailPane`（2026-10-27，搬进 `useKnowledge`
- * 的 `saveDraft()` / `removeEntry()`，2 处 → 0）。
+ * 的 `saveDraft()` / `removeEntry()`，2 处 → 0）；
+ * - `InventoryView`（2 处 → 0，搬进 `useInventory`：盘点加载 / 测算参数 / 派生结论 / 提交全归 hook）。
  */
 const ALLOWED_VIEWS = {
   'AsinView.tsx': 9,
-  'InventoryView.tsx': 2,
-  'OpsLogView.tsx': 10,
+  /**
+   * 10 → 11（2026-10-27）：运营日志页新增「完成候选」读取
+   * （`GET /api/workbench/oplog/completion-candidates`，同时在途的还有 `api/routes/oplog.ts`
+   * 与 `db/repo/oplog.ts` 的改动）。**这条是棘轮自己抓到的** —— 说明"新增会被拦"是有效的，
+   * 而不是一段写在注释里的规矩。
+   *
+   * ⚠️ 将来这个视图收回 hook 时，请把它从本表里整体删掉（而不是改成 0）。
+   */
+  'OpsLogView.tsx': 11,
 }
 
 function viewFiles() {

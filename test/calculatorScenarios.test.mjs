@@ -115,7 +115,20 @@ test('对比：每列结论现算、非法列给警告、第一列为基准', as
 
   // 「优」标记：非法列绝不参与（否则 -1 的坏方案会以"成本最低"拿下「优」）
   const cost = COMPARISON_METRICS.find((m) => m.key === 'totalVariableCost')
-  assert.equal(bestColumnId(cost, table.columns), null, '两份合法方案成本相同 → 不给标记；非法列必须被排除')
+  /**
+   * 2026-10-27：佣金改成"售价 × 固定 15%"后，**低价那份的成本确实更低**（佣金跟着降），
+   * 所以这里从"两份成本相同 → 不标"改成"低价成本最低 → 标 b"。
+   * 旧判据成立的前提是两份都把佣金固定写成 6.00 —— 那本身就是佣金与售价脱钩的症状。
+   */
+  assert.equal(bestColumnId(cost, table.columns), 'b', '低价方案佣金同步降低 → 成本最低')
+  assert.equal(bestColumnId(cost, [table.columns[0], table.columns[2]]), null,
+    '只剩基准与非法列时不许标优（非法列排除后有效值不足 2 个）')
+  // 全列同值仍然不标（每列都"最优"等于没有信息）
+  const sameInputs = buildComparison([
+    { id: 'x', name: 'X', input: normalizeCalculatorInput(INPUT) },
+    { id: 'y', name: 'Y', input: normalizeCalculatorInput(INPUT) },
+  ], DEFAULTS)
+  assert.equal(bestColumnId(cost, sameInputs.columns), null, '两份完全相同的方案不标优')
 
   // 有效贡献：售价高的那列更高 → 标 a
   const profit = COMPARISON_METRICS.find((m) => m.key === 'effectiveProfit')

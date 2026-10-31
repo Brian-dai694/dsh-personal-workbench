@@ -306,15 +306,21 @@ test('设置页：字典管理里有「知识库类型」（原先漏了这个�
   }
 })
 
-test('字典：知识库/点子类型的**出厂 config 必须带颜色**（否则 Tab 圆点与徽标全落灰色兜底）', () => {
+test('字典：知识库/点子类型的出厂颜色由 palette.ts 注入（种子不再写死色号）', () => {
   const seed = readFileSync('src/db/seed.ts', 'utf8')
   const knowledgeSeeds = seed.match(/\{ kind: 'knowledge_kind'[^\n]*/g) ?? []
   const ideaSeeds = seed.match(/\{ kind: 'idea_kind'[^\n]*/g) ?? []
   assert.equal(knowledgeSeeds.length, 4, 'knowledge_kind 种子 4 条')
   assert.equal(ideaSeeds.length, 5, 'idea_kind 种子 5 条')
+  // 2026-10-28：颜色统一由 palette.ts 注入（换色系只改一处，种子与迁移不再各写一份）
   for (const line of [...knowledgeSeeds, ...ideaSeeds]) {
-    assert.match(line, /config: \{ color: '#[0-9A-Fa-f]{6}' \}/, `种子缺颜色：${line.slice(0, 60)}`)
+    assert.match(line, /config: \{\}/, `种子不该再写死颜色：${line.slice(0, 60)}`)
   }
+  // 出厂色本身仍然必须有 —— 这里只验"来源存在"，逐项一致性由 paletteAlign.test.mjs 断言
+  const palette = readFileSync('src/shared/palette.ts', 'utf8')
+  assert.match(palette, /knowledge_kind: \{/, 'palette.ts 必须给出知识库类型的出厂色')
+  assert.match(palette, /idea_kind: \{/, 'palette.ts 必须给出点子类型的出厂色')
+  assert.match(seed, /RAW_SEEDS\.map/, 'DICTIONARY_SEEDS 必须由调色板注入颜色（RAW_SEEDS.map）')
 })
 
 test('迁移 16：给已存在的库回填这两类字典的颜色，且**不覆盖已有颜色**', () => {

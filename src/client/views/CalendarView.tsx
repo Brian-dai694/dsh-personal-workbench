@@ -84,8 +84,8 @@ export function CalendarView(props: CalendarViewProps): JSX.Element {
             const logs = oplogCountByDate.get(dayKey(d)) ?? 0
             return (
               <div key={d.toISOString()} className={`wb-day ${sameDay(d, now) ? 'today' : ''} ${sameDay(d, picked) ? 'selected' : ''}`} onClick={() => onPick(startOfDay(d))} {...interactiveProps(() => onPick(startOfDay(d)), { pressed: sameDay(d, picked) })}>
-                <div className="wb-day-date" style={{ fontSize: 12, color: '#999' }}>{d.getMonth() + 1}/{d.getDate()}</div>
-                {n > 0 && <div className="wb-chip" style={{ background: '#4f8ef7', marginTop: 4 }}>{n} 个任务</div>}
+                <div className="wb-day-date" style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>{d.getMonth() + 1}/{d.getDate()}</div>
+                {n > 0 && <div className="wb-chip" style={{ background: 'var(--wb-accent)', marginTop: 4 }}>{n} 个任务</div>}
                 {logs > 0 && (
                   <button type="button" className="wb-day-log" onClick={(e) => { e.stopPropagation(); onOpenOplogDate?.(dayKey(d)) }} title={`${logs} 条运营日志`}>
                     <Icon name="file" size={11} />{logs} 条日志
@@ -104,7 +104,7 @@ export function CalendarView(props: CalendarViewProps): JSX.Element {
               <div key={d.toISOString()} className={`wb-mday ${d.getMonth() !== cursor.getMonth() ? 'other' : ''} ${sameDay(d, now) ? 'today' : ''} ${sameDay(d, picked) ? 'selected' : ''}`} onClick={() => onPick(startOfDay(d))} {...interactiveProps(() => onPick(startOfDay(d)), { pressed: sameDay(d, picked) })}>
                 <div className="wb-mday-date" style={{ fontSize: 12 }}>{d.getDate()}</div>
                 <div className="wb-mday-dots">
-                  {tasks.some((t) => isTaskDueOnDay(t, d)) && <div className="wb-chip" style={{ background: '#4f8ef7', marginTop: 2 }}>•</div>}
+                  {tasks.some((t) => isTaskDueOnDay(t, d)) && <div className="wb-chip" style={{ background: 'var(--wb-accent)', marginTop: 2 }}>•</div>}
                   {logs > 0 && (
                     <button type="button" className="wb-mday-log" onClick={(e) => { e.stopPropagation(); onOpenOplogDate?.(dayKey(d)) }} title={`${logs} 条运营日志`} aria-label={`${logs} 条运营日志`}>
                       <i aria-hidden="true" />

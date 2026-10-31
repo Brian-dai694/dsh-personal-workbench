@@ -17,6 +17,7 @@ import type { useKnowledge } from '../hooks/useKnowledge.js'
 import type { useAmazonDatasets } from '../hooks/useAmazonDatasets.js'
 import type { useAbaKeywordSets } from '../hooks/useAbaKeywordSets.js'
 import type { useAdReportDatasets } from '../hooks/useAdReportDatasets.js'
+import type { useUniverCsvTable } from '../hooks/useUniverCsvTable.js'
 import type { useTaskData } from '../hooks/useTaskData.js'
 import type { useTaskDetailModel } from '../hooks/useTaskDetailModel.js'
 import type { useTaskForms } from '../hooks/useTaskForms.js'
@@ -29,6 +30,7 @@ import type { useWorkbenchFeedback } from '../hooks/useWorkbenchFeedback.js'
 import type { useWorkbenchExperts } from '../hooks/useWorkbenchExperts.js'
 import type { useWorkbenchNavigation } from '../hooks/useWorkbenchNavigation.js'
 import type { useOplogDayIndex } from '../hooks/useOplogDayIndex.js'
+import type { useInventory } from '../hooks/useInventory.js'
 import type { useKeywordPlans } from '../hooks/useKeywordPlans.js'
 import type { useCalculatorScenarios } from '../hooks/useCalculatorScenarios.js'
 import type { useWorkbenchQuickIntake } from '../hooks/useWorkbenchQuickIntake.js'
@@ -98,6 +100,17 @@ export interface WorkbenchAssembly {
    */
   abaKeywordSets: ReturnType<typeof useAbaKeywordSets>
   /**
+   * 表格能力域（并入 CSV 版块）：把当前页解析好的 CSV 变成可编辑的 `.univer` 表格。
+   *
+   * 为什么在装配层：`POST /api/workbench/amazon/table-preview` 是 HTTP（D17 硬门禁止视图发请求），
+   * 且「生成后就在本页嵌着看」的状态不能因为切一次视图就被重置。
+   *
+   * 与 `dsh-univer-office` 的关系只有两条**同源契约**：本插件宿主侧的 `ctx.univer` 服务，
+   * 以及浏览器侧的 `/univer-api/state` + `/univer-viewer`。对方不在时本域只报"没装"，
+   * 工作台其余功能不受影响（也不冒充能生成）。
+   */
+  univerTable: ReturnType<typeof useUniverCsvTable>
+  /**
    * 广告报表域（T3）：**非搜索词**类型（投放/活动/广告位/预算/份额）。
    *
    * 搜索词一路不在这里 —— 它读 `amazonData`，三页共用同一个 current。
@@ -106,6 +119,14 @@ export interface WorkbenchAssembly {
   adReportData: ReturnType<typeof useAdReportDatasets>
   /** 点子域（D17/P2）。 */
   ideas: ReturnType<typeof useIdeas>
+  /**
+   * 库存补货看板域（2026-10-27 批次 8）：盘点数据、测算参数与派生结论的唯一所有者。
+   *
+   * 为什么在装配层：`InventoryView` 原先自己发 `GET`/`POST /api/workbench/inventory`，
+   * 破了「视图不发 HTTP」（D17 结构硬门）。搬到 hook 后视图只拿结果与意图，
+   * 同时"进视图才拉一次"的时机不变。
+   */
+  inventory: ReturnType<typeof useInventory>
   /** 反馈域（D17/P5-1）：toast 宿主与三个写口。 */
   feedback: ReturnType<typeof useWorkbenchFeedback>
   /**

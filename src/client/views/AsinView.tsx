@@ -6,10 +6,16 @@
  * 工作台里没有那个上下文，硬搬等于造假数据。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api } from '../api.js'
+import { api, ApiError } from '../api.js'
 import { useI18n } from '../i18n.js'
 import { Icon } from '../components/Icon.js'
 import { Modal } from '../components/Modal.js'
+import { AsinProductForm, AsinStoreForm } from '../components/AsinManualForms.js'
+import {
+  emptyProductDraft, emptyStoreDraft, productBody, productDraftOf, storeBody, storeDraftOf,
+  type AsinProductDraft, type AsinStoreDraft,
+} from '../asinManualDraft.js'
+import { useAsinLibrary } from '../hooks/useAsinLibrary.js'
 import { ASIN_VERDICTS, ASIN_VERDICT_LABELS } from '../../shared/asinJudgment.js'
 import type { AsinJudgment, AsinVerdict } from '../../shared/asinJudgment.js'
 
@@ -23,7 +29,9 @@ interface AsinProduct {
   rating: number | null
   reviews: number | null
   bsr: number | null
-  site: string
+  /** 站点；`null` = 身份未定（needs_site），不得默认 US（P2 合同）。 */
+  site: string | null
+  identityState?: 'ok' | 'needs_site'
   shopId: string | null
   shopName: string | null
   category: string | null
@@ -38,9 +46,9 @@ interface AsinProduct {
 
 interface AsinStoreRow { id: string; sellerId: string | null; site: string | null; name: string; url: string | null; note: string | null; watch: boolean; lastScannedAt: string | null; productsCount: number; linked: number; watched: number }
 interface Facet { value: string; count: number }
-interface Facets { categories: Facet[]; shops: Facet[]; tags: Facet[]; verdicts: Facet[]; total: number; watched: number }
+interface Facets { categories: Facet[]; shops: Facet[]; tags: Facet[]; verdicts: Facet[]; sites: Facet[]; total: number; watched: number }
 
-const EMPTY: Facets = { categories: [], shops: [], tags: [], verdicts: [], total: 0, watched: 0 }
+const EMPTY: Facets = { categories: [], shops: [], tags: [], verdicts: [], sites: [], total: 0, watched: 0 }
 
 /** 点一下结论就轮转：未判断 → 可做 → 观望 → 放弃 → 未判断。 */
 const VERDICT_CYCLE: Record<AsinVerdict, AsinVerdict> = { none: 'do', do: 'watch', watch: 'drop', drop: 'none' }
@@ -61,7 +69,8 @@ function Sparkline({ values }: { values: number[] }): JSX.Element | null {
   const down = values[values.length - 1] <= values[0]
   return (
     <svg className="wb-asin-spark" viewBox={`0 0 ${width} ${height}`} width={width} height={height} aria-hidden="true">
-      <polyline points={points} fill="none" stroke={down ? '#2E9B7B' : '#d9534f'} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+      {/* 走势线的颜色也走令牌（2026-10-28：原先写死墨绿/砖红，是全站最后两处自定色） */}
+      <polyline points={points} fill="none" stroke={down ? 'var(--wb-ok)' : 'var(--wb-danger)'} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
 }
@@ -73,7 +82,17 @@ function fmtDate(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-export function AsinView(): JSX.Element {
+export interface AsinViewProps {
+  /** 不带身份地打开产品库（页签上的入口）。 */
+  onOpenLibrary?: () => void
+  /**
+   * 带身份地打开产品库（行内入口）：`site + asin` **必须成对**传，
+   * 只传 asin 会让落地页在同 ASIN 多站点时搜出两行，看着像定位成功其实要用户再选一次。
+   */
+  onOpenProducts?: (asin: string, site: string | null) => void
+}
+
+export function AsinView({ onOpenLibrary, onOpenProducts }: AsinViewProps): JSX.Element {
   const { t } = useI18n()
   const [products, setProducts] = useState<AsinProduct[]>([])
   const [facets, setFacets] = useState<Facets>(EMPTY)
@@ -81,6 +100,8 @@ export function AsinView(): JSX.Element {
   const [error, setError] = useState('')
   const [note, setNote] = useState('')
   const [category, setCategory] = useState('')
+  /** 站点筛选（P2）：多站点身份下，不先筛站点就看不清"同一个 ASIN 的两条记录"。 */
+  const [site, setSite] = useState('')
   const [shop, setShop] = useState('')
   const [keyword, setKeyword] = useState('')
   const [tag, setTag] = useState('')
@@ -93,7 +114,7 @@ export function AsinView(): JSX.Element {
   const [total, setTotal] = useState(0)
   const [busyAsin, setBusyAsin] = useState('')
   /** 批量选择的 ASIN（跨页保留：翻页后再回来勾选状态还在，用户不会以为白选了）。 */
-  const [picked, setPicked] = useState<Set<string>>(() => new Set())
+  const [picked, setPicked] = useState<Map<string, string | null>>(() => new Map())
   const [batchTag, setBatchTag] = useState('')
   const [batchBusy, setBatchBusy] = useState(false)
   const [exportPath, setExportPath] = useState('')
@@ -102,14 +123,49 @@ export function AsinView(): JSX.Element {
   const [stores, setStores] = useState<AsinStoreRow[]>([])
   const [storeBusy, setStoreBusy] = useState('')
   /** 立项弹框的草稿：类型/优先级可改，标题可改（默认「选品立项：商品名」）。 */
-  const [taskDraft, setTaskDraft] = useState<{ asin: string; title: string; typeCode: string; priorityCode: string; dueLocal: string } | null>(null)
+  const [taskDraft, setTaskDraft] = useState<{ asin: string; site: string; title: string; typeCode: string; priorityCode: string; dueLocal: string } | null>(null)
   /** 立项可选类型/优先级：来自字典（服务端下发），界面不硬编码 code。 */
   const [typeOptions, setTypeOptions] = useState<Array<{ code: string; name: string }>>([])
   const [priorityOptions, setPriorityOptions] = useState<Array<{ code: string; name: string }>>([])
+  /**
+   * 手工维护弹框（v1.18）：商品/店铺各一份草稿，`null` = 关着。
+   * 保存成败都走 `formError`（不复用列表那条 `error`：否则表单校验失败会显示在背后被遮住）。
+   */
+  const [productDraft, setProductDraft] = useState<{ mode: 'create' | 'edit'; value: AsinProductDraft } | null>(null)
+  /** 店铺的 id 单独带：它是身份，编辑时**不随改名变化**（PATCH 路径要用原 id）。 */
+  const [storeDraft, setStoreDraft] = useState<{ mode: 'create' | 'edit'; id: string | null; value: AsinStoreDraft } | null>(null)
+  const [formError, setFormError] = useState('')
+  /** 写通道在 hook 里（视图不发 HTTP，见 test/viewHttpFence 的棘轮）。 */
+  const library = useAsinLibrary()
+
+  /**
+   * 写操作的**身份守卫**（P2，2026-10-29）：站点未定就不发请求。
+   *
+   * 服务端会 400 `site_required`，但在界面这里拦住才能给出可操作的下一步；
+   * 直接把 400 文案抛给用户，他并不知道"去哪儿补站点"。
+   */
+  const identityOf = useCallback((product: AsinProduct): { site: string; asin: string } | null => {
+    if (product.site === null || product.site.trim() === '') {
+      setError(t('「{asin}」的站点未定（待复核）：先补站点，再操作。', { asin: product.asin }))
+      return null
+    }
+    return { site: product.site, asin: product.asin }
+  }, [t])
+
+  /** 409 / 400 的可恢复提示：告诉用户"选站点 / 刷新"，而不是原样抛 message。 */
+  const describeWriteError = useCallback((e: unknown): string => {
+    if (e instanceof ApiError) {
+      if (e.code === 'identity_required') return t('这个 ASIN 在多个站点存在：先按站点筛选，再对该站点操作。')
+      if (e.code === 'site_mismatch') return t('站点与记录不一致（可能已被改过）：刷新后重试。')
+      if (e.code === 'site_required') return t('缺少站点：写入必须指明站点。')
+    }
+    return e instanceof Error ? e.message : String(e)
+  }, [t])
 
   const query = useMemo(() => {
     const params = new URLSearchParams()
     if (category !== '') params.set('category', category)
+    if (site !== '') params.set('site', site)
     if (shop !== '') params.set('shop', shop)
     if (keyword.trim() !== '') params.set('q', keyword.trim())
     if (tag !== '') params.set('tag', tag)
@@ -120,7 +176,7 @@ export function AsinView(): JSX.Element {
     params.set('page', String(page))
     params.set('size', String(size))
     return params.toString()
-  }, [category, shop, keyword, tag, watch, verdict, sort, order, page, size])
+  }, [category, site, shop, keyword, tag, watch, verdict, sort, order, page, size])
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -160,49 +216,53 @@ export function AsinView(): JSX.Element {
   }, [load, t])
 
   const toggleWatch = useCallback(async (product: AsinProduct): Promise<void> => {
+    const identity = identityOf(product)
+    if (identity === null) return
     setBusyAsin(product.asin)
     setError('')
     try {
-      await api(`/api/workbench/asin/${encodeURIComponent(product.asin)}/watch`, {
-        method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ watch: !product.watch }),
+      await api(`/api/workbench/asin/${encodeURIComponent(identity.asin)}/watch?site=${encodeURIComponent(identity.site)}`, {
+        method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ watch: !product.watch, site: identity.site }),
       })
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(describeWriteError(e))
     } finally {
       setBusyAsin('')
     }
-  }, [load])
+  }, [describeWriteError, identityOf, load])
 
   /** 点结论 chip 轮转判断：只传 verdict，其余判断字段（VOC/评分卡）由服务端沿用原值。 */
   const cycleVerdict = useCallback(async (product: AsinProduct): Promise<void> => {
+    const identity = identityOf(product)
+    if (identity === null) return
     const next = VERDICT_CYCLE[product.judgment.verdict] ?? 'do'
     setBusyAsin(product.asin)
     setError('')
     try {
-      await api(`/api/workbench/asin/${encodeURIComponent(product.asin)}/judgment`, {
+      await api(`/api/workbench/asin/${encodeURIComponent(identity.asin)}/judgment?site=${encodeURIComponent(identity.site)}`, {
         method: 'PATCH', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ verdict: next, source: 'manual' }),
+        body: JSON.stringify({ verdict: next, source: 'manual', site: identity.site }),
       })
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(describeWriteError(e))
     } finally {
       setBusyAsin('')
     }
-  }, [load])
+  }, [describeWriteError, identityOf, load])
 
   const changeFilter = (setter: (value: string) => void) => (event: React.ChangeEvent<HTMLSelectElement>): void => {
     setter(event.target.value)
     setPage(1)
   }
 
-  /** 勾选/取消一个 ASIN。 */
-  const togglePick = useCallback((asin: string): void => {
+  /** 勾选/取消一个商品：**连站点一起记**（P2 的批量要求 `{site, asin}`）。 */
+  const togglePick = useCallback((product: AsinProduct): void => {
     setPicked((prev) => {
-      const next = new Set(prev)
-      if (next.has(asin)) next.delete(asin)
-      else next.add(asin)
+      const next = new Map(prev)
+      if (next.has(product.asin)) next.delete(product.asin)
+      else next.set(product.asin, product.site)
       return next
     })
   }, [])
@@ -210,12 +270,11 @@ export function AsinView(): JSX.Element {
   /** 全选当前页 / 取消全选当前页（只影响本页，避免误删整库）。 */
   const togglePickPage = useCallback((): void => {
     setPicked((prev) => {
-      const pageAsins = products.map((product) => product.asin)
-      const allPicked = pageAsins.every((asin) => prev.has(asin))
-      const next = new Set(prev)
-      for (const asin of pageAsins) {
-        if (allPicked) next.delete(asin)
-        else next.add(asin)
+      const allPicked = products.every((product) => prev.has(product.asin))
+      const next = new Map(prev)
+      for (const product of products) {
+        if (allPicked) next.delete(product.asin)
+        else next.set(product.asin, product.site)
       }
       return next
     })
@@ -227,6 +286,13 @@ export function AsinView(): JSX.Element {
    */
   const runBatch = useCallback(async (action: 'watch' | 'unwatch' | 'addTag' | 'removeTag' | 'delete'): Promise<void> => {
     if (picked.size === 0) return
+    /** 批量必须逐项带站点（P2）：站点未定的先拦住，不许静默跳过或猜一个站点。 */
+    const items = [...picked.entries()].map(([asin, site]) => ({ asin, site }))
+    const unresolved = items.filter((item) => item.site === null || item.site.trim() === '')
+    if (unresolved.length > 0) {
+      setError(t('选中的 {n} 个商品站点未定（待复核）：先补站点，再批量操作。', { n: unresolved.length }))
+      return
+    }
     if (action === 'delete' && !window.confirm(t('删除选中的 {n} 个 ASIN？删除后不可恢复。', { n: picked.size }))) return
     setBatchBusy(true)
     setError('')
@@ -234,35 +300,44 @@ export function AsinView(): JSX.Element {
     try {
       const result = await api<{ affected: number; missing: number; tag: string | null }>('/api/workbench/asin/batch', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ asins: [...picked], action, tag: batchTag }),
+        body: JSON.stringify({ items, action, tag: batchTag }),
       })
       const label = action === 'delete' ? t('删除') : action === 'watch' ? t('设为关注') : action === 'unwatch' ? t('取消关注') : action === 'addTag' ? t('加标签') : t('删标签')
       setNote(t('已{label} {n} 个', { label, n: result.affected }) + (result.missing > 0 ? t('，{m} 个已不存在已跳过', { m: result.missing }) : ''))
-      if (action === 'delete') setPicked(new Set())
+      if (action === 'delete') setPicked(new Map())
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(describeWriteError(e))
     } finally {
       setBatchBusy(false)
     }
-  }, [batchTag, load, picked, t])
+  }, [batchTag, describeWriteError, load, picked, t])
 
-  /** 导出：整库或仅选中（服务端写文件并返回真实路径）。 */
+  /** 导出：整库或仅选中（服务端写文件并返回真实路径）。选中项同样逐项带站点。 */
   const exportBackup = useCallback(async (onlyPicked: boolean): Promise<void> => {
     setBatchBusy(true)
     setError('')
     setNote('')
     try {
-      const query = onlyPicked && picked.size > 0 ? `?asins=${encodeURIComponent([...picked].join(','))}` : ''
+      let query = ''
+      if (onlyPicked && picked.size > 0) {
+        const items = [...picked.entries()].map(([asin, site]) => ({ asin, site }))
+        const unresolved = items.filter((item) => item.site === null || item.site.trim() === '')
+        if (unresolved.length > 0) {
+          setError(t('选中的 {n} 个商品站点未定（待复核）：先补站点，再导出选中。', { n: unresolved.length }))
+          return
+        }
+        query = `?asins=${encodeURIComponent(JSON.stringify(items))}`
+      }
       const result = await api<{ path: string; products: number }>(`/api/workbench/asin/export${query}`)
       setExportPath(result.path)
       setNote(t('已导出 {n} 个 ASIN 到本机', { n: result.products }))
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(describeWriteError(e))
     } finally {
       setBatchBusy(false)
     }
-  }, [picked, t])
+  }, [describeWriteError, picked, t])
 
   /** 关注/取消关注一个店铺（店铺是"扫描记录"，关注只是标记，不影响其商品）。 */
   const toggleStoreWatch = useCallback(async (store: AsinStoreRow): Promise<void> => {
@@ -303,6 +378,74 @@ export function AsinView(): JSX.Element {
     setPage(1)
   }, [])
 
+  /* ------------------------------------------------------------------
+   * 手工维护（v1.18）：不依赖旧脚本备份也能建库/改库
+   * ------------------------------------------------------------------ */
+
+  const openProductCreate = useCallback((): void => {
+    setFormError('')
+    setProductDraft({ mode: 'create', value: emptyProductDraft() })
+  }, [])
+
+  const openProductEdit = useCallback((product: AsinProduct): void => {
+    setFormError('')
+    setProductDraft({ mode: 'edit', value: productDraftOf(product) })
+  }, [])
+
+  const openStoreCreate = useCallback((): void => {
+    setFormError('')
+    setStoreDraft({ mode: 'create', id: null, value: emptyStoreDraft() })
+  }, [])
+
+  const openStoreEdit = useCallback((store: AsinStoreRow): void => {
+    setFormError('')
+    setStoreDraft({ mode: 'edit', id: store.id, value: storeDraftOf(store) })
+  }, [])
+
+  /**
+   * 保存商品：先由 `productBody` 做一次本地转换/校验（数字格式、标签切分），
+   * 服务端还会再校验一遍。**不加乐观更新**：成功后重新拉列表，列表才是唯一事实。
+   */
+  const saveProduct = useCallback(async (): Promise<void> => {
+    if (productDraft === null) return
+    setFormError('')
+    try {
+      const body = productBody(productDraft.value, stores)
+      if (productDraft.mode === 'create') {
+        await library.createProduct(body)
+        setNote(t('已添加商品 {asin}', { asin: String(body.asin) }))
+      } else {
+        await library.updateProduct(productDraft.value.asin, body)
+        setNote(t('已保存商品 {asin}', { asin: productDraft.value.asin }))
+      }
+      setProductDraft(null)
+      await load()
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : String(e))
+    }
+  }, [library, load, productDraft, stores, t])
+
+  /** 保存店铺：与商品同一条路径（本地转换 → 服务端校验 → 重新拉列表）。 */
+  const saveStore = useCallback(async (): Promise<void> => {
+    if (storeDraft === null) return
+    setFormError('')
+    try {
+      const body = storeBody(storeDraft.value)
+      if (storeDraft.mode === 'create') {
+        await library.createStore(body)
+        setNote(t('已添加店铺 {name}', { name: String(body.name) }))
+      } else {
+        if (storeDraft.id === null) throw new Error('缺少店铺 id，无法保存')
+        await library.updateStore(storeDraft.id, body)
+        setNote(t('已保存店铺 {name}', { name: String(body.name) }))
+      }
+      setStoreDraft(null)
+      await load()
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : String(e))
+    }
+  }, [library, load, storeDraft, t])
+
   /**
    * 立项：把这条商品的判断变成一条真实任务。
    *
@@ -326,27 +469,31 @@ export function AsinView(): JSX.Element {
 
   /** 打开立项弹框（类型/优先级/截止时间/标题都在这里确认，避免"隐藏固定参数"）。 */
   const openTaskDraft = useCallback((product: AsinProduct): void => {
+    const identity = identityOf(product)
+    if (identity === null) return
     setError('')
     setNote('')
     setTaskDraft({
-      asin: product.asin,
+      asin: identity.asin,
+      site: identity.site,
       title: `选品立项：${product.currentTitle ?? product.title ?? product.asin}`.slice(0, 120),
       typeCode: 'personal',
       priorityCode: 'p2',
       // p2 默认不设截止；用户改优先级时 suggestDueLocal 会补上建议值
       dueLocal: '',
     })
-  }, [])
+  }, [identityOf])
 
   const submitTaskDraft = useCallback(async (): Promise<void> => {
     if (taskDraft === null) return
     setBusyAsin(taskDraft.asin)
     setError('')
     try {
-      const result = await api<{ taskId: string; title: string }>(`/api/workbench/asin/${encodeURIComponent(taskDraft.asin)}/task`, {
+      const result = await api<{ taskId: string; title: string }>(`/api/workbench/asin/${encodeURIComponent(taskDraft.asin)}/task?site=${encodeURIComponent(taskDraft.site)}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          site: taskDraft.site,
           title: taskDraft.title,
           typeCode: taskDraft.typeCode,
           priorityCode: taskDraft.priorityCode,
@@ -374,15 +521,33 @@ export function AsinView(): JSX.Element {
         <button type="button" role="tab" aria-selected={tab === 'stores'} className={`wb-seg ${tab === 'stores' ? 'on' : ''}`} onClick={() => setTab('stores')}>
           {t('店铺库')}<span className="wb-asin-tab-count">{stores.length}</span>
         </button>
+        {/**
+         * 跳产品库（P3）：本页只留"怎么判"，"这个商品是什么"去产品库看。
+         * 只做跳转，不做第二份产品详情 —— 两份详情必然漂移。
+         */}
+        {onOpenLibrary !== undefined && (
+          <button
+            type="button"
+            className="wb-seg wb-asin-tab-link"
+            onClick={onOpenLibrary}
+            title={t('查看商品事实（站点/ASIN/价格/店铺）')}
+          >{t('产品库 →')}</button>
+        )}
       </div>
 
       {tab === 'stores' ? (
         <div className="wb-asin-stores">
+          <div className="wb-asin-toolbar">
+            <div className="wb-asin-filters">
+              <button type="button" className="wb-btn" onClick={openStoreCreate}>{t('添加店铺')}</button>
+              <span className="wb-asin-batch-hint">{t('店铺只是选品库的归类：删记录不会删掉它下面的商品。')}</span>
+            </div>
+          </div>
           {stores.length === 0
             ? (
               <div className="wb-empty">
                 <div className="wb-empty-title">{t('还没有店铺记录')}</div>
-                <div className="wb-empty-desc">{t('旧脚本导出备份里的店铺会随「导入收藏 JSON」一起进来；每家店会显示库内实际关联的商品数。')}</div>
+                <div className="wb-empty-desc">{t('点上面的「添加店铺」手工建一家；旧脚本导出的店铺也会随「导入收藏 JSON」进来。每家店会显示库内实际关联的商品数。')}</div>
               </div>
             )
             : stores.map((store) => (
@@ -407,6 +572,7 @@ export function AsinView(): JSX.Element {
                 </div>
                 <div className="wb-asin-store-actions">
                   <button type="button" className="wb-btn" disabled={store.linked === 0} onClick={() => openStoreProducts(store)}>{t('看商品')}</button>
+                  <button type="button" className="wb-oplog-card-open" onClick={() => openStoreEdit(store)}>{t('编辑')}</button>
                   <button type="button" className="wb-oplog-card-open" disabled={storeBusy === store.id} onClick={() => void removeStore(store)}>{t('删除记录')}</button>
                 </div>
               </div>
@@ -416,6 +582,10 @@ export function AsinView(): JSX.Element {
       <>
       <div className="wb-asin-toolbar">
         <div className="wb-asin-filters">
+        <select className="wb-oplog-select" value={site} onChange={changeFilter(setSite)} aria-label={t('站点')}>
+          <option value="">{t('全部站点')}</option>
+          {facets.sites.map((f) => <option key={f.value} value={f.value}>{f.value}（{f.count}）</option>)}
+        </select>
         <select className="wb-oplog-select" value={category} onChange={changeFilter(setCategory)} aria-label={t('分类')}>
           <option value="">{t('全部分类')}（{facets.total}）</option>
           {facets.categories.map((f) => <option key={f.value} value={f.value}>{f.value}（{f.count}）</option>)}
@@ -452,6 +622,16 @@ export function AsinView(): JSX.Element {
           {order === 'desc' ? '↓' : '↑'}
         </button>
         <input className="wb-oplog-search" type="search" value={keyword} placeholder={t('搜索 ASIN / 标题 / 备注')} onChange={(e) => { setKeyword(e.target.value); setPage(1) }} />
+        </div>
+      </div>
+
+      {/**
+       * 动作层与筛选层分开（2026-10-29）：原来 6 个筛选控件、排序、搜索和
+       * 添加/导入/导出挤在**一行**里，窄屏会折成三层、主操作被埋在后面。
+       * 筛选是"看什么"，动作是"改什么" —— 两类意图不该抢同一行。
+       */}
+      <div className="wb-report-actions">
+        <button type="button" className="wb-btn primary" onClick={openProductCreate}>{t('添加商品')}</button>
         <label className="wb-btn wb-oplog-import">
           <Icon name="file" size={13} />{t('导入收藏 JSON')}
           <input
@@ -466,7 +646,6 @@ export function AsinView(): JSX.Element {
           />
         </label>
         <button type="button" className="wb-btn" disabled={batchBusy} onClick={() => void exportBackup(false)}>{t('导出备份 JSON')}</button>
-        </div>
       </div>
 
       {/* 批量工具条：只在有勾选时出现，避免平时占一行 */}
@@ -486,7 +665,7 @@ export function AsinView(): JSX.Element {
           <button type="button" className="wb-btn" disabled={batchBusy || batchTag.trim() === ''} onClick={() => void runBatch('removeTag')}>{t('删标签')}</button>
           <button type="button" className="wb-btn" disabled={batchBusy} onClick={() => void exportBackup(true)}>{t('只导出选中')}</button>
           <button type="button" className="wb-btn wb-asin-batch-danger" disabled={batchBusy} onClick={() => void runBatch('delete')}>{t('删除选中')}</button>
-          <button type="button" className="wb-oplog-card-open" onClick={() => setPicked(new Set())}>{t('清空选择')}</button>
+          <button type="button" className="wb-oplog-card-open" onClick={() => setPicked(new Map())}>{t('清空选择')}</button>
         </div>
       )}
       {exportPath !== '' && (
@@ -499,10 +678,46 @@ export function AsinView(): JSX.Element {
       {error !== '' && <div className="wb-oplog-error">{error}</div>}
       {loading && <div className="wb-skill-hint">{t('读取收藏库…')}</div>}
 
+      {/**
+       * 空态要给**能点的东西**（2026-10-29）：原来只有一句"点上面的「添加商品」"，
+       * 用户得回到工具条里去找；筛选无结果时甚至没有一键复原的入口。
+       */ }
       {!loading && products.length === 0 && (
         <div className="wb-empty">
           <div className="wb-empty-title">{facets.total === 0 ? t('收藏库还是空的') : t('没有符合条件的商品')}</div>
-          <div className="wb-empty-desc">{facets.total === 0 ? t('在旧脚本里「导出备份(JSON)」，再用上面的「导入收藏 JSON」导进来。') : t('调整筛选条件，或清除标签和关注筛选。')}</div>
+          <div className="wb-empty-desc">
+            {facets.total === 0
+              ? t('手工录入一个 ASIN，或把旧脚本导出的备份（JSON）整库带进来。')
+              : t('当前筛选没有命中任何商品。')}
+          </div>
+          <div className="wb-report-actions" style={{ justifyContent: 'center' }}>
+            {facets.total === 0 ? (
+              <>
+                <button type="button" className="wb-btn primary" onClick={openProductCreate}>{t('添加商品')}</button>
+                <label className="wb-btn">
+                  <Icon name="file" size={13} />{t('导入收藏 JSON')}
+                  <input
+                    type="file"
+                    accept="application/json,.json"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0]
+                      if (file !== undefined) void onImport(file)
+                      e.currentTarget.value = ''
+                    }}
+                  />
+                </label>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="wb-btn"
+                onClick={() => {
+                  setCategory(''); setShop(''); setVerdict('all'); setTag(''); setWatch('all'); setKeyword(''); setPage(1)
+                }}
+              >{t('清空筛选')}</button>
+            )}
+          </div>
         </div>
       )}
 
@@ -522,7 +737,7 @@ export function AsinView(): JSX.Element {
           {products.map((product) => (
             <div key={product.asin} className={`wb-asin-row${picked.has(product.asin) ? ' is-picked' : ''}`}>
               <label className="wb-asin-pick" title={t('选择')}>
-                <input type="checkbox" checked={picked.has(product.asin)} onChange={() => togglePick(product.asin)} aria-label={t('选择 {asin}', { asin: product.asin })} />
+                <input type="checkbox" checked={picked.has(product.asin)} onChange={() => togglePick(product)} aria-label={t('选择 {asin}', { asin: product.asin })} />
               </label>
               {product.imageUrl !== null
                 ? <img className="wb-asin-thumb" src={product.imageUrl} alt="" loading="lazy" />
@@ -539,6 +754,19 @@ export function AsinView(): JSX.Element {
                     className="wb-asin-copy"
                     onClick={() => { void navigator.clipboard?.writeText(product.asin) }}
                   >{t("复制")}</button>
+                  <button type="button" className="wb-asin-copy" onClick={() => openProductEdit(product)}>{t('编辑')}</button>
+                  {/**
+                   * 只读出口：带 `site + asin` 跳到产品库。
+                   * 这里**不放**产品字段的第二份详情 —— 摘要=行内已有的事实，详情归产品库。
+                   */}
+                  {onOpenProducts !== undefined && (
+                    <button
+                      type="button"
+                      className="wb-asin-copy"
+                      onClick={() => onOpenProducts(product.asin, product.site)}
+                      title={t('在产品库查看这条商品事实')}
+                    >{t('产品库')}</button>
+                  )}
                   {product.shopId !== null && <span>{product.shopName ?? product.shopId}</span>}
                   {product.category !== null && <span className="wb-chip is-neutral">{product.category}</span>}
                   <button
@@ -624,6 +852,32 @@ export function AsinView(): JSX.Element {
             <p className="wb-amazon-footnote">{t('任务描述会自动带上这条商品的 ASIN、售价、判断结论、评分卡、VOC 痛点与风险。')}</p>
           </div>
         </Modal>
+      )}
+
+      {/* 手工维护弹框（v1.18）：存成功后才关、才重拉列表；失败把服务端文案留在弹框里。 */}
+      {productDraft !== null && (
+        <AsinProductForm
+          mode={productDraft.mode}
+          draft={productDraft.value}
+          stores={stores}
+          busy={library.busy}
+          error={formError}
+          onChange={(value) => setProductDraft({ mode: productDraft.mode, value })}
+          onSave={() => void saveProduct()}
+          onClose={() => setProductDraft(null)}
+        />
+      )}
+
+      {storeDraft !== null && (
+        <AsinStoreForm
+          mode={storeDraft.mode}
+          draft={storeDraft.value}
+          busy={library.busy}
+          error={formError}
+          onChange={(value) => setStoreDraft({ mode: storeDraft.mode, id: storeDraft.id, value })}
+          onSave={() => void saveStore()}
+          onClose={() => setStoreDraft(null)}
+        />
       )}
     </div>
   )

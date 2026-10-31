@@ -44,7 +44,7 @@ export function KnowledgeListView({ model, dictOf, busy }: KnowledgeListViewProp
       />
       {entries.length === 0 ? (
         <div className="wb-empty" style={{ padding: '28px 18px' }}>
-          <div style={{ marginBottom: 6, color: 'var(--dsw-alias-state-business-primary, #4f8ef7)' }}><Icon name="book" size={30} /></div>
+          <div style={{ marginBottom: 6, color: 'var(--wb-accent)' }}><Icon name="book" size={30} /></div>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('还没有知识条目')}</div>
           <div style={{ fontSize: 12, opacity: .8, marginBottom: 12 }}>{t('沉淀经验教训、决策和可复用片段；也可以在 AI 复盘后一键写入')}</div>
           <button className="wb-btn primary" onClick={() => model.startCreate()}>{t('新建知识')}</button>

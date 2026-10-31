@@ -7,6 +7,15 @@ export function buildXlsx(rows, sheetName = 'Search Terms') {
   return Buffer.from(XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }))
 }
 
+/** 多工作表 xlsx：验证 `parse-file` 的 sheetCount / 只取第一张口径。 */
+export function buildXlsxMulti(sheets) {
+  const workbook = XLSX.utils.book_new()
+  for (const { name, rows } of sheets) {
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), name)
+  }
+  return Buffer.from(XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }))
+}
+
 /** 生成真实 BIFF8 .xls 字节，覆盖旧版 Excel 的兼容链。 */
 export function buildXls(rows, sheetName = 'Search Terms') {
   const workbook = XLSX.utils.book_new()

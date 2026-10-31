@@ -40,10 +40,10 @@ export interface AsinBackup {
   tags: string[]
 }
 
-/** 产品键：站点 + ASIN。缺站点按 US（与导入侧 `splitId` 的缺省一致）。 */
+/** 产品键：站点 + ASIN；站点未知时用 `UNKNOWN_` 前缀，回导后归为 needs_site，不默认 US。 */
 export function productKey(product: Pick<AsinProduct, 'asin' | 'site'>): string {
-  const site = product.site.trim() === '' ? 'US' : product.site.trim().toUpperCase()
-  return `${site}_${product.asin.toUpperCase()}`
+  const site = (product.site ?? '').trim().toUpperCase()
+  return `${site === '' ? 'UNKNOWN' : site}_${product.asin.toUpperCase()}`
 }
 
 function extraOf(product: AsinProduct): Record<string, unknown> {
@@ -103,7 +103,7 @@ function flattenExtra(extra: Record<string, unknown>): Record<string, unknown> {
 function productRecord(product: AsinProduct): Record<string, unknown> {
   const record: Record<string, unknown> = {
     asin: product.asin.toUpperCase(),
-    site: product.site.trim() === '' ? 'US' : product.site.trim().toUpperCase(),
+    site: product.site === null || product.site.trim() === '' ? null : product.site.trim().toUpperCase(),
     title: product.title,
     currentTitle: product.currentTitle,
     image: product.imageUrl,

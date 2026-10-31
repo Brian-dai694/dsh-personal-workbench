@@ -14,7 +14,7 @@
  */
 import { calculateAmazonEconomics, type AmazonCalculatorInput, type AmazonCalculatorResult } from '../shared/amazonCalculator.js'
 import {
-  CALCULATOR_FIELD_LABELS, diffCalculatorInputs,
+  CALCULATOR_FIELD_LABELS, diffCalculatorInputs, withFixedReferralFee,
   type CalculatorInputRecord,
 } from '../shared/calculatorScenario.js'
 
@@ -49,11 +49,13 @@ export function buildComparison(
   const columns: ComparisonColumn[] = []
   let baseline: CalculatorInputRecord | null = null
   for (const scenario of scenarios) {
-    const merged: AmazonCalculatorInput = { ...defaults, ...scenario.input }
+    /** 佣金恒定 = 售价 × 15%（与面板同一份规则）；老方案里存过的佣金金额不再参与计算。 */
+    const normalized = withFixedReferralFee(scenario.input)
+    const merged: AmazonCalculatorInput = { ...defaults, ...normalized }
     const result = calculateAmazonEconomics(merged)
     if (!result.valid) warnings.push(`「${scenario.name}」参数不合法：${result.errors.slice(0, 2).join('；')}`)
-    const diffs = baseline === null ? [] : diffCalculatorInputs(baseline, scenario.input)
-    if (baseline === null) baseline = scenario.input
+    const diffs = baseline === null ? [] : diffCalculatorInputs(baseline, normalized)
+    if (baseline === null) baseline = normalized
     columns.push({
       id: scenario.id,
       name: scenario.name,

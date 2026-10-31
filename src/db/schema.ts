@@ -3,8 +3,11 @@
  * 迁移只前向；所有“枚举”都走 dictionaries 表。
  */
 import type { DatabaseSync } from 'node:sqlite'
+import { LEGACY_COLOR_REWRITES } from '../shared/palette.js'
+import { applyAsinIdentityV37, backfillAsinIdentityV37 } from './asinIdentityV37.js'
+import { applyOplogAssociationsV38, backfillOplogAssociationsV38 } from './oplogAssociationsV38.js'
 
-export const SCHEMA_VERSION = 34
+export const SCHEMA_VERSION = 39
 
 export interface Migration {
   version: number
@@ -895,6 +898,125 @@ export const MIGRATIONS: Migration[] = [
      */
     up(db) {
       db.exec('ALTER TABLE amazon_datasets ADD COLUMN ai_summary TEXT')
+    },
+  },
+  {
+    version: 35,
+    name: 'dictionary-palette-dsh',
+    /**
+     * 字典出厂色对齐 DSH 色系（2026-10-28，用户要求「工作台和 dsh 统一一个色系」）。
+     *
+     * 为什么要迁移而不是只改种子：种子只在**首次装库**时 INSERT OR IGNORE，
+     * 已经存在的库（本机就是）改完种子依然是旧色 —— 任务类型圆点还是紫/青混搭。
+     * v16 当年就是靠迁移把「知识库/点子类型没有颜色」补上的，这里是同一个道理。
+     *
+     * 只改**还等于旧出厂值**的行：用户在「设置 → 字典管理」里自己调过的颜色一律保留
+     * （判据是精确字符串相等，不做"近似色"匹配 —— 近似匹配会改掉用户的自主选择）。
+     *
+     * 逐 (kind, code) 匹配而不是全局"旧色 → 新色"表：旧色板里 `#8B7BE8` 同时出现在
+     * 知识库「决策记录」（应转琥珀）和点子「插件点子」（应转浅蓝）上，按颜色值映射
+     * 必然把其中一个改成错的语义。
+     */
+    up(db) {
+      const select = db.prepare('SELECT config FROM dictionaries WHERE kind = ? AND code = ?')
+      const update = db.prepare('UPDATE dictionaries SET config = ?, updated_at = ? WHERE kind = ? AND code = ?')
+      const at = new Date().toISOString()
+      for (const [kind, byCode] of Object.entries(LEGACY_COLOR_REWRITES)) {
+        for (const [code, { from, to }] of Object.entries(byCode)) {
+          const row = select.get(kind, code) as { config: string } | undefined
+          if (row === undefined) continue
+          let config: Record<string, unknown>
+          try {
+            const parsed = JSON.parse(row.config) as unknown
+            if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) continue
+            config = parsed as Record<string, unknown>
+          } catch {
+            continue // config 不是合法 JSON（手工改过库）→ 不动它，交给「字典管理」修
+          }
+          if (typeof config.color !== 'string' || config.color !== from) continue
+          update.run(JSON.stringify({ ...config, color: to }), at, kind, code)
+        }
+      }
+    },
+  },
+  {
+    version: 36,
+    name: 'amazon-dataset-univer-file',
+    /**
+     * 亚马逊版块重构（2026-10-29）：数据集要记住自己生成过的 `.univer` 表格。
+     *
+     * ## 为什么是 36 而不是 35
+     * v35 已被 `dictionary-palette-dsh`（2026-10-28 的字典配色迁移）占用，且本机真实库
+     * 已经迁到 35。把新列塞进 v35 会导致**已迁到 35 的库永远不会重跑**，
+     * 列永远加不上，服务端一读 `amazon_datasets` 就炸。
+     *
+     * ## 为什么只加一列
+     * 报表类型**已经存在**（`kind_code`，六种取值，且已有索引
+     * `idx_amazon_datasets_kind(kind_code, created_at DESC)`）。再建一个同义的 `kind`
+     * 只会让"读哪一列"变成两处判断 —— 直接复用 `kind_code`。
+     *
+     * ## 老行
+     * `univer_file` 为 NULL（= 还没生成过表格），读取按 null 处理，不伪造路径；
+     * 不重写任何旧数据。
+     */
+    up(db) {
+      db.exec('ALTER TABLE amazon_datasets ADD COLUMN univer_file TEXT')
+    },
+  },
+  {
+    version: 37,
+    name: 'asin-identity-shadow',
+    /**
+     * P1：选品/产品身份影子表（site+ASIN）+ 复核队列。
+     *
+     * **只增不改**：不碰 `asin_products` / `asin_snapshots` 的列，也不切换读取路径；
+     * 未知站点一律进 `migration_review`，**不回填 US**。父子/SKU 只建表、不猜关系。
+     *
+     * 迁移在事务内执行；回填全部 `INSERT OR IGNORE`，重复执行不会翻倍。
+     * 回滚：影子表与复核队列都是新增对象，停用读取开关后可整表删除；v1 数据原样保留。
+     */
+    up(db) {
+      applyAsinIdentityV37(db)
+      backfillAsinIdentityV37(db)
+    },
+  },
+  {
+    version: 38,
+    name: 'oplog-associations',
+    /**
+     * P4-B：运营日志 0..n 结构化关联。
+     *
+     * **只增不改**：不碰 `oplog_entries` 任何列，`asin_json` 原样保留；
+     * 存量按 `asin_json` 顺序回填，role 一律 `unknown`，站点缺失保持 NULL 并进 `migration_review`。
+     * 父子/SKU 不推断；读路径（列表/详情）同时返回 `asins`（旧）与 `associations`（新）。
+     *
+     * 可重复执行：建表 `IF NOT EXISTS`，回填 `INSERT OR IGNORE`。
+     * 回滚：只删这张新表，旧列与旧读路径原样。
+     */
+    up(db) {
+      applyOplogAssociationsV38(db)
+      backfillOplogAssociationsV38(db)
+    },
+  },
+  {
+    version: 39,
+    name: 'products-library',
+    /** 独立产品事实表；不回填、不读取、不修改选品库 asin_products。 */
+    up(db) {
+      db.exec(`CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        site TEXT NOT NULL,
+        asin TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        price REAL,
+        shop_name TEXT,
+        category TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (site, asin)
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS idx_products_updated ON products(updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_products_site ON products(site);`)
     },
   },
 ]

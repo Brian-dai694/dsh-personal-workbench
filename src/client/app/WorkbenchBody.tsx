@@ -11,7 +11,7 @@
 import type { WorkbenchAssembly } from './assembly.js'
 import { useState } from 'react'
 import { SettingsModal } from '../components/SettingsModal.js'
-import { startOfWeek } from '../format.js'
+import { startOfWeek, localDateString } from '../format.js'
 import { readNotificationCtor, requestNotificationPermission, sendSystemNotification } from '../notificationCapability.js'
 import { AsinView } from '../views/AsinView.js'
 import { CalendarView } from '../views/CalendarView.js'
@@ -25,11 +25,10 @@ import { OpsLogView } from '../views/OpsLogView.js'
 import { TodayPane } from '../views/TodayPane.js'
 import { AmazonToolsView } from '../views/AmazonToolsView.js'
 import { AmazonKeywordView } from '../views/AmazonKeywordView.js'
-import { AmazonTrafficView } from '../views/AmazonTrafficView.js'
 import { AmazonReportView } from '../views/AmazonReportView.js'
+import { ProductLibraryView } from '../views/ProductLibraryView.js'
 import { InventoryView } from '../views/InventoryView.js'
 import { PaymentReconcileView } from '../views/PaymentReconcileView.js'
-import { AmazonTrafficDetailPane } from '../views/AmazonTrafficDetailPane.js'
 import { AmazonSopCard } from '../components/AmazonSopCard.js'
 
 export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
@@ -42,9 +41,16 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
    * `seq` 是"同一天再点一次也要生效"的版本号（否则第二次点击没有可观察变化）。
    */
   const [oplogFocus, setOplogFocus] = useState<{ date: string; seq: number } | null>(null)
+  /**
+   * 产品库落地意图（P3 / B3）：从选品页某一行跳过来时带上 `q + site`。
+   *
+   * 放在装配层而不是产品库内部：产品库是**独立数据域**，它不该知道"我是从哪跳来的"；
+   * 装配层负责把"意图"变成道具，产品库只消费。
+   */
+  const [productFocus, setProductFocus] = useState<{ q: string; site: string } | null>(null)
   const { openSessionInPanel, startAISession } = props.ai.actions
   const { busy } = props.busyApi
-  const { bootstrap, childrenOf, dictOf, dicts, pendingMap, selected, taskKnowledge, tasks } = props.data
+  const { bootstrap, childrenOf, dictOf, dicts, linkedOplog, pendingMap, selected, taskKnowledge, tasks } = props.data
   const { archiveSelectedTask, completeTaskFromProgress, createSubtask, patchTask, restoreTask, saveProgress } = props.data.actions
   const { addingPlanTaskId, calMode, capacity, capacityEdit, capacityExpanded, cursor, dayPanel, monthGrid, picked, weekDays } = props.day
   const { addTaskToPlan, moveMonth, moveWeek, setCalMode, setCapacityEdit, setCapacityExpanded, setCursor, setPicked } = props.day.actions
@@ -54,6 +60,52 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
   const { editDraft, subtaskParent } = props.forms
   const { view } = props.nav
   const { setView } = props.nav.actions
+  /**
+   * 跳到运营日志的**某一天**：日历格子上的「N 条日志」与任务详情里的「关联日志」共用这一条。
+   *
+   * 抽成具名函数而不是两处内联：这三句（选中那天 / 递增 seq / 切视图）漏任何一句的表现
+   * 都是"点了没反应"，而两处内联迟早只改一处。
+   */
+  const openOplogDate = (date: string): void => {
+    setPicked(new Date(`${date}T00:00:00`))
+    setOplogFocus((prev) => ({ date, seq: (prev?.seq ?? 0) + 1 }))
+    setView('oplog')
+  }
+  /**
+   * 仪表盘数据（2026-10-27，方案 A）：今日视图上半屏。
+   *
+   * 全部在这里派生 —— 视图不发 HTTP，也不自己算。三块来源：
+   * - 最近完成：从已加载的 `tasks` 里按 `completedAt` 倒序取 4 条（不额外请求）；
+   * - 运营日志：`useOplogDayIndex` 已经附带 KPI / 最近几条 / 待归档数；
+   * - 亚马逊事实：`amazonData` / `keywordPlans` / `inventory` 三个域现有的结果。
+   */
+  const recentDone = tasks
+    .flatMap((task) => (task.statusCode === 'done' && typeof task.completedAt === 'string' && task.completedAt !== ''
+      ? [{ date: localDateString(new Date(task.completedAt)), title: task.title }]
+      : []))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 4)
+
+  const dashboardProps = {
+    pendingArchive: props.oplogIndex.pendingArchive,
+    oplog: {
+      week: props.oplogIndex.kpi.week,
+      month: props.oplogIndex.kpi.month,
+      total: props.oplogIndex.kpi.total,
+      recent: props.oplogIndex.recent,
+    },
+    amazon: {
+      datasetCount: props.amazonData.datasets.length,
+      datasetLatest: typeof props.amazonData.datasets[0]?.createdAt === 'string'
+        ? props.amazonData.datasets[0].createdAt.slice(0, 10)
+        : null,
+      keywordPlanCount: props.keywordPlans.plans.length,
+      keywordPlanWords: props.keywordPlans.plans[0]?.rowCount ?? 0,
+      keywordPlanNegatives: props.keywordPlans.plans[0]?.negativeCount ?? 0,
+      inventoryReady: props.inventory.snapshot !== null,
+    },
+    recentDone,
+  }
   const { dictEditCode, dictError, dictForm, dictKind, recallLog, recallSessionOff, settings, settingsSaving, showSettings } = props.prefs
   const { deleteDictionaryEntry, loadRecallLog, recallSessionRestore, saveDictionaryEntry, saveIncludeOverdue, saveSettings, setDictEditCode, setDictError, setDictForm, setDictKind, setSettings, setShowSettings, toggleDictionaryEntry } = props.prefs.actions
   const { notifyPerm, reminderBusy, reminderChannel, reminderOptions, reminderPolicy } = props.remindersApi
@@ -76,6 +128,11 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
     if (view === 'list' || view === 'today') return selected !== null
     if (view === 'knowledge') return knowledge.selected !== null
     if (view === 'ideas') return ideas.selectedIdea !== null || ideas.selectedCluster !== null
+    /**
+     * `'traffic'` 保留但**不再可达**（2026-10-29 合并进「报表分析 · 搜索词」）。
+     * 旧会话里存着的 view 值不该让界面崩，所以这里仍按"有详情区"处理，
+     * 但导航里已经没有入口 —— 见 `WorkbenchHeader` 与 `test/trafficRetired.test.mjs`。
+     */
     if (view === 'traffic' || view === 'oplog' || view === 'asin') return true
     return false // amazon / keywords / reports：没有详情内容
   })()
@@ -211,6 +268,10 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
               dayPanelProps={dayPanelProps}
               onQuickEntry={openQuickEntry}
               onNewTask={() => forms.actions.toggleCreate()}
+              dashboard={dashboardProps}
+              onOpenTasks={() => setView('list')}
+              onOpenOplog={() => setView('oplog')}
+              onOpenAmazon={() => setView('keywords')}
             />
           )}
           {view === 'calendar' && (
@@ -232,11 +293,7 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
               readOnly={dayPanel.readOnly}
               day={dayPanel.day}
               oplogDates={props.oplogIndex.dates}
-              onOpenOplogDate={(date) => {
-                setPicked(new Date(`${date}T00:00:00`))
-                setOplogFocus((prev) => ({ date, seq: (prev?.seq ?? 0) + 1 }))
-                setView('oplog')
-              }}
+              onOpenOplogDate={openOplogDate}
             />
           )}
 
@@ -246,15 +303,27 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
 
           {view === 'amazon' && <><AmazonToolsView onSendToAI={(text) => void startAISession('consult', null, text)} scenarios={props.calculatorScenarios} /><AmazonSopCard tool="profit" /></>}
 
-          {view === 'keywords' && <><AmazonKeywordView model={props.keywordPlans} amazon={props.amazonData} aba={props.abaKeywordSets} onSendToAI={(text) => void startAISession('consult', null, text)} onOpenTraffic={(keyword) => { props.amazonData.actions.setCurrentKeyword(keyword.trim() === '' ? null : keyword); setView('traffic') }} /><AmazonSopCard tool="keywords" /></>}
+          {view === 'keywords' && <><AmazonKeywordView model={props.keywordPlans} amazon={props.amazonData} aba={props.abaKeywordSets} table={props.univerTable} onSendToAI={(text) => void startAISession('consult', null, text)} onOpenTraffic={(keyword) => { props.amazonData.actions.setCurrentKeyword(keyword.trim() === '' ? null : keyword); setView('reports') }} /><AmazonSopCard tool="keywords" /></>}
 
-          {view === 'traffic' && <AmazonTrafficView model={props.amazonData} />}
+          {/**
+           * `'traffic'` 已并入「报表分析 · 搜索词」：这里**不再渲染左栏视图**。
+           * 保留分支只有一个作用 —— 旧会话恢复时给出可读的去处，而不是空白页。
+           */}
+          {view === 'traffic' && (
+            <div className="wb-empty">
+              <div className="wb-empty-title">「流量分析」已并入「报表分析 · 搜索词」</div>
+              <div className="wb-empty-desc">同一份数据、同一套结论，现在只有一个入口。</div>
+              <button type="button" className="wb-btn primary" style={{ marginTop: 8 }} onClick={() => setView('reports')}>
+                去报表分析
+              </button>
+            </div>
+          )}
 
-          {view === 'reports' && <AmazonReportView amazon={props.amazonData} reports={props.adReportData} />}
+          {view === 'reports' && <AmazonReportView amazon={props.amazonData} reports={props.adReportData} table={props.univerTable} thresholds={settings.amazonKeywordThresholds} onSendToAI={(text) => void startAISession('consult', null, text)} onOpenKeyword={(keyword) => { props.amazonData.actions.setCurrentKeyword(keyword); setView('keywords') }} />}
 
-          {view === 'inventory' && <InventoryView />}
+          {view === 'inventory' && <InventoryView model={props.inventory} table={props.univerTable} />}
 
-          {view === 'payments' && <PaymentReconcileView />}
+          {view === 'payments' && <PaymentReconcileView table={props.univerTable} />}
 
           {view === 'oplog' && (
             <OpsLogView
@@ -266,15 +335,34 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
             />
           )}
 
-          {view === 'asin' && <AsinView />}
+          {view === 'asin' && (
+            <AsinView
+              onOpenLibrary={() => setView('products')}
+              /**
+               * 行内跳转带 `site + asin` 成对落地（B3）。只传 asin 的后果是
+               * 同一 ASIN 跨站点两条时落地页搜出两行 —— 看着像定位成功，实际要用户再选一次。
+               */
+              onOpenProducts={(asin, site) => {
+                setProductFocus({ q: asin, site: site ?? '' })
+                setView('products')
+              }}
+            />
+          )}
+
+          {view === 'products' && (
+            <ProductLibraryView table={props.univerTable} focus={productFocus ?? undefined} />
+          )}
 
           {view === 'list' && <TaskListView model={taskList} dictOf={dictOf} dicts={dicts} selectedId={selected?.task.id} pending={pendingMap} childrenOf={childrenOf} onOpen={openTask} />}
         </div>
 
         <div className="wb-detail">
-          {view === 'traffic'
-            ? <AmazonTrafficDetailPane model={props.amazonData} onSendToAI={(text) => void startAISession('consult', null, text)} onOpenKeyword={(keyword) => { props.amazonData.actions.setCurrentKeyword(keyword); setView('keywords') }} />
-            : view === 'ideas'
+          {/**
+           * `'traffic'` 不再有自己的右栏：搜索词结论现在长在报表页里
+           * （`AmazonReportView` 内嵌 `AmazonTrafficDetailPane`）。
+           * 这里不能留分支，否则旧会话恢复时会多出一份"没有左栏的右栏"。
+           */}
+          {view === 'ideas'
             ? <IdeasDetailPane model={ideas} dictOf={dictOf} busy={busy} startAISession={startAISession} />
             : view === 'knowledge'
             ? <KnowledgeDetailPane model={knowledge} tasks={tasks} dictOf={dictOf} setError={setError} setNotice={setNotice} openTaskById={openTaskById} />
@@ -287,6 +375,8 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
                 pendingMap={pendingMap}
                 settings={settings}
                 taskKnowledge={taskKnowledge}
+                linkedOplog={linkedOplog}
+                onOpenOplogDate={openOplogDate}
                 knowledge={knowledge}
                 busy={busy}
                 editing={editDraft !== null}

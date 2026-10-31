@@ -149,6 +149,8 @@ const SINGLE_END_DEBT = new Map([
   ['shared/asinImport', '仅宿主；应归 amazon/ 域'],
   ['shared/oplogImport', '仅宿主；应归 amazon/ 域'],
   ['shared/paymentReconciliation', '仅客户端；对账只在前端做，宿主无消费方'],
+  ['shared/cartonPacking', '仅客户端；外箱装箱计算只在 Amazon 工具面板使用'],
+  ['shared/packageCalculator', '仅客户端；包裹费用计算只在 Amazon 工具面板使用'],
 ])
 
 test('R1：shared/ 的模块必须双端都在用（含 shared→shared 传递）', () => {

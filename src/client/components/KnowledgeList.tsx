@@ -20,6 +20,7 @@ import { Icon } from './Icon.js'
 import { fmtTime } from '../format.js'
 import type { Dict } from '../viewTypes.js'
 import { translate } from '../../shared/i18n.js'
+import { PALETTE } from '../../shared/palette.js'
 
 export interface KnowledgeFilters {
   keyword: string
@@ -148,7 +149,7 @@ export function KnowledgeToolbar({ filters, tabs, tagCounts, total, onChange, on
 /** 状态/类型徽标：与任务列表共用 wb-chip 视觉。 */
 function Chip({ dict, code }: { dict: readonly Dict[]; code: string }): JSX.Element {
   const entry = dict.find((d) => d.code === code)
-  const color = String(entry?.config.color ?? '#8a9aa8')
+  const color = String(entry?.config.color ?? PALETTE.neutralDeep)
   return <span className="wb-kb-chip" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 45%, transparent)` }}>{entry?.name ?? code}</span>
 }
 
@@ -162,7 +163,7 @@ function row(entry: ContentItem, dicts: readonly Dict[], selectedId: string | un
       data-kb-row={entry.id}
       onClick={() => onOpen(entry)}
     >
-      <span className="wb-kb-dot-sm" style={{ background: String(dicts.find((d) => d.code === entry.kindCode)?.config.color ?? '#8a9aa8') }} />
+      <span className="wb-kb-dot-sm" style={{ background: String(dicts.find((d) => d.code === entry.kindCode)?.config.color ?? PALETTE.neutralDeep) }} />
       <div className="wb-kb-body">
         <div className="wb-kb-title">{entry.title}</div>
         <div className="wb-kb-sum">{entry.body.split('\n')[0]}</div>

@@ -18,7 +18,7 @@ import { readExpertSettings, writeExpertSettings } from '../../db/repo/experts.j
 import { readPersonaSettings, writePersonaSettings } from '../../db/repo/personas.js'
 import { normalizeRecentWorkspaces } from '../../shared/quickWorkspaceRecent.js'
 import { isUiLocale, normalizeUiLocale } from '../../shared/i18n.js'
-import type { WorkbenchSettings } from '../../shared/contracts.js'
+import type { AmazonKeywordThresholds, WorkbenchSettings } from '../../shared/contracts.js'
 import type { KnowledgeRecallManager } from '../../knowledge/recall.js'
 import type { ExpertService } from '../../experts/service.js'
 
@@ -60,6 +60,39 @@ export function readRecentWorkspaces(db: DatabaseSync): string[] {
   try { return normalizeRecentWorkspaces(JSON.parse(raw)) } catch { return [] }
 }
 
+/**
+ * 搜索词阈值（Step 0）：存 meta 的 JSON 单键，`null`/缺省 = 用默认值。
+ *
+ * 范围与 `adviceCalibration.deriveAdviceThresholds` 对齐：点击下限 3（校准也是 `Math.max(3, …)`），
+ * ACOS 0.1–0.95（校准同样夹在这个区间）。脏值一律当"未校准"读回 null，不让坏字符串打挂设置接口。
+ */
+export const AMAZON_KEYWORD_THRESHOLDS_META_KEY = 'amazon_keyword_thresholds'
+export const MIN_WASTE_MIN_CLICKS = 3
+export const MAX_WASTE_MIN_CLICKS = 1000
+export const MIN_GOOD_ACOS = 0.1
+export const MAX_GOOD_ACOS = 0.95
+
+export function readAmazonKeywordThresholds(db: DatabaseSync): AmazonKeywordThresholds | null {
+  const raw = readMeta(db, AMAZON_KEYWORD_THRESHOLDS_META_KEY)
+  if (raw === undefined || raw === '') return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
+    const record = parsed as Record<string, unknown>
+    const clicks = record.wasteMinClicks
+    const acos = record.goodAcos
+    if (typeof clicks !== 'number' || !Number.isFinite(clicks)) return null
+    if (typeof acos !== 'number' || !Number.isFinite(acos)) return null
+    if (clicks < MIN_WASTE_MIN_CLICKS || acos < MIN_GOOD_ACOS || acos > MAX_GOOD_ACOS) return null
+    return {
+      wasteMinClicks: Math.min(MAX_WASTE_MIN_CLICKS, Math.round(clicks)),
+      goodAcos: Math.round(acos * 100) / 100,
+    }
+  } catch {
+    return null
+  }
+}
+
 
 /**
  * 读一份完整的设置视图（GET 与 POST 的响应**共用这一个实现**）。
@@ -78,8 +111,10 @@ export function readWorkbenchSettings(db: DatabaseSync): WorkbenchSettings {
     /** 缺省**开**：功能不默认关闭，否则用户永远发现不了它（关掉是显式动作）。 */
     autoKnowledgeRecall: (readMeta(db, 'knowledge_recall_auto') ?? '1') !== '0',
     defaultEstimateMinutes: readDefaultEstimateMinutes(db),
-    /** 缺省**关**：逾期是历史欠账，默认不混进"今天要做的事"（见 contracts 里的说明）。 */
+    /** 逾期是历史欠账，默认不混进"今天要做的事"（见 contracts 里的说明）。 */
     dailyCapacityIncludeOverdue: (readMeta(db, 'daily_capacity_include_overdue') ?? '0') === '1',
+    /** 搜索词判定阈值：账号级共享，null = 默认值。 */
+    amazonKeywordThresholds: readAmazonKeywordThresholds(db),
     /** 角色库三个偏好：**唯一读入口**在 `db/repo/personas.ts`（与写入端共用一处形状）。 */
     ...readPersonaSettings(db),
     /** 界面语言（issue #12）：客户端显示偏好，服务端只持久化。缺省 auto。 */
@@ -144,6 +179,30 @@ export function makeSettingsRoutes(db: DatabaseSync, deps: SettingsRouteDeps = {
           /** 逾期是否计入今日容量：写单个 meta 键，客户端读同一键（不另开字段）。 */
           if (body.dailyCapacityIncludeOverdue === true || body.dailyCapacityIncludeOverdue === false) {
             writeMeta(db, 'daily_capacity_include_overdue', body.dailyCapacityIncludeOverdue ? '1' : '0')
+          }
+          /**
+           * 搜索词阈值（Step 0）：`null` 清空（回到默认），对象则按校准同口径夹取后落库。
+           *
+           * 为什么不在缺字段时写默认：设置页 POST 只改传了的字段；这里用 hasOwn 判断，
+           * 避免"保存别的开关时把阈值顺手重置"。数字夹取而不是拒绝，与设置域既有字段一致，
+           * 且响应会立刻回读夹取后的值，前端不会看到"存进去 2、显示 3"的两套数。
+           */
+          if (Object.prototype.hasOwnProperty.call(body, 'amazonKeywordThresholds')) {
+            const raw = body.amazonKeywordThresholds
+            if (raw === null) {
+              writeMeta(db, AMAZON_KEYWORD_THRESHOLDS_META_KEY, '')
+            } else if (typeof raw === 'object' && !Array.isArray(raw)) {
+              const record = raw as Record<string, unknown>
+              const clicks = record.wasteMinClicks
+              const acos = record.goodAcos
+              if (typeof clicks === 'number' && Number.isFinite(clicks)
+                && typeof acos === 'number' && Number.isFinite(acos)) {
+                writeMeta(db, AMAZON_KEYWORD_THRESHOLDS_META_KEY, JSON.stringify({
+                  wasteMinClicks: Math.min(MAX_WASTE_MIN_CLICKS, Math.max(MIN_WASTE_MIN_CLICKS, Math.round(clicks))),
+                  goodAcos: Math.min(MAX_GOOD_ACOS, Math.max(MIN_GOOD_ACOS, Math.round(acos * 100) / 100)),
+                }))
+              }
+            }
           }
           /**
            * 角色库三个偏好（§6.3）：路径 + 两个 ID 数组。

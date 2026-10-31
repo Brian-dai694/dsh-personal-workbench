@@ -23,6 +23,9 @@ export function Icon({ name, size = 16 }: { name: string; size?: number }): JSX.
     case 'archive': return <svg {...common}><rect x="2.5" y="3" width="11" height="3.5" rx="1" /><path d="M4 6.5h8v6H4v-6zM6.5 9h3" /></svg>
     case 'book': return <svg {...common}><path d="M3 2.5h6.5v11H3zM9.5 2.5H13v11H9.5z" /><path d="M3 2.5v11M13 2.5v11" /></svg>
     case 'file': return <svg {...common}><path d="M4 1.5h5.5L13 5v9.5H4z" /><path d="M9.5 1.5V5H13" /></svg>
+    /* 2026-10-29：亚马逊版块改成「拖文件进表」的入口，补两个语义图标 */
+    case 'upload': return <svg {...common}><path d="M8 11V3" /><path d="M5 6l3-3 3 3" /><path d="M2.5 11.5v2h11v-2" /></svg>
+    case 'table': return <svg {...common}><rect x="2" y="3" width="12" height="10" rx="1.5" /><path d="M2 6.5h12M2 9.5h12M6 3v10M10 3v10" /></svg>
     case 'folder': return <svg {...common}><path d="M2.5 4h4l1.5 2h5.5v7h-11z" /></svg>
     case 'idea': return <svg {...common}><path d="M8 2a4 4 0 0 0-1 7.8V12h2V9.8A4 4 0 0 0 8 2z" /><path d="M6.5 14h3" /></svg>
     case 'chart': return <svg {...common}><path d="M2.5 13.5h11M4 11V8m4 3V4m4 7V6" /><path d="M3 5.5l4-2 4 1 2-2" /></svg>

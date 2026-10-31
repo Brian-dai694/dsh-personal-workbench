@@ -15,7 +15,7 @@ import { seedDictionaries } from '../lib/db/seed.js'
 import { MIGRATIONS, SCHEMA_VERSION } from '../lib/db/schema.js'
 import {
   createAmazonDataset, deleteAmazonDataset, getAmazonDataset, getLatestAmazonDataset,
-  listAmazonDatasets, saveAmazonDatasetSummary, saveSearchTermReview,
+  listAmazonDatasets, saveAmazonDatasetSummary, saveSearchTermReview, setAmazonDatasetUniverFile,
 } from '../lib/db/repo.js'
 
 function openMemoryDb() {
@@ -40,7 +40,7 @@ test('schema 与迁移表一致，且迁移可重复执行（幂等）', () => {
 
 test('导入 → 读取 → 列表：行数据原样保存，不带派生指标', () => {
   const db = openMemoryDb()
-  const created = createAmazonDataset(db, { title: 'US 搜索词 10/11-10/17', period: '2026-10-11~2026-10-17', rows: ROWS })
+  const created = createAmazonDataset(db, { kindCode: 'search_term', title: 'US 搜索词 10/11-10/17', period: '2026-10-11~2026-10-17', rows: ROWS })
   assert.equal(created.rows.length, 2)
   assert.equal(created.rows[0].keyword, 'tig torch cup')
   assert.equal('ctr' in created.rows[0], false, '库里不存派生指标（算法变了旧快照就是假数据）')
@@ -55,7 +55,7 @@ test('导入 → 读取 → 列表：行数据原样保存，不带派生指标'
 
 test('AI 写回建议：非法 action 被拒，同词后者覆盖前者', () => {
   const db = openMemoryDb()
-  const dataset = createAmazonDataset(db, { title: 't', rows: ROWS })
+  const dataset = createAmazonDataset(db, { kindCode: 'search_term', title: 't', rows: ROWS })
 
   assert.throws(
     () => saveSearchTermReview(db, dataset.id, [{ keyword: 'mig gloves', action: 'delete_campaign' }]),
@@ -74,9 +74,9 @@ test('AI 写回建议：非法 action 被拒，同词后者覆盖前者', () => 
 
 test('保存建议不覆盖行数据；重新导入不影响已存数据集', () => {
   const db = openMemoryDb()
-  const first = createAmazonDataset(db, { title: '第一批', rows: ROWS })
+  const first = createAmazonDataset(db, { kindCode: 'search_term', title: '第一批', rows: ROWS })
   saveSearchTermReview(db, first.id, [{ keyword: 'tig torch cup', action: 'add_exact', reason: '有单低 ACOS' }])
-  const second = createAmazonDataset(db, { title: '第二批', rows: ROWS })
+  const second = createAmazonDataset(db, { kindCode: 'search_term', title: '第二批', rows: ROWS })
 
   assert.equal(getAmazonDataset(db, first.id)?.rows.length, 2, '写回建议不得动 rows_json')
   assert.equal(getAmazonDataset(db, second.id)?.annotations.length, 0, '新导入的数据集不该继承上一份建议')
@@ -86,7 +86,7 @@ test('保存建议不覆盖行数据；重新导入不影响已存数据集', ()
 
 test('删除数据集后不再出现在列表与最近一份里', () => {
   const db = openMemoryDb()
-  const dataset = createAmazonDataset(db, { title: 't', rows: ROWS })
+  const dataset = createAmazonDataset(db, { kindCode: 'search_term', title: 't', rows: ROWS })
   assert.equal(deleteAmazonDataset(db, dataset.id), true)
   assert.equal(deleteAmazonDataset(db, dataset.id), false)
   assert.equal(getAmazonDataset(db, dataset.id), undefined)
@@ -113,7 +113,7 @@ const SUMMARY_B = { version: 1, rows: 2, uniqueKeywords: 1, notes: ['重新分�
 
 test('报表级结论：整份替换，不碰行数据与词级建议', () => {
   const db = openMemoryDb()
-  const dataset = createAmazonDataset(db, { title: 't', rows: ROWS })
+  const dataset = createAmazonDataset(db, { kindCode: 'search_term', title: 't', rows: ROWS })
   assert.equal(dataset.aiSummary, null, '刚导入时没有报表级结论')
   saveSearchTermReview(db, dataset.id, [{ keyword: 'mig gloves', action: 'watch', reason: '先观察' }])
 
@@ -134,7 +134,7 @@ test('报表级结论：整份替换，不碰行数据与词级建议', () => {
 
 test('老行与坏 JSON 都按 null 处理，不迁移数据也不抛错', () => {
   const db = openMemoryDb()
-  const created = createAmazonDataset(db, { title: 't', rows: ROWS })
+  const created = createAmazonDataset(db, { kindCode: 'search_term', title: 't', rows: ROWS })
   // 模拟 schema 34 之前写入的行：不指定 ai_summary，取列默认值 NULL
   db.prepare(`INSERT INTO amazon_datasets
     (id, kind_code, title, period, rows_json, annotations_json, source_code, session_id, created_at, updated_at)
@@ -146,4 +146,31 @@ test('老行与坏 JSON 都按 null 处理，不迁移数据也不抛错', () =>
     db.prepare('UPDATE amazon_datasets SET ai_summary = ? WHERE id = ?').run(broken, created.id)
     assert.equal(getAmazonDataset(db, created.id)?.aiSummary, null, `坏值 ${broken} 应降级为 null`)
   }
+})
+
+/**
+ * schema 36：`univer_file`。
+ *
+ * 这列只记"生成过的表格在哪"，写它不该影响行数据与建议 ——
+ * 否则"点一次在表格里打开"会被误判成"报表变了"。
+ */
+test('univer_file：默认 null，写入/清除只动这一列；坏值降级', () => {
+  const db = openMemoryDb()
+  const dataset = createAmazonDataset(db, { kindCode: 'search_term', title: '搜索词报表 2026/10/29 14:56:14', rows: ROWS })
+  assert.equal(dataset.kindCode, 'search_term', '不传类型时落库为 search_term')
+  assert.equal(dataset.univerFile, null, '刚导入时没有表格')
+  saveSearchTermReview(db, dataset.id, [{ keyword: 'mig gloves', action: 'watch', reason: '先观察' }])
+
+  const withTable = setAmazonDatasetUniverFile(db, dataset.id, 'D:\\Work Space\\搜索词报表-20261029-145614.univer')
+  assert.equal(withTable.univerFile, 'D:\\Work Space\\搜索词报表-20261029-145614.univer')
+  assert.equal(withTable.rows.length, 2, '写表格路径不得动行数据')
+  assert.equal(withTable.annotations.length, 1, '写表格路径不得动建议')
+
+  const listed = listAmazonDatasets(db).find((item) => item.id === dataset.id)
+  assert.equal(listed?.univerFile, withTable.univerFile, '列表也带出路径（前端据此显示"已生成"）')
+  assert.equal(listed?.kindCode, 'search_term')
+
+  // 空白 = 没有；不写一个空串进库
+  assert.equal(setAmazonDatasetUniverFile(db, dataset.id, '   ').univerFile, null)
+  assert.throws(() => setAmazonDatasetUniverFile(db, 'missing', 'x'), /dataset not found/)
 })

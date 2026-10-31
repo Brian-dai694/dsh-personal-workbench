@@ -51,13 +51,21 @@ test('日志可关联任务并在列表/详情里读回', () => withDb((db) => {
   assert.equal(updateOplogEntry(db, created.id, draft({ taskId: null })).taskId, null)
 }))
 
-test('任务候选只列未完成、未归档的任务，且按截止时间靠前', () => withDb((db) => {
+/**
+ * 候选池口径（2026-10-27 变更）。
+ *
+ * 原实现排除 `done` / `cancelled`，后果是**任务一完成就再也关联不上** ——
+ * 想给已完成的任务补一条复盘日志，选择器里根本找不到。现在只排除**已归档**，
+ * 并按「未完成优先」排序：常用项仍在前，历史任务不会把它挤到后面。
+ */
+test('任务候选：排除已归档；未完成优先，已完成也要能选', () => withDb((db) => {
   makeTask(db, 'task-1', '无截止')
   makeTask(db, 'task-2', '早截止', '2026-10-21T00:00:00.000Z')
   makeTask(db, 'task-3', '晚截止', '2026-11-30T00:00:00.000Z')
   db.prepare("UPDATE tasks SET status_code = 'done', completed_at = '2026-10-22T00:00:00.000Z' WHERE id = 'task-3'").run()
   db.prepare("UPDATE tasks SET archived = 1 WHERE id = 'task-1'").run()
-  assert.deepEqual(listOplogTaskOptions(db).map((t) => t.id), ['task-2'])
+  assert.deepEqual(listOplogTaskOptions(db).map((t) => t.id), ['task-2', 'task-3'],
+    '已归档的 task-1 不出现；未完成的 task-2 排在已完成的 task-3 之前')
 }))
 
 test('日历日期索引按业务日期聚合，缺失 log_date 回退 createdAt', () => withDb((db) => {

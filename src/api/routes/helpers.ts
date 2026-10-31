@@ -70,6 +70,10 @@ export const IDEA_CLUSTERS_PREFIX = '/api/workbench/idea-clusters'
  */
 export const ABA_KEYWORDS_PREFIX = '/api/workbench/aba-keywords'
 export const AMAZON_DATASETS_PREFIX = '/api/workbench/amazon/datasets'
+/** 统一导入端点（P2-2）：按 kind 做列校验后再落库；旧的两条写入路由也走同一份实现。 */
+export const AMAZON_IMPORT_PREFIX = '/api/workbench/amazon/import'
+/** 无持久化表格预览（2026-10-30）：产品库/付款对账这类派生视图的"生成表格并预览"出口。 */
+export const AMAZON_TABLE_PREVIEW_PREFIX = '/api/workbench/amazon/table-preview'
 export const ASIN_PREFIX = '/api/workbench/asin'
 export const CALCULATOR_SCENARIOS_PREFIX = '/api/workbench/calculator-scenarios'
 export const INVENTORY_PREFIX = '/api/workbench/inventory'

@@ -181,6 +181,12 @@ export function applyReady(ctx: Context, db: DatabaseSync, config: Config): void
     /** 专家服务：路由与草稿确认/放弃分支共用（未装配时那一段整体不注册）。 */
     experts,
     /**
+     * Univer 服务：**软探测**，每次请求现探（运行中装上/卸掉都能反映）。
+     * 与上面几条同一条纪律 —— 绝不写进 `inject`，否则没装 `dsh-univer-office`
+     * 的机器上整个工作台会 pending。
+     */
+    probeUniver: () => probeService<unknown>(ctx, 'univer'),
+    /**
      * 团队记忆服务：**软探测**（`dsh-team-memory` 目前只注册 AI 工具、没有 provide 服务，
      * 所以这里通常拿不到 → 走"本地 Markdown + 队列补传"的等价通道）。
      * 绝不能把可选依赖写进 inject：那会让没装它的机器上整个插件 pending。

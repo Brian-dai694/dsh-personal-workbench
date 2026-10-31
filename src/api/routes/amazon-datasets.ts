@@ -3,22 +3,24 @@
  *
  * 只服务本机面板与 DSH 工具（loopback-only，与其他域同一条信任围栏）：
  * - `GET    /`            列表（不含行数据）
- * - `POST   /`            导入一份报表（rows 由面板解析后提交）
- * - `GET    /:id`         读整份（行 + 已有词级建议 + 报表级结论 `aiSummary`）
+ * - `POST   /`            导入一份报表（P2-2 起内部 delegate 到 `amazon-import.ts` 的同一实现）
+ * - `GET    /:id`         读整份（行 + 已有词级建议 + 报表级结论 `aiSummary` + 表格路径 `univerFile`）
  * - `PATCH  /:id`         AI 写回：`reviews`（词级建议，整份替换）/ `summary`（报表级结论，整份替换），可只传其一
+ * - `POST   /:id/table`   生成/复用 `.univer` 表格（P2-3）：未装 Univer → 503
  * - `DELETE /:id`         删除
  *
  * 响应信封（2026-10-27，决策 2）：一律走 `apiOk` / `apiError`。
  */
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { DatabaseSync } from 'node:sqlite'
-import type { TrafficRow } from '../../shared/amazonTrafficTools.js'
 import { readXlsx, sheetToTsv, sniffKind } from '../../lib/xlsx.js'
 import {
-  createAmazonDataset, deleteAmazonDataset, getAmazonDataset, isAmazonDatasetKind, listAmazonDatasets,
+  deleteAmazonDataset, getAmazonDataset, listAmazonDatasets,
   saveAmazonDatasetSummary, saveSearchTermReview,
 } from '../../db/repo.js'
 import type { AmazonDatasetSummaryPayload } from '../../db/repo.js'
+import { importAmazonDataset } from './amazon-import.js'
+import { createDatasetTable } from './amazon-dataset-table.js'
 import { AMAZON_DATASETS_PREFIX as PREFIX, apiError, apiOk, isLoopbackRequest, pathSegments, readJsonBody } from './helpers.js'
 
 
@@ -39,6 +41,17 @@ const MAX_ROWS_BODY_BYTES = 8 * 1024 * 1024
 const MAX_PATCH_BODY_BYTES = 1024 * 1024
 /** base64 之外还有 JSON 外壳、filename 等字段的余量。 */
 const MAX_PARSE_FILE_BODY_BYTES = MAX_FILE_BASE64 + 2 * 1024 * 1024
+/**
+ * `parse-file` 的**预判**上限：base64 10MB + 64KB JSON 外壳。
+ *
+ * 为什么不复用 `MAX_PARSE_FILE_BODY_BYTES`（12MB）：那是**读体**上限，拿来当用户可见的预判口径
+ * 会提示"上限 12MB"，可源文件约 7.5MB 就已经被拒 —— 两个数字对不上，用户会以为还能再大一点。
+ * 预判只负责"早拒绝、说对话"；读体仍用 12MB，让略超 10MB 的请求能进到 base64 校验并拿到同一句文案。
+ */
+const MAX_PARSE_FILE_DECLARED_BYTES = MAX_FILE_BASE64 + 64 * 1024
+
+/** 文件过大的唯一文案：预判与 base64 校验共用，前端按"源文件约 7.5MB"渲染。 */
+const PARSE_FILE_TOO_LARGE_MESSAGE = '文件过大（超过约 7.5MB），请先筛选或拆分后再导入'
 
 /** 按「哪个端点」决定读体上限：同一个 handler 里三种请求的体量差两个数量级。 */
 function bodyLimitFor(method: string, segments: string[]): number {
@@ -62,32 +75,7 @@ function declaredTooLarge(req: { headers: Record<string, string | string[] | und
   return Number.isFinite(declared) && declared > limit
 }
 
-function readRow(value: unknown): TrafficRow | null {
-  if (typeof value !== 'object' || value === null) return null
-  const raw = value as Record<string, unknown>
-  const numeric = (input: unknown): number | null => typeof input === 'number' && Number.isFinite(input) && input >= 0 ? input : null
-  const keyword = typeof raw.keyword === 'string' ? raw.keyword.trim() : ''
-  const impressions = numeric(raw.impressions)
-  const clicks = numeric(raw.clicks)
-  const orders = numeric(raw.orders)
-  const spend = numeric(raw.spend)
-  const sales = numeric(raw.sales)
-  if (keyword === '' || impressions === null || clicks === null || orders === null || spend === null || sales === null) return null
-  /** 投放/活动报表多出来的列：带上但不校验（缺了就是 null，不影响三类共用一套指标）。 */
-  const optionalText = (input: unknown): string | null => typeof input === 'string' && input.trim() !== '' ? input.trim() : null
-  return {
-    keyword, impressions, clicks, orders, spend, sales,
-    campaign: optionalText(raw.campaign),
-    adGroup: optionalText(raw.adGroup),
-    matchType: optionalText(raw.matchType),
-    budget: numeric(raw.budget),
-    status: optionalText(raw.status),
-    /** P2：广告位与展示量份额（0–1）；份额越界一律丢弃，不夹取。 */
-    placement: optionalText(raw.placement),
-    share: typeof raw.share === 'number' && Number.isFinite(raw.share) && raw.share >= 0 && raw.share <= 1 ? raw.share : null,
-  } as TrafficRow
-}
-export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
+export function makeAmazonDatasetRoutes(db: DatabaseSync, deps: { probeUniver?: () => unknown } = {}): WebRoute[] {
   return [
     {
       kind: 'prefix',
@@ -98,8 +86,16 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
         const segments = pathSegments(url, PREFIX)
         const method = req.method ?? 'GET'
         const bodyLimit = bodyLimitFor(method, segments)
-        if (['POST', 'PATCH'].includes(method) && declaredTooLarge(req, bodyLimit)) {
-          return apiError(res, 413, `请求体过大（上限 ${Math.round(bodyLimit / 1024 / 1024)}MB），请先筛选或拆分后再导入`, { code: 'too-large' })
+        /**
+         * 预判口径：`parse-file` 按"源文件约 7.5MB"（base64 10MB + 64KB 外壳），其余端点仍按读体上限。
+         * 两种超限都回 413 + `too-large`，只是文案不同；行数据那道 8MB 不动。
+         */
+        const isParseFile = segments[0] === 'parse-file'
+        const declaredLimit = isParseFile ? MAX_PARSE_FILE_DECLARED_BYTES : bodyLimit
+        if (['POST', 'PATCH'].includes(method) && declaredTooLarge(req, declaredLimit)) {
+          return isParseFile
+            ? apiError(res, 413, PARSE_FILE_TOO_LARGE_MESSAGE, { code: 'too-large' })
+            : apiError(res, 413, `请求体过大（上限 ${Math.round(bodyLimit / 1024 / 1024)}MB），请先筛选或拆分后再导入`, { code: 'too-large' })
         }
         const body = ['POST', 'PATCH'].includes(method) ? await readJsonBody(req, bodyLimit) : undefined
 
@@ -109,24 +105,19 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
           }
           if (method === 'POST') {
             if (body === undefined) return apiError(res, 400, 'invalid JSON body')
-            try {
-              const rows = Array.isArray(body.rows) ? body.rows.map(readRow) : []
-              const valid = rows.filter((row): row is TrafficRow => row !== null)
-              if (Array.isArray(body.rows) && valid.length !== body.rows.length) {
-                return apiError(res, 400, 'rows 中存在不合法的行（关键词为空或指标不是非负数字）')
-              }
-              const dataset = createAmazonDataset(db, {
-                kindCode: isAmazonDatasetKind(body.kindCode) ? body.kindCode : undefined,
-                title: typeof body.title === 'string' && body.title.trim() !== '' ? body.title : '搜索词报表',
-                period: typeof body.period === 'string' && body.period.trim() !== '' ? body.period.trim() : null,
-                rows: valid,
-                sourceCode: typeof body.sourceCode === 'string' ? body.sourceCode : 'paste',
-                sessionId: typeof body.sessionId === 'string' ? body.sessionId : null,
+            /**
+             * 旧写入路径**不再是第二份实现**：与 `POST /api/workbench/amazon/import`
+             * 调同一个 `importAmazonDataset()`（按 kind 做列校验）。
+             * 兼容旧 body 的 `kindCode`，`kind` 优先。
+             */
+            const outcome = importAmazonDataset(db, body)
+            if (!outcome.ok) {
+              return apiError(res, outcome.status, outcome.error, {
+                code: outcome.code,
+                ...outcome.missing === undefined ? {} : { missing: outcome.missing },
               })
-              return apiOk(res, { dataset }, 201)
-            } catch (error) {
-              return apiError(res, 400, error instanceof Error ? error.message : String(error))
             }
+            return apiOk(res, { dataset: outcome.dataset, datasetId: outcome.dataset.id, duplicate: outcome.duplicate }, outcome.duplicate ? 200 : 201)
           }
           return apiError(res, 405, 'method not allowed')
         }
@@ -142,7 +133,7 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
           if (body === undefined) return apiError(res, 400, 'invalid JSON body')
           const base64 = typeof body.base64 === 'string' ? body.base64 : ''
           if (base64 === '') return apiError(res, 400, 'base64 不能为空')
-          if (base64.length > MAX_FILE_BASE64) return apiError(res, 413, '文件过大（超过约 7.5MB），请先筛选或拆分后再导入', { code: 'too-large' })
+          if (base64.length > MAX_FILE_BASE64) return apiError(res, 413, PARSE_FILE_TOO_LARGE_MESSAGE, { code: 'too-large' })
           const filename = typeof body.filename === 'string' ? body.filename : ''
           let buffer: Buffer
           try {
@@ -168,8 +159,22 @@ export function makeAmazonDatasetRoutes(db: DatabaseSync): WebRoute[] {
           })
         }
 
-        if (method === 'GET' && segments.length === 1) {
-          const dataset = getAmazonDataset(db, id)
+        /**
+         * `POST /:id/table`（P2-3）：数据集 → `.univer` 表格。
+         * 已生成过且文件还在就复用（`reused: true`），不再堆草稿。
+         * Univer 没装时由 `createDatasetTable` 回 503 + 中文原因。
+         */
+        if (segments.length === 2 && segments[1] === 'table' && method === 'POST') {
+          if (body === undefined) return apiError(res, 400, 'invalid JSON body')
+          const outcome = await createDatasetTable(db, deps, id, body)
+          const { error, ...extra } = outcome.payload
+          if (outcome.status >= 400) {
+            return apiError(res, outcome.status, typeof error === 'string' ? error : '生成表格失败', extra)
+          }
+          return apiOk(res, outcome.payload, outcome.status)
+        }
+
+        if (method === 'GET' && segments.length === 1) {          const dataset = getAmazonDataset(db, id)
           return dataset === undefined ? apiError(res, 404, 'dataset not found') : apiOk(res, { dataset })
         }
         if (method === 'PATCH' && segments.length === 1) {

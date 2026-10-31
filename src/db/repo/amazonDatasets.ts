@@ -12,22 +12,19 @@ import { randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
 import type { SearchTermAction, SearchTermAnnotation, TrafficRow } from '../../shared/amazonTrafficTools.js'
 import { SEARCH_TERM_ACTIONS } from '../../shared/amazonTrafficTools.js'
-
-export const AMAZON_DATASET_KINDS = ['search_term', 'targeting', 'campaign', 'placement', 'budget', 'impression_share'] as const
-export type AmazonDatasetKind = typeof AMAZON_DATASET_KINDS[number]
+import { AMAZON_DATASET_KINDS, isAmazonDatasetKind } from '../../amazon/import.js'
+import type { AmazonDatasetKind } from '../../amazon/import.js'
 
 /**
- * 行形状统一用 `keyword` 承载「这条记录的主体」：
- * 搜索词 = 客户搜索词，投放 = 投放词，广告活动 = 活动名。
- * 多出来的 `campaign/adGroup/matchType/budget/status` 只有后两类报表才有，
- * 存成可选字段而不是新建三张表 —— 三种报表的指标列是同一套。
+ * 种类定义只有一份（`amazon/import.ts`）：仓储、导入校验、CSV 导出都从那里取，
+ * 否则"允许的 kind 列表"与"每种 kind 要哪些列"会各自漂移。
  */
-export function isAmazonDatasetKind(value: unknown): value is AmazonDatasetKind {
-  return typeof value === 'string' && (AMAZON_DATASET_KINDS as readonly string[]).includes(value)
-}
+export { AMAZON_DATASET_KINDS, isAmazonDatasetKind }
+export type { AmazonDatasetKind }
 
 export interface AmazonDatasetRow {
   id: string
+  /** 报表类型：复用历史列 `kind_code`（六种取值，对齐 `AdReportKind`）。 */
   kindCode: AmazonDatasetKind
   title: string
   period: string | null
@@ -38,6 +35,11 @@ export interface AmazonDatasetRow {
    * `null` = 还没做过报表级结论（老行也是 null，不伪造空结论）。
    */
   aiSummary: AmazonDatasetSummaryPayload | null
+  /**
+   * 生成过的 `.univer` 绝对路径（schema 36）。`null` = 还没生成。
+   * 生成一次就复用；只有文件不在了或用户明确要求重新生成才重建。
+   */
+  univerFile: string | null
   sourceCode: string
   sessionId: string | null
   createdAt: string
@@ -54,11 +56,14 @@ export type AmazonDatasetSummaryPayload = Record<string, unknown>
 /** 列表项：不带整份行数据（大表不塞进列表响应）。 */
 export interface AmazonDatasetSummary {
   id: string
+  /** 报表类型：直接来自 `kind_code`（六种取值）。 */
   kindCode: string
   title: string
   period: string | null
   rowCount: number
   annotationCount: number
+  /** 已生成过 `.univer` 表格的路径；没生成过为 null。 */
+  univerFile: string | null
   sourceCode: string
   createdAt: string
   updatedAt: string
@@ -73,6 +78,8 @@ interface RawDatasetRow {
   annotations_json: string
   /** schema 34 才有的列；老库迁移后为 NULL。 */
   ai_summary: string | null
+  /** schema 36 才有的列；NULL = 还没生成过表格。 */
+  univer_file: string | null
   source_code: string
   session_id: string | null
   created_at: string
@@ -113,15 +120,31 @@ function parseAiSummary(json: string | null): AmazonDatasetSummaryPayload | null
   } catch { return null }
 }
 
+/**
+ * 报表类型只从 `kind_code` 读（那一列早就有，且建了索引）。
+ *
+ * 遇到不认识的值降级为 `search_term` 而不是抛错：读一份老报表/被手工改过的行，
+ * 不该让整个面板打不开。
+ */
+function kindCodeOf(raw: RawDatasetRow): AmazonDatasetKind {
+  return isAmazonDatasetKind(raw.kind_code) ? raw.kind_code : 'search_term'
+}
+
+/** `univer_file`：非空字符串才算有；空白/非字符串降级为 null（不伪造路径）。 */
+function parseUniverFile(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null
+}
+
 function toRow(raw: RawDatasetRow): AmazonDatasetRow {
   return {
     id: raw.id,
-    kindCode: raw.kind_code as AmazonDatasetKind,
+    kindCode: kindCodeOf(raw),
     title: raw.title,
     period: raw.period,
     rows: parseRows(raw.rows_json),
     annotations: parseAnnotations(raw.annotations_json),
     aiSummary: parseAiSummary(raw.ai_summary ?? null),
+    univerFile: parseUniverFile(raw.univer_file),
     sourceCode: raw.source_code,
     sessionId: raw.session_id,
     createdAt: raw.created_at,
@@ -130,33 +153,40 @@ function toRow(raw: RawDatasetRow): AmazonDatasetRow {
 }
 
 export interface CreateAmazonDatasetInput {
-  kindCode?: AmazonDatasetKind
+  /** **必填**：不允许再默认 `search_term`（缺类型会写错口径，见 `importAmazonDataset`）。 */
+  kindCode: AmazonDatasetKind
   title: string
   period?: string | null
   rows: TrafficRow[]
   sourceCode?: string
   sessionId?: string | null
+  /** 导入时就带着表格路径（一般由生成接口写回，这里只给需要预置的场景）。 */
+  univerFile?: string | null
 }
 
 export function createAmazonDataset(db: DatabaseSync, input: CreateAmazonDatasetInput): AmazonDatasetRow {
   if (input.title.trim() === '') throw new Error('title is required')
   if (input.rows.length === 0) throw new Error('rows must not be empty')
-  if (input.kindCode !== undefined && !isAmazonDatasetKind(input.kindCode)) {
-    throw new Error(`kindCode 非法：${String(input.kindCode)}（允许 ${AMAZON_DATASET_KINDS.join(' / ')}）`)
+  /** 运行期兜底：JS 调用方（测试/脚本）绕过 TS 时也必须显式给 kind。 */
+  if (typeof input.kindCode !== 'string' || !isAmazonDatasetKind(input.kindCode)) {
+    throw new Error(`kind_code 必填且必须合法（收到 ${String(input.kindCode)}；允许 ${AMAZON_DATASET_KINDS.join(' / ')}）`)
   }
+  const requested = input.kindCode
   const at = new Date().toISOString()
   const id = randomUUID()
   db.prepare(
-    `INSERT INTO amazon_datasets (id, kind_code, title, period, rows_json, annotations_json, source_code, session_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, '[]', ?, ?, ?, ?)`,
+    `INSERT INTO amazon_datasets
+       (id, kind_code, title, period, rows_json, annotations_json, source_code, session_id, univer_file, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, '[]', ?, ?, ?, ?, ?)`,
   ).run(
     id,
-    input.kindCode ?? 'search_term',
+    requested,
     input.title.trim(),
     input.period ?? null,
     JSON.stringify(input.rows),
     input.sourceCode ?? 'paste',
     input.sessionId ?? null,
+    parseUniverFile(input.univerFile ?? null),
     at,
     at,
   )
@@ -185,15 +215,60 @@ export function listAmazonDatasets(db: DatabaseSync, kindCode = 'search_term'): 
   const rows = db.prepare('SELECT * FROM amazon_datasets WHERE kind_code = ? ORDER BY created_at DESC, rowid DESC LIMIT 50').all(kindCode) as unknown as RawDatasetRow[]
   return rows.map((raw) => ({
     id: raw.id,
-    kindCode: raw.kind_code,
+    kindCode: kindCodeOf(raw),
     title: raw.title,
     period: raw.period,
     rowCount: parseRows(raw.rows_json).length,
     annotationCount: parseAnnotations(raw.annotations_json).length,
+    univerFile: parseUniverFile(raw.univer_file),
     sourceCode: raw.source_code,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   }))
+}
+
+/**
+ * 找一份「同一类报表 + 同一周期 + 行数相同」的既有数据集。
+ *
+ * 背景（2026-10-24 真实数据）：用户库里 3 份 `搜索词报表` 行数完全一样（1243 行），
+ * 是同一天三次重复导入 —— 面板列表因此看起来"怎么导了这么多份"。
+ * 导入时命中这个签名就返回**既有那份**（前端提示"这份已经导过了"），不新增行。
+ *
+ * 只比 kind_code / period / 行数，不比标题：标题带时间戳（`... 13:59:09`），
+ * 拿它做签名等于永远不命中。周期未知（period 为 null）时不判重 ——
+ * 两份都不带周期的报表可能是不同批数据，静默合并比重复更危险。
+ */
+export function findDuplicateAmazonDataset(
+  db: DatabaseSync,
+  kindCode: AmazonDatasetKind,
+  period: string | null,
+  rowCount: number,
+): AmazonDatasetRow | undefined {
+  if (period === null) return undefined
+  const rows = db.prepare(
+    'SELECT * FROM amazon_datasets WHERE kind_code = ? AND period = ? ORDER BY created_at DESC, rowid DESC LIMIT 20',
+  ).all(kindCode, period) as unknown as RawDatasetRow[]
+  for (const raw of rows) {
+    if (parseRows(raw.rows_json).length === rowCount) return toRow(raw)
+  }
+  return undefined
+}
+
+/**
+ * 记录/清除该数据集生成过的 `.univer` 表格路径。
+ *
+ * 只写 `univer_file`：生成表格不该刷新 `updated_at` 之外的东西，
+ * 更不该动 `rows_json` / `annotations_json`（否则"重新生成表格"会看起来像"报表变了"）。
+ */
+export function setAmazonDatasetUniverFile(db: DatabaseSync, id: string, file: string | null): AmazonDatasetRow {
+  const dataset = getAmazonDataset(db, id)
+  if (dataset === undefined) throw new Error('dataset not found')
+  const at = new Date().toISOString()
+  db.prepare('UPDATE amazon_datasets SET univer_file = ?, updated_at = ? WHERE id = ?')
+    .run(parseUniverFile(file), at, id)
+  const updated = getAmazonDataset(db, id)
+  if (updated === undefined) throw new Error('dataset update failed')
+  return updated
 }
 
 export interface SearchTermReviewInput {
@@ -210,6 +285,13 @@ export interface SearchTermReviewInput {
 export function saveSearchTermReview(db: DatabaseSync, id: string, reviews: SearchTermReviewInput[]): AmazonDatasetRow {
   const dataset = getAmazonDataset(db, id)
   if (dataset === undefined) throw new Error('dataset not found')
+  /**
+   * kind 守卫：词级建议只属于搜索词报表。
+   * 没有这道守卫，agent 拿 campaign 的 dataset_id 也能写回搜索词建议 —— 合并后最难查的旁路。
+   */
+  if (dataset.kindCode !== 'search_term') {
+    throw new Error(`kind_mismatch：dataset ${id} 是 ${dataset.kindCode}，只有 search_term 可以写回词级建议`)
+  }
   if (reviews.length === 0) throw new Error('reviews must not be empty')
   const byKeyword = new Map<string, SearchTermAnnotation>()
   const at = new Date().toISOString()
@@ -251,6 +333,10 @@ export function saveAmazonDatasetSummary(
 ): AmazonDatasetRow {
   const dataset = getAmazonDataset(db, id)
   if (dataset === undefined) throw new Error('dataset not found')
+  /** 同 `saveSearchTermReview`：报表级结论也只属于搜索词。 */
+  if (dataset.kindCode !== 'search_term') {
+    throw new Error(`kind_mismatch：dataset ${id} 是 ${dataset.kindCode}，只有 search_term 可以写回报表级结论`)
+  }
   if (summary !== null && (typeof summary !== 'object' || Array.isArray(summary))) {
     throw new Error('summary 必须是 JSON 对象或 null')
   }

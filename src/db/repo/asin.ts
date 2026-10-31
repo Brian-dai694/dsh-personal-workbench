@@ -19,6 +19,8 @@ export type { AsinJudgment, AsinJudgmentInput, AsinVerdict }
 export interface AsinFilter {
   category?: string
   shop?: string
+  /** 站点筛选（两位数代码）；与 `(site, asin)` 身份口径一致。 */
+  site?: string
   keyword?: string
   tag?: string
   watch?: 'watch' | 'normal'
@@ -81,7 +83,8 @@ function toProduct(row: RawAsinRow): AsinProduct {
     category: row.category,
     note: row.note,
     tags,
-    site: row.site ?? 'US',
+    site: normalizeStoredSite(row.site),
+    identityState: normalizeStoredSite(row.site) === null ? 'needs_site' : 'ok',
     extraJson: row.extra_json ?? '{}',
     brand: row.brand,
     seller: row.seller,
@@ -120,6 +123,11 @@ export function queryAsinPage(db: DatabaseSync, filter: AsinFilter = {}): AsinPa
   const params: Array<string | number> = []
   if (filter.category) { where.push('category = ?'); params.push(filter.category) }
   if (filter.shop) { where.push('(shop_id = ? OR shop_name = ?)'); params.push(filter.shop, filter.shop) }
+  if (filter.site) {
+    const site = optionalSite(filter.site)
+    if (site === null) throw new Error('站点必须是两位字母代码，例如 US / UK / DE')
+    where.push('site = ?'); params.push(site)
+  }
   if (filter.tag) {
     const tags = db.prepare('SELECT asin, tags_json FROM asin_products').all() as unknown as Array<{ asin: string; tags_json: string }>
     const matches = tags.filter((row) => {
@@ -157,10 +165,10 @@ export function listAsinProducts(db: DatabaseSync, filter: AsinFilter = {}): Asi
   return queryAsinPage(db, filter).items
 }
 
-export interface AsinFacets { categories: Array<{ value: string; count: number }>; shops: Array<{ value: string; count: number }>; tags: Array<{ value: string; count: number }>; verdicts: Array<{ value: string; count: number }>; total: number; watched: number }
+export interface AsinFacets { categories: Array<{ value: string; count: number }>; shops: Array<{ value: string; count: number }>; sites: Array<{ value: string; count: number }>; tags: Array<{ value: string; count: number }>; verdicts: Array<{ value: string; count: number }>; total: number; watched: number }
 
 export function asinFacets(db: DatabaseSync): AsinFacets {
-  const group = (column: 'category' | 'shop_name'): Array<{ value: string; count: number }> =>
+  const group = (column: 'category' | 'shop_name' | 'site'): Array<{ value: string; count: number }> =>
     db.prepare(`SELECT ${column} AS value, COUNT(*) AS count FROM asin_products WHERE ${column} IS NOT NULL AND ${column} != '' GROUP BY ${column} ORDER BY count DESC`).all() as unknown as Array<{ value: string; count: number }>
   const total = (db.prepare('SELECT COUNT(*) AS n FROM asin_products').get() as unknown as { n: number }).n
   const counts = new Map<string, number>()
@@ -174,11 +182,13 @@ export function asinFacets(db: DatabaseSync): AsinFacets {
   const tags = [...counts.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count)
   const watched = (db.prepare('SELECT COUNT(*) AS n FROM asin_products WHERE watch = 1').get() as unknown as { n: number }).n
   const verdicts = db.prepare("SELECT verdict AS value, COUNT(*) AS count FROM asin_products GROUP BY verdict ORDER BY count DESC").all() as unknown as Array<{ value: string; count: number }>
-  return { categories: group('category'), shops: group('shop_name'), tags, verdicts, total, watched }
+  return { categories: group('category'), shops: group('shop_name'), sites: group('site'), tags, verdicts, total, watched }
 }
 
-export function setAsinWatch(db: DatabaseSync, asin: string, watch: boolean): boolean {
-  return db.prepare('UPDATE asin_products SET watch = ?, updated_at = ? WHERE asin = ?').run(watch ? 1 : 0, new Date().toISOString(), asin).changes > 0
+export function setAsinWatch(db: DatabaseSync, asin: string, watch: boolean, site?: string | null): boolean {
+  /** 路由层已强制写请求带 site；仓储保留唯一匹配兼容，供内部工具/迁移调用。 */
+  const identity = resolveAsinIdentity(db, asin, site)
+  return db.prepare('UPDATE asin_products SET watch = ?, updated_at = ? WHERE asin = ?').run(watch ? 1 : 0, new Date().toISOString(), identity.asin).changes > 0
 }
 
 /**
@@ -190,9 +200,10 @@ export function setAsinWatch(db: DatabaseSync, asin: string, watch: boolean): bo
  * - **未提供的字段沿用原值**（浅合并）：面板上点一下结论不该把 VOC、评分卡一起抹掉；
  *   要清空就给空数组 / null，而不是"没传"。
  */
-export function setAsinJudgment(db: DatabaseSync, asin: string, input: AsinJudgmentInput): AsinJudgment {
+export function setAsinJudgment(db: DatabaseSync, asin: string, input: AsinJudgmentInput, site?: string | null): AsinJudgment {
+  const identity = resolveAsinIdentity(db, asin, site)
   const checked = normalizeJudgmentInput(input)
-  const existingRow = db.prepare('SELECT * FROM asin_products WHERE asin = ?').get(asin) as unknown as RawAsinRow | undefined
+  const existingRow = db.prepare('SELECT * FROM asin_products WHERE asin = ?').get(identity.asin) as unknown as RawAsinRow | undefined
   if (existingRow === undefined) throw new Error('asin not found')
   const before = toJudgment(existingRow)
   const at = new Date().toISOString()
@@ -204,10 +215,15 @@ export function setAsinJudgment(db: DatabaseSync, asin: string, input: AsinJudgm
     keywordCount: checked.keywordCount === undefined ? before.keywordCount : checked.keywordCount,
   }
   const score = checked.score === undefined ? before.score : checked.score
+  /**
+   * **判断写入不碰产品事实列**（P3 验收 B2）：`updated_at` 表示"产品事实最后一次变"，
+   * 产品库拿它显示更新时间、按它排序；一次评分/改结论不该让商品看起来被更新过。
+   * 判断自己的时间戳是 `judged_at`，回看历史用它，不用 `updated_at`。
+   */
   db.prepare(
-    `UPDATE asin_products SET verdict = ?, score = ?, judgment_json = ?, judged_at = ?, judged_source = ?, updated_at = ?
+    `UPDATE asin_products SET verdict = ?, score = ?, judgment_json = ?, judged_at = ?, judged_source = ?
      WHERE asin = ?`,
-  ).run(checked.verdict, score, JSON.stringify(payload), at, checked.source ?? 'manual', at, asin)
+  ).run(checked.verdict, score, JSON.stringify(payload), at, checked.source ?? 'manual', identity.asin)
   return { ...payload, verdict: checked.verdict, score, judgedAt: at, judgedSource: checked.source ?? 'manual' }
 }
 
@@ -221,8 +237,9 @@ export function listAsinJudgments(db: DatabaseSync, verdict?: AsinVerdict, limit
 
 export interface AsinTrendPoint { capturedAt: string; price: number | null; reviews: number | null; rating: number | null; bsrMajor: number | null; monthlySales: number | null }
 
-export function asinTrend(db: DatabaseSync, asin: string, limit = 60): AsinTrendPoint[] {
-  const rows = db.prepare('SELECT captured_at, price, reviews, rating, bsr_major, monthly_sales FROM asin_snapshots WHERE asin = ? ORDER BY captured_at ASC LIMIT ?').all(asin, limit) as unknown as Array<{ captured_at: string; price: number | null; reviews: number | null; rating: number | null; bsr_major: number | null; monthly_sales: number | null }>
+export function asinTrend(db: DatabaseSync, asin: string, limit = 60, site?: string | null): AsinTrendPoint[] {
+  const identity = resolveAsinIdentity(db, asin, site)
+  const rows = db.prepare('SELECT captured_at, price, reviews, rating, bsr_major, monthly_sales FROM asin_snapshots WHERE asin = ? ORDER BY captured_at ASC LIMIT ?').all(identity.asin, limit) as unknown as Array<{ captured_at: string; price: number | null; reviews: number | null; rating: number | null; bsr_major: number | null; monthly_sales: number | null }>
   return rows.map((row) => ({ capturedAt: row.captured_at, price: row.price, reviews: row.reviews, rating: row.rating, bsrMajor: row.bsr_major, monthlySales: row.monthly_sales }))
 }
 
@@ -310,13 +327,18 @@ export function importAsinStores(db: DatabaseSync, stores: readonly AsinStore[])
 
 export interface AsinStoreRow { id: string; sellerId: string | null; site: string | null; name: string; url: string | null; note: string | null; watch: boolean; lastScannedAt: string | null; productsCount: number }
 
-export function listAsinStores(db: DatabaseSync): AsinStoreRow[] {
-  const rows = db.prepare('SELECT * FROM asin_stores ORDER BY watch DESC, name ASC').all() as unknown as Array<Record<string, unknown>>
-  return rows.map((row) => ({
+/** 行 → 领域对象（列表与单条读取共用一份映射，避免两处各写一遍）。 */
+function toStoreRow(row: Record<string, unknown>): AsinStoreRow {
+  return {
     id: String(row.id), sellerId: row.seller_id === null ? null : String(row.seller_id), site: row.site === null ? null : String(row.site),
     name: String(row.name), url: row.url === null ? null : String(row.url), note: row.note === null ? null : String(row.note),
     watch: Number(row.watch) === 1, lastScannedAt: row.last_scanned_at === null ? null : String(row.last_scanned_at), productsCount: Number(row.products_count ?? 0),
-  }))
+  }
+}
+
+export function listAsinStores(db: DatabaseSync): AsinStoreRow[] {
+  const rows = db.prepare('SELECT * FROM asin_stores ORDER BY watch DESC, name ASC').all() as unknown as Array<Record<string, unknown>>
+  return rows.map(toStoreRow)
 }
 
 
@@ -355,11 +377,17 @@ export function batchUpdateAsins(
   action: AsinBatchAction,
   tag = '',
   at = new Date().toISOString(),
+  site?: string | null,
 ): AsinBatchResult {
   if (!ASIN_BATCH_ACTIONS.includes(action)) throw new Error(`不支持的批量动作：${action}`)
-  const clean = [...new Set(asins.map((value) => value.trim().toUpperCase()).filter((value) => value !== ''))]
-  if (clean.length === 0) throw new Error('至少选择一个 ASIN')
-  if (clean.length > ASIN_BATCH_LIMIT) throw new Error(`一次最多处理 ${ASIN_BATCH_LIMIT} 个 ASIN（本次 ${clean.length} 个）`)
+  const raw = [...new Set(asins.map((value) => value.trim().toUpperCase()).filter((value) => value !== ''))]
+  if (raw.length === 0) throw new Error('至少选择一个 ASIN')
+  if (raw.length > ASIN_BATCH_LIMIT) throw new Error(`一次最多处理 ${ASIN_BATCH_LIMIT} 个 ASIN（本次 ${raw.length} 个）`)
+  /**
+   * 批量是写操作，但保留旧字符串数组的兼容：唯一匹配可过；任一条歧义就整体失败，
+   * 不允许“跳过歧义项继续改其余项”。
+   */
+  const clean = raw.map((asin) => resolveAsinIdentity(db, asin, site).asin)
   const cleanTag = tag.trim()
   if ((action === 'addTag' || action === 'removeTag') && cleanTag === '') throw new Error('标签不能为空')
 
@@ -512,10 +540,11 @@ export interface AsinTaskSource {
  * 为什么不复用 `listAsinProducts`：那会把 30 列 + 标签/店铺聚合全查一遍，
  * 而立项只需要拼一段描述。**但 SQL 仍然归仓储**（架构规则 R7）。
  */
-export function getAsinTaskSource(db: DatabaseSync, asin: string): AsinTaskSource | undefined {
+export function getAsinTaskSource(db: DatabaseSync, asin: string, site?: string | null): AsinTaskSource | undefined {
+  const identity = resolveAsinIdentity(db, asin, site)
   const row = db.prepare(
     'SELECT title, price, site, verdict, score, judgment_json FROM asin_products WHERE asin = ?',
-  ).get(asin) as unknown as { title: string; price: number | null; site: string | null; verdict: string | null; score: number | null; judgment_json: string | null } | undefined
+  ).get(identity.asin) as unknown as { title: string; price: number | null; site: string | null; verdict: string | null; score: number | null; judgment_json: string | null } | undefined
   if (row === undefined) return undefined
   return {
     title: row.title,
@@ -543,13 +572,366 @@ export function getAsinTaskSource(db: DatabaseSync, asin: string): AsinTaskSourc
  * 于是"任务表长什么样"和"选品怎么防重"被混成一个问题。
  * 现在归位到选品域；对外仍由 `db/repo.ts` 再导出，调用点不用改。
  */
-export function findOpenTaskByAsin(db: DatabaseSync, asin: string): TaskRow | undefined {
+export function findOpenTaskByAsin(db: DatabaseSync, asin: string, site?: string | null): TaskRow | undefined {
   const clean = asin.trim().toUpperCase()
   if (clean === '') return undefined
+  const cleanSite = typeof site === 'string' ? site.trim().toUpperCase() : ''
+  const siteClause = /^[A-Z]{2}$/.test(cleanSite)
+    ? ` AND (extra LIKE ? OR extra NOT LIKE '%"site":%')`
+    : ''
+  const params: string[] = [`%"asin":"${clean}"%`]
+  if (siteClause !== '') params.push(`%"site":"${cleanSite}"%`)
   const rows = db.prepare(`SELECT * FROM tasks
     WHERE archived = 0 AND status_code NOT IN ('done', 'cancelled')
-      AND extra LIKE ?`).all(`%"asin":"${clean}"%`) as unknown as RawTaskRow[]
+      AND extra LIKE ?${siteClause}`).all(...params) as unknown as RawTaskRow[]
   return rows.map((row) => parseTask(row, db)).find((task): task is TaskRow => task !== undefined)
+}
+
+/* ==========================================================================
+ * 手工维护（v1.18）：不依赖旧脚本备份也能建库
+ * ==========================================================================
+ *
+ * 背景：选品库此前的**唯一**写入口是「导入收藏 JSON」（旧油猴脚本导出）。
+ * 用户要手工录一个 ASIN、改一条价格/标签、补一家店铺，都只能伪造一份备份再导入 ——
+ * 这正是本次需求的来源（「商品/店铺需要维护，手动添加产品」）。
+ *
+ * 三条纪律：
+ * 1. **校验与 SQL 同住仓储**：只写在路由里，将来工具/CLI 写入就绕过去了（架构规则 R7）；
+ * 2. **错误分两类**：`AsinConflictError` = 已存在（路由给 409），其它 = 输入不合法（400），
+ *    文案直接是可读中文，界面原样显示；
+ * 3. **PATCH 语义是"传了才改"**：没出现的键保持原值，显式 `null` 才清空 ——
+ *    否则编辑价格会把标签一起抹掉（与 `setAsinJudgment` 的浅合并同一条口径）。
+ */
+
+/** 记录已存在（重复 ASIN / 重复店铺 id）。路由据此返回 409。 */
+export class AsinConflictError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'AsinConflictError'
+  }
+}
+
+const ASIN_CODE_RE = /^[A-Z0-9]{10}$/
+
+/** ASIN 唯一入口：去空白、转大写、校验 10 位字母数字。 */
+export function normalizeAsinCode(raw: unknown): string {
+  const value = typeof raw === 'string' ? raw.trim().toUpperCase() : ''
+  if (!ASIN_CODE_RE.test(value)) throw new Error('ASIN 必须是 10 位字母数字，例如 B0XXXXXXXX')
+  return value
+}
+
+/**
+ * P2 身份解析：旧调用不带 site 时，只在**唯一**匹配下兼容；多站点必须显式给 site。
+ *
+ * 候选站点来源 = v1 行的 site + v37 影子表里该 ASIN 的站点。
+ * 未知站点（v1 site 为空）不猜 US，返回 `site: null`；这仍是一条唯一身份。
+ */
+export class AsinIdentityError extends Error {
+  readonly code: 'SITE_REQUIRED' | 'SITE_MISMATCH'
+  readonly asin: string
+  readonly candidates: string[]
+
+  constructor(code: 'SITE_REQUIRED' | 'SITE_MISMATCH', asin: string, candidates: string[]) {
+    super(code === 'SITE_REQUIRED'
+      ? `ASIN ${asin} 在多个站点存在（${candidates.join(' / ')}），请显式传 site`
+      : `ASIN ${asin} 的站点与请求不一致（已有 ${candidates.join(' / ')}）`)
+    this.name = 'AsinIdentityError'
+    this.code = code
+    this.asin = asin
+    this.candidates = candidates
+  }
+}
+
+function tableExists(db: DatabaseSync, name: string): boolean {
+  return db.prepare("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1").get(name) !== undefined
+}
+
+/** 只做规范化，不抛错：用于读取库里可能存在的脏 site。 */
+/** 写入必须显式 site：缺站点直接拒绝，不回退到唯一匹配（P2 合同）。 */
+export class AsinSiteRequiredError extends Error {
+  readonly code = 'site_required'
+  readonly asin: string
+
+  constructor(asin: string) {
+    super(`写入必须显式传 site（ASIN ${asin}）：空站点归一为 needs_site，不默认 US`)
+    this.name = 'AsinSiteRequiredError'
+    this.asin = asin
+  }
+}
+
+export function requireWriteIdentity(db: DatabaseSync, rawAsin: string, rawSite?: string | null): { asin: string; site: string } {
+  if (typeof rawSite !== 'string' || rawSite.trim() === '') {
+    throw new AsinSiteRequiredError(typeof rawAsin === 'string' ? rawAsin.trim().toUpperCase() : '')
+  }
+  const identity = resolveAsinIdentity(db, rawAsin, rawSite)
+  if (identity.site === null) {
+    throw new AsinSiteRequiredError(identity.asin)
+  }
+  return { asin: identity.asin, site: identity.site }
+}
+
+function normalizeStoredSite(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const value = raw.trim().toUpperCase()
+  return /^[A-Z]{2}$/.test(value) ? value : null
+}
+
+export function resolveAsinIdentity(
+  db: DatabaseSync,
+  rawAsin: string,
+  rawSite?: string | null,
+): { asin: string; site: string | null } {
+  /** 读取/解析已有身份时不重跑新建校验：老库允许非常规长度，不能因此读不到。 */
+  const asin = typeof rawAsin === 'string' ? rawAsin.trim().toUpperCase() : ''
+  if (asin === '') throw new Error('ASIN 不能为空')
+  const requestedSite = optionalSite(rawSite ?? undefined)
+  const candidates = new Set<string>()
+
+  const v1 = db.prepare('SELECT site FROM asin_products WHERE asin = ?').get(asin) as unknown as { site: string | null } | undefined
+  const v1Site = normalizeStoredSite(v1?.site)
+  if (v1Site !== null) candidates.add(v1Site)
+
+  if (tableExists(db, 'asin_products_v2')) {
+    const rows = db.prepare('SELECT DISTINCT site FROM asin_products_v2 WHERE asin = ?').all(asin) as unknown as Array<{ site: string }>
+    for (const row of rows) {
+      const site = normalizeStoredSite(row.site)
+      if (site !== null) candidates.add(site)
+    }
+  }
+
+  const sorted = [...candidates].sort()
+  if (requestedSite !== null) {
+    /**
+     * P2 读路径仍是 v1：v1 行的 site 与请求不一致时明确拒绝，
+     * 不能拿另一站点的行冒充。等 P5 切到 v2 才允许按 site 读不同行。
+     */
+    if (v1Site !== null && requestedSite !== v1Site) {
+      throw new AsinIdentityError('SITE_MISMATCH', asin, sorted)
+    }
+    if (sorted.length > 0 && !candidates.has(requestedSite)) {
+      throw new AsinIdentityError('SITE_MISMATCH', asin, sorted)
+    }
+    return { asin, site: requestedSite }
+  }
+  if (sorted.length > 1) throw new AsinIdentityError('SITE_REQUIRED', asin, sorted)
+  return { asin, site: sorted.length === 1 ? sorted[0]! : null }
+}
+
+function requiredText(raw: unknown, field: string, max: number): string {
+  if (typeof raw !== 'string') throw new Error(`${field}必须是文本`)
+  const value = raw.trim()
+  if (value === '') throw new Error(`${field}不能为空`)
+  if (value.length > max) throw new Error(`${field}过长（最多 ${max} 字）`)
+  return value
+}
+
+function optionalText(raw: unknown, field: string, max: number): string | null {
+  if (raw === null || raw === undefined) return null
+  if (typeof raw !== 'string') throw new Error(`${field}必须是文本`)
+  const value = raw.trim()
+  if (value === '') return null
+  if (value.length > max) throw new Error(`${field}过长（最多 ${max} 字）`)
+  return value
+}
+
+function optionalNumber(raw: unknown, field: string, min: number, max: number, integer = false): number | null {
+  if (raw === null || raw === undefined) return null
+  const rawText = typeof raw === 'string' ? raw.trim() : ''
+  const value = typeof raw === 'number' ? raw : rawText === '' ? Number.NaN : Number(rawText)
+  if (!Number.isFinite(value)) throw new Error(`${field}必须是数字`)
+  if (integer && !Number.isInteger(value)) throw new Error(`${field}必须是整数`)
+  if (value < min || value > max) throw new Error(`${field}超出范围（${min}–${max}）`)
+  return value
+}
+
+function optionalSite(raw: unknown): string | null {
+  if (raw === null || raw === undefined) return null
+  if (typeof raw !== 'string') throw new Error('站点必须是两位字母代码，例如 US / UK / DE')
+  const value = raw.trim().toUpperCase()
+  if (value === '') return null
+  if (!/^[A-Z]{2}$/.test(value)) throw new Error('站点必须是两位字母代码，例如 US / UK / DE')
+  return value
+}
+
+/** 链接只接受 http(s)：`javascript:` 之类既不安全也没有在界面里渲染的意义。 */
+function optionalUrl(raw: unknown, field: string): string | null {
+  const value = optionalText(raw, field, 600)
+  if (value === null) return null
+  if (!/^https?:\/\//i.test(value)) throw new Error(`${field}必须是 http(s) 链接`)
+  return value
+}
+
+/** 标签：去空白、去重、单个 ≤40 字、最多 20 个（不做静默截断）。 */
+function tagList(raw: unknown): string[] {
+  if (raw === null || raw === undefined) return []
+  if (!Array.isArray(raw)) throw new Error('标签必须是数组')
+  const out: string[] = []
+  for (const item of raw) {
+    if (typeof item !== 'string') throw new Error('标签必须是文本')
+    const tag = item.trim()
+    if (tag === '') continue
+    if (tag.length > 40) throw new Error('单个标签不超过 40 字')
+    if (!out.includes(tag)) out.push(tag)
+  }
+  if (out.length > 20) throw new Error('最多 20 个标签')
+  return out
+}
+
+function optionalWatch(raw: unknown, field = '关注标记'): boolean | undefined {
+  if (raw === undefined) return undefined
+  if (typeof raw !== 'boolean') throw new Error(`${field}必须是布尔值`)
+  return raw
+}
+
+/** 单条商品读取（手工录入后返回给界面；也供 PATCH 回读）。 */
+export function getAsinProduct(db: DatabaseSync, asin: string, site?: string | null): AsinProduct | undefined {
+  const identity = resolveAsinIdentity(db, asin, site)
+  const row = db.prepare('SELECT * FROM asin_products WHERE asin = ?').get(identity.asin) as unknown as RawAsinRow | undefined
+  return row === undefined ? undefined : toProduct(row)
+}
+
+/**
+ * 手工新增一条商品（重复 ASIN → `AsinConflictError`）。
+ *
+ * 只写事实字段；判断结论/关注之外的派生列交给列默认值 —— 手工录入不代表"已判断"。
+ */
+export function createAsinProduct(db: DatabaseSync, input: Record<string, unknown>, at = new Date().toISOString()): AsinProduct {
+  const asin = normalizeAsinCode(input.asin)
+  const title = optionalText(input.title, '标题', 300) ?? ''
+  /**
+   * P2：site 可为 null（needs_site），但**绝不默认 US**。
+   * HTTP 路由要求新建立即给出 site；仓储保留 null 以支持“待复核”导入/迁移。
+   */
+  const site = optionalSite(input.site)
+  const imageUrl = optionalUrl(input.imageUrl, '图片链接')
+  const url = optionalUrl(input.url, '商品链接')
+  const price = optionalNumber(input.price, '价格', 0, 10_000_000)
+  const rating = optionalNumber(input.rating, '评分', 0, 5)
+  const reviews = optionalNumber(input.reviews, '评论数', 0, 100_000_000, true)
+  const bsr = optionalNumber(input.bsr, 'BSR', 0, 100_000_000, true)
+  const brand = optionalText(input.brand, '品牌', 120)
+  const seller = optionalText(input.seller, '卖家', 120)
+  const shopId = optionalText(input.shopId, '店铺 ID', 64)
+  const shopName = optionalText(input.shopName, '店铺名', 120)
+  const category = optionalText(input.category, '分类', 60)
+  const note = optionalText(input.note, '备注', 2000)
+  const tags = tagList(input.tags)
+  const watch = optionalWatch(input.watch) === true ? 1 : 0
+  if (db.prepare('SELECT asin FROM asin_products WHERE asin = ?').get(asin) !== undefined) {
+    throw new AsinConflictError(`ASIN ${asin} 已经在选品库里`)
+  }
+  db.prepare(`
+    INSERT INTO asin_products (asin, title, current_title, image_url, url, price, rating, reviews, bsr, shop_id, shop_name, category, note, tags_json, added_at, updated_at, site, extra_json, brand, seller, currency, watch)
+    VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, NULL, ?)
+  `).run(asin, title, imageUrl, url, price, rating, reviews, bsr, shopId, shopName, category, note, JSON.stringify(tags), at, at, site, brand, seller, watch)
+  const created = getAsinProduct(db, asin, site)
+  if (created === undefined) throw new Error('写入后读不到这条商品（数据库异常）')
+  return created
+}
+
+/**
+ * 编辑一条商品（PATCH 语义：只改传了的字段；`null` / 空串清空可空字段）。
+ *
+ * `title` 是 NOT NULL 列，所以显式传空串等于"标题留空"，而不是删除记录。
+ */
+export function updateAsinProduct(db: DatabaseSync, rawAsin: string, patch: Record<string, unknown>, at = new Date().toISOString(), site?: string | null): AsinProduct {
+  const identity = resolveAsinIdentity(db, rawAsin, site)
+  const asin = identity.asin
+  const sets: string[] = []
+  const params: Array<string | number | null> = []
+  const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(patch, key) && patch[key] !== undefined
+
+  if (has('title')) { sets.push('title = ?'); params.push(optionalText(patch.title, '标题', 300) ?? '') }
+  /**
+   * site 是身份的一部分，不能靠 PATCH 改：`(site, asin)` 变更等于换一条 listing。
+   * P2 先拒绝；将来要"换站点"应走显式的迁移动作，而不是静默 UPDATE。
+   */
+  if (has('site')) {
+    const nextSite = optionalSite(patch.site)
+    if (nextSite !== identity.site) throw new Error('站点是身份，不能通过 PATCH 修改')
+  }
+  if (has('imageUrl')) { sets.push('image_url = ?'); params.push(optionalUrl(patch.imageUrl, '图片链接')) }
+  if (has('url')) { sets.push('url = ?'); params.push(optionalUrl(patch.url, '商品链接')) }
+  if (has('price')) { sets.push('price = ?'); params.push(optionalNumber(patch.price, '价格', 0, 10_000_000)) }
+  if (has('rating')) { sets.push('rating = ?'); params.push(optionalNumber(patch.rating, '评分', 0, 5)) }
+  if (has('reviews')) { sets.push('reviews = ?'); params.push(optionalNumber(patch.reviews, '评论数', 0, 100_000_000, true)) }
+  if (has('bsr')) { sets.push('bsr = ?'); params.push(optionalNumber(patch.bsr, 'BSR', 0, 100_000_000, true)) }
+  if (has('brand')) { sets.push('brand = ?'); params.push(optionalText(patch.brand, '品牌', 120)) }
+  if (has('seller')) { sets.push('seller = ?'); params.push(optionalText(patch.seller, '卖家', 120)) }
+  if (has('shopId')) { sets.push('shop_id = ?'); params.push(optionalText(patch.shopId, '店铺 ID', 64)) }
+  if (has('shopName')) { sets.push('shop_name = ?'); params.push(optionalText(patch.shopName, '店铺名', 120)) }
+  if (has('category')) { sets.push('category = ?'); params.push(optionalText(patch.category, '分类', 60)) }
+  if (has('note')) { sets.push('note = ?'); params.push(optionalText(patch.note, '备注', 2000)) }
+  if (has('tags')) { sets.push('tags_json = ?'); params.push(JSON.stringify(tagList(patch.tags))) }
+  const watch = optionalWatch(patch.watch)
+  if (watch !== undefined) { sets.push('watch = ?'); params.push(watch ? 1 : 0) }
+  if (sets.length === 0) throw new Error('没有要更新的字段')
+
+  params.push(at, asin)
+  const changes = db.prepare(`UPDATE asin_products SET ${sets.join(', ')}, updated_at = ? WHERE asin = ?`).run(...params).changes
+  if (Number(changes) === 0) throw new Error('asin not found')
+  const updated = getAsinProduct(db, asin, identity.site)
+  if (updated === undefined) throw new Error('更新后读不到这条商品（数据库异常）')
+  return updated
+}
+
+/** 单条店铺读取。 */
+export function getAsinStore(db: DatabaseSync, id: string): AsinStoreRow | undefined {
+  const row = db.prepare('SELECT * FROM asin_stores WHERE id = ?').get(id) as unknown as Record<string, unknown> | undefined
+  return row === undefined ? undefined : toStoreRow(row)
+}
+
+/**
+ * 手工新增一家店铺。
+ *
+ * id 沿用旧脚本的 `${site}_${sellerId}`；没有 Seller ID 时用 `manual_<uuid8>`，
+ * 因为 `asin_stores.id` 是主键 —— 用店铺名当 id 会在改名时撞车。
+ */
+export function createAsinStore(db: DatabaseSync, input: Record<string, unknown>): AsinStoreRow {
+  const name = requiredText(input.name, '店铺名称', 120)
+  const sellerId = optionalText(input.sellerId, 'Seller ID', 64)
+  const site = optionalSite(input.site) ?? (sellerId === null ? null : 'US')
+  const url = optionalUrl(input.url, '店铺链接')
+  const note = optionalText(input.note, '备注', 2000)
+  const watch = optionalWatch(input.watch, '店铺关注标记') === true ? 1 : 0
+  const id = sellerId === null ? `manual_${randomUUID().slice(0, 8)}` : `${site ?? 'US'}_${sellerId}`
+  if (db.prepare('SELECT 1 AS x FROM asin_stores WHERE id = ?').get(id) !== undefined) {
+    throw new AsinConflictError(`店铺 ${id} 已经在店铺库里`)
+  }
+  db.prepare(`INSERT INTO asin_stores (id, seller_id, site, name, url, note, watch, last_scanned_at, products_count)
+    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 0)`).run(id, sellerId, site, name, url, note, watch)
+  const created = getAsinStore(db, id)
+  if (created === undefined) throw new Error('写入后读不到这家店铺（数据库异常）')
+  return created
+}
+
+/**
+ * 编辑一家店铺（与商品 PATCH 同一条语义：只改传了的字段，`null` 清空）。
+ *
+ * id 是身份，不随改站点/改 Seller ID 变化：改 id 等于换一条记录，
+ * 而库里商品是按 `shop_id` / `shop_name` 关联的，静默换 id 会把关联悄悄断开。
+ */
+export function updateAsinStore(db: DatabaseSync, id: string, patch: Record<string, unknown>): AsinStoreRow {
+  const existing = getAsinStore(db, id)
+  if (existing === undefined) throw new Error('店铺不存在')
+  const sets: string[] = []
+  const params: Array<string | number | null> = []
+  const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(patch, key) && patch[key] !== undefined
+
+  if (has('name')) { sets.push('name = ?'); params.push(requiredText(patch.name, '店铺名称', 120)) }
+  if (has('sellerId')) { sets.push('seller_id = ?'); params.push(optionalText(patch.sellerId, 'Seller ID', 64)) }
+  if (has('site')) { sets.push('site = ?'); params.push(optionalSite(patch.site)) }
+  if (has('url')) { sets.push('url = ?'); params.push(optionalUrl(patch.url, '店铺链接')) }
+  if (has('note')) { sets.push('note = ?'); params.push(optionalText(patch.note, '备注', 2000)) }
+  const watch = optionalWatch(patch.watch, '店铺关注标记')
+  if (watch !== undefined) { sets.push('watch = ?'); params.push(watch ? 1 : 0) }
+  if (sets.length === 0) throw new Error('没有要更新的字段')
+
+  params.push(id)
+  db.prepare(`UPDATE asin_stores SET ${sets.join(', ')} WHERE id = ?`).run(...params)
+  const updated = getAsinStore(db, id)
+  if (updated === undefined) throw new Error('更新后读不到这家店铺（数据库异常）')
+  return updated
 }
 
 /**

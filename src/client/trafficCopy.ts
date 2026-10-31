@@ -49,3 +49,35 @@ export function summariseSliceForCopy(
   }
   return lines.join('\n')
 }
+
+/**
+ * 同一份数据的**结构化**版本（2026-10-30）：给 `table-preview` 用。
+ *
+ * 与 `summariseSliceForCopy` 并存而不是二选一：剪贴板要"能直接粘进 Excel 的文本"，
+ * 生成表格要"列名 + 行数组"。两者必须**同一套值与文案**，所以复用同一组
+ * `percent` / `money` / `ACTION_LABEL`，只是最后一步组装方式不同。
+ */
+export function trafficCopyTable(
+  rows: readonly TrafficMetric[],
+  annotations: ReadonlyMap<string, { action: SearchTermAction }>,
+): { columns: string[]; rows: Array<Array<string | number | null>> } {
+  return {
+    columns: [...TRAFFIC_COPY_HEADER],
+    rows: rows.map((row) => {
+      const note = annotations.get(row.keyword)
+      return [
+        row.keyword,
+        percent(row.acos),
+        row.clicks,
+        row.orders,
+        money(row.spend),
+        note === undefined ? '待分析' : ACTION_LABEL[note.action],
+        row.impressions,
+        money(row.sales),
+        percent(row.ctr),
+        percent(row.cvr),
+        money(row.cpc),
+      ]
+    }),
+  }
+}

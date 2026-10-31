@@ -166,7 +166,7 @@ export function TaskEditModal({
         <label>{t('AI 策略')}<select value={draft.aiPolicyCode} onChange={(e) => onPatchDraft({ aiPolicyCode: e.target.value })}>{dictOf('ai_policy').map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}</select></label>
         {recurrenceMasterId === null
           ? <label>{t('重复')}<select value={draft.recurrenceCode} onChange={(e) => onPatchDraft({ recurrenceCode: e.target.value })}>{dictOf('recurrence').map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}</select></label>
-          : <div style={{ fontSize: 12, color: '#999', alignSelf: 'center' }}>{t('重复：由模板任务管理')}</div>}
+          : <div style={{ fontSize: 12, color: 'var(--wb-ink-2)', alignSelf: 'center' }}>{t('重复：由模板任务管理')}</div>}
         <label>{t('截止时间')}<input type="datetime-local" value={draft.dueLocal} onChange={(e) => onPatchDraft({ dueLocal: e.target.value })} /></label>
         {/* ---------------- 预计耗时 / 全天任务（v1.15.1） ---------------- */}
         <label>{t('耗时（分钟）')}<input type="number" min={1} max={1440} step={5} value={draft.estimatedMinutes} placeholder={t('留空 = 默认 {n} 分钟', { n: defaultEstimateMinutes })} onChange={(e) => onPatchDraft({ estimatedMinutes: e.target.value })} /></label>

@@ -1,6 +1,6 @@
 {
   "name": "@dely0/dsh-personal-workbench",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "description": "DSH 个人工作台：日历 + 层级任务 + AI 澄清/拆解/执行/复盘 + AI 智能排序/日报周报 + 桌面提醒",
   "repository": {
     "type": "git",
@@ -72,9 +72,11 @@
     "@types/node": "^24.13.3",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.186.0",
     "react-dom": "^18.3.1",
     "tsdown": "0.22.2",
-    "typescript": "~5.7.2"
+    "typescript": "~5.7.2",
+    "vite": "^8.3.5"
   },
   "packageManager": "pnpm@11.7.0",
   "engines": {
@@ -84,17 +86,20 @@
   "scripts": {
     "link:dsh": "bash scripts/link-dsh-dev.sh",
     "repair": "node scripts/repair-parent-completion.mjs",
+    "audit:asin": "node scripts/audit-asin-identity.mjs",
+    "p1:rehearse": "node scripts/rehearse-asin-identity-p1.mjs",
+    "verify:judgment": "node scripts/verify-judgment-fact-isolation.mjs --out test-results/p3-b2-judgment-isolation.json",
     "build": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\" && node scripts/build-info.mjs && tsc -p tsconfig.build.json && tsdown",
     "typecheck": "tsc --noEmit",
     "dev:install": "node scripts/dev-install.mjs",
     "check": "tsc --noEmit && node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\" && node scripts/build-info.mjs && tsc -p tsconfig.build.json && tsdown",
     "test": "pnpm build && node --test --test-concurrency=1 test/*.test.mjs",
-    "test:local": "node --test test/panelState.test.mjs test/capabilities.test.mjs test/clientInvariants.test.mjs test/amazonThreePageWiring.test.mjs test/keywordAnalysis.test.mjs",
+    "test:local": "node --test test/panelState.test.mjs test/capabilities.test.mjs test/clientInvariants.test.mjs test/amazonThreePageWiring.test.mjs test/keywordAnalysis.test.mjs test/amazonImport.test.mjs test/amazonDatasetTable.test.mjs",
     "prepare": "pnpm build"
   },
   "dependencies": {
-    
     "react": "^18.3.1",
+    "three": "^0.186.1",
     "xlsx": "^0.18.5",
     "yaml": "2.9.1"
   },

@@ -64,7 +64,7 @@ test('立项：建出真实任务，判断内容进描述，状态是 todo / 进
       risk: { level: 'medium', note: '近似商标一件' }, keywordCount: 42, source: 'manual',
     })
 
-    const created = await request('POST', '/api/workbench/asin/B0TASK00001/task')
+    const created = await request('POST', '/api/workbench/asin/B0TASK00001/task?site=US')
     assert.equal(created.status, 200)
     assert.match(created.body.title, /^选品立项：/)
     const task = getTask(db, created.body.taskId)
@@ -91,9 +91,9 @@ test('立项幂等：同 ASIN 第二次 409 并给出现有任务 id；完成后
     importAsinProducts(db, [product('B0TASK00002')], [], 0, null)
     setAsinJudgment(db, 'B0TASK00002', { verdict: 'watch', score: 50, source: 'manual' })
 
-    const first = await request('POST', '/api/workbench/asin/B0TASK00002/task')
+    const first = await request('POST', '/api/workbench/asin/B0TASK00002/task?site=US')
     assert.equal(first.status, 200)
-    const second = await request('POST', '/api/workbench/asin/B0TASK00002/task')
+    const second = await request('POST', '/api/workbench/asin/B0TASK00002/task?site=US')
     assert.equal(second.status, 409, '重复点立项不能建出第二个任务')
     assert.equal(second.body.existingTaskId, first.body.taskId)
     assert.equal(listTasks(db).length, 1)
@@ -101,7 +101,7 @@ test('立项幂等：同 ASIN 第二次 409 并给出现有任务 id；完成后
     // 第一个任务完成后允许再立（第二轮做同一个品是正常的）
     updateTask(db, first.body.taskId, { statusCode: 'done' })
     assert.equal(findOpenTaskByAsin(db, 'B0TASK00002'), undefined)
-    const third = await request('POST', '/api/workbench/asin/B0TASK00002/task')
+    const third = await request('POST', '/api/workbench/asin/B0TASK00002/task?site=US')
     assert.equal(third.status, 200)
     assert.notEqual(third.body.taskId, first.body.taskId)
     assert.equal(listTasks(db).length, 2)
@@ -110,14 +110,14 @@ test('立项幂等：同 ASIN 第二次 409 并给出现有任务 id；完成后
 
 test('立项边界：未知 ASIN 404；ASIN 大小写不敏感；别的手工任务不会被误判成同一 ASIN', async () => {
   await withServer(async ({ request, db }) => {
-    assert.equal((await request('POST', '/api/workbench/asin/B0NOTEXIST/task')).status, 404)
+    assert.equal((await request('POST', '/api/workbench/asin/B0NOTEXIST/task?site=US')).status, 404)
 
     importAsinProducts(db, [product('B0TASK00003')], [], 0, null)
     // 一条描述里带 ASIN 但 extra 没有锚点的普通任务，不该挡住立项
     createTask(db, { title: '手工写的关于 B0TASK00003 的任务', typeCode: 'personal', priorityCode: 'p2' })
     assert.equal(findOpenTaskByAsin(db, 'B0TASK00003'), undefined, '只认 extra.asin，不靠标题/描述猜')
 
-    const lower = await request('POST', '/api/workbench/asin/b0task00003/task')
+    const lower = await request('POST', '/api/workbench/asin/b0task00003/task?site=US')
     assert.equal(lower.status, 200)
     assert.equal(findOpenTaskByAsin(db, 'B0TASK00003')?.id, lower.body.taskId, '小写 ASIN 也归一到同一条')
   })
@@ -128,7 +128,7 @@ test('立项参数可选：类型/优先级/标题按传入生效，非法 code 
     importAsinProducts(db, [product('B0TASK00009')], [], 0, null)
     setAsinJudgment(db, 'B0TASK00009', { verdict: 'do', score: 70, source: 'manual' })
 
-    const custom = await request('POST', '/api/workbench/asin/B0TASK00009/task', {
+    const custom = await request('POST', '/api/workbench/asin/B0TASK00009/task?site=US', {
       title: '自定义标题：先算模具费', typeCode: 'project_delivery', priorityCode: 'p1',
     })
     assert.equal(custom.status, 200)
@@ -147,11 +147,11 @@ test('立项参数：字典里不存在或已停用的 code 被拒，且不留�
     setAsinJudgment(db, 'B0TASK00010', { verdict: 'do', source: 'manual' })
     const before = listTasks(db).length
 
-    const badType = await request('POST', '/api/workbench/asin/B0TASK00010/task', { typeCode: '与选品无关的类型' })
+    const badType = await request('POST', '/api/workbench/asin/B0TASK00010/task?site=US', { typeCode: '与选品无关的类型' })
     assert.equal(badType.status, 400)
     assert.match(badType.body.error, /typeCode/)
 
-    const badPriority = await request('POST', '/api/workbench/asin/B0TASK00010/task', { priorityCode: 'p9' })
+    const badPriority = await request('POST', '/api/workbench/asin/B0TASK00010/task?site=US', { priorityCode: 'p9' })
     assert.equal(badPriority.status, 400)
     assert.match(badPriority.body.error, /priorityCode/)
 
@@ -173,10 +173,10 @@ test('参数校验先于幂等：已有任务时传非法类型，必须报类�
   await withServer(async ({ request, db }) => {
     importAsinProducts(db, [product('B0TASK00011')], [], 0, null)
     setAsinJudgment(db, 'B0TASK00011', { verdict: 'do', source: 'manual' })
-    assert.equal((await request('POST', '/api/workbench/asin/B0TASK00011/task')).status, 200)
+    assert.equal((await request('POST', '/api/workbench/asin/B0TASK00011/task?site=US')).status, 200)
 
     // 现在已有未完成任务；这一步校验必须排在幂等判断之前，否则错误会被 409 盖住
-    const bad = await request('POST', '/api/workbench/asin/B0TASK00011/task', { typeCode: '不存在类型' })
+    const bad = await request('POST', '/api/workbench/asin/B0TASK00011/task?site=US', { typeCode: '不存在类型' })
     assert.equal(bad.status, 400)
     assert.match(bad.body.error, /typeCode/)
   })
@@ -187,7 +187,7 @@ test('截止时间：传入则落库并按类型/优先级补提醒；非法时�
     importAsinProducts(db, [product('B0DUE000001')], [], 0, null)
     setAsinJudgment(db, 'B0DUE000001', { verdict: 'do', source: 'manual' })
     const due = new Date('2026-11-02T10:00:00.000Z')
-    const created = await request('POST', '/api/workbench/asin/B0DUE000001/task', { dueAt: due.toISOString(), priorityCode: 'p1' })
+    const created = await request('POST', '/api/workbench/asin/B0DUE000001/task?site=US', { dueAt: due.toISOString(), priorityCode: 'p1' })
     assert.equal(created.status, 200)
     const task = getTask(db, created.body.taskId)
     assert.equal(task.dueAt, due.toISOString())
@@ -197,7 +197,7 @@ test('截止时间：传入则落库并按类型/优先级补提醒；非法时�
     assert.equal(reminders, 1, '有截止时间就应该按默认提前量加一条提醒')
 
     importAsinProducts(db, [product('B0DUE000002')], [], 0, null)
-    const bad = await request('POST', '/api/workbench/asin/B0DUE000002/task', { dueAt: '不是时间' })
+    const bad = await request('POST', '/api/workbench/asin/B0DUE000002/task?site=US', { dueAt: '不是时间' })
     assert.equal(bad.status, 400)
     assert.match(bad.body.error, /dueAt/)
   })
@@ -207,7 +207,7 @@ test('判断回写闭环：立项任务完成后，商品备注追加一条事�
   await withServer(async ({ request, db }) => {
     importAsinProducts(db, [product('B0WB000001')], [], 0, null)
     setAsinJudgment(db, 'B0WB000001', { verdict: 'do', score: 71, nextAction: '先打样', source: 'manual' })
-    const created = await request('POST', '/api/workbench/asin/B0WB000001/task')
+    const created = await request('POST', '/api/workbench/asin/B0WB000001/task?site=US')
     assert.equal(created.status, 200)
 
     // 验收通过那条路径（completeTaskCascade）

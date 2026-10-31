@@ -15,7 +15,7 @@ const pct = (value: number | null): string => value === null ? '—' : `${(value
 const count = (value: number): string => value.toLocaleString('en-US')
 
 export function AmazonKeywordAnalysisBlock({ analysis }: { analysis: KeywordAnalysis }): JSX.Element {
-  const { rowCount, wordCount, spend, acos, buckets, risks, opportunities, missingPlacement } = analysis
+  const { rowCount, wordCount, spend, acos, buckets, risks, opportunities, missingPlacement, placementGap } = analysis
 
   return (
     <section className="wb-kw-analysis" aria-label="关键词分层分析">
@@ -83,8 +83,17 @@ export function AmazonKeywordAnalysisBlock({ analysis }: { analysis: KeywordAnal
         </div>
       </div>
 
+      {/**
+       * 两种缺列原因分开说（2026-10-29）：
+       * 「文件里没有该列」是用户侧动作（回后台按投放单元导出），
+       * 「旧数据没这三列」是我们历史格式，重新导入即可带上 —— 不说清用户只能猜。
+       */}
       {missingPlacement && (
-        <p className="wb-kw-footnote">否词需按投放单元复核</p>
+        <p className="wb-kw-footnote">
+          {placementGap === 'legacy-rows'
+            ? '否词需按投放单元复核：这份数据是旧格式导入的，没有广告组/匹配类型列。重新导入同一份报表即可带上这两列（会存进数据集，刷新后仍在）。'
+            : '否词需按投放单元复核：报表里没有广告组/匹配类型（或整列为空）。去广告后台按「投放单元」维度重新导出，再导入即可精确定位。'}
+        </p>
       )}
     </section>
   )

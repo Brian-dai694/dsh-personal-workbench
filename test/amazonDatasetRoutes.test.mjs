@@ -16,7 +16,7 @@ import { openWorkbenchDb } from '../lib/db/database.js'
 import { seedDictionaries } from '../lib/db/seed.js'
 import { makeRoutes } from '../lib/api/routes.js'
 import { readSearchTermsTool, saveSearchTermReviewTool, saveSearchTermSummaryTool } from '../lib/amazon/tools.js'
-import { buildFakeCfb, buildXls, buildXlsx } from './_xlsxFixture.mjs'
+import { buildFakeCfb, buildXls, buildXlsx, buildXlsxMulti } from './_xlsxFixture.mjs'
 
 /** 真实报表行（本地 DB 导出后摘出来的），用来验"按词聚合"在工具层真的生效。 */
 const GOLDEN = JSON.parse(readFileSync(new URL('./fixtures/keyword-aggregate.golden.json', import.meta.url), 'utf8'))
@@ -68,6 +68,7 @@ test('导入 → agent 读 → agent 写回 → 面板再读：全链路闭环',
   await withServer(async ({ db, request }) => {
     // 1. 面板导入
     const created = await request('POST', '/api/workbench/amazon/datasets', {
+      kindCode: 'search_term',
       title: 'US 搜索词 10/11-10/17',
       period: '2026-10-11~2026-10-17',
       rows: ROWS,
@@ -117,7 +118,7 @@ test('导入 → agent 读 → agent 写回 → 面板再读：全链路闭环',
 
 test('非法建议动作被拒且不留脏数据；未知数据集返回 needs_data', async () => {
   await withServer(async ({ db, request }) => {
-    const created = await request('POST', '/api/workbench/amazon/datasets', { title: 't', rows: ROWS })
+    const created = await request('POST', '/api/workbench/amazon/datasets', { kindCode: 'search_term', title: 't', rows: ROWS })
     const id = created.body.dataset.id
 
     const bad = await request('PATCH', `/api/workbench/amazon/datasets/${id}`, {
@@ -137,13 +138,17 @@ test('非法建议动作被拒且不留脏数据；未知数据集返回 needs_d
   })
 })
 
-test('导入非法行整体拒绝（不做部分导入）', async () => {  await withServer(async ({ request }) => {
+test('导入非法行整体拒绝（不做部分导入）', async () => {
+  await withServer(async ({ request }) => {
     const bad = await request('POST', '/api/workbench/amazon/datasets', {
+      kindCode: 'search_term',
       title: 't',
       rows: [{ keyword: 'ok', impressions: 1, clicks: 1, orders: 0, spend: 0, sales: 0 }, { keyword: '', impressions: 1, clicks: 1, orders: 0, spend: 0, sales: 0 }],
     })
     assert.equal(bad.status, 400)
-    assert.match(bad.body.error, /不合法的行/)
+    // P2-2 起错误信息精确到"第几行哪一列"，不再是一句笼统的"不合法的行"
+    assert.match(bad.body.error, /第 2 行的「搜索词」为空/)
+    assert.equal(bad.body.code, 'invalid-rows')
     const list = await request('GET', '/api/workbench/amazon/datasets')
     assert.equal(list.body.datasets.length, 0, '拒绝时不得留下半份数据')
   })
@@ -166,7 +171,7 @@ const SUMMARY = {
 
 test('PATCH summary：整份替换、GET 回 aiSummary、非法形状被拒', async () => {
   await withServer(async ({ request }) => {
-    const created = await request('POST', '/api/workbench/amazon/datasets', { title: 't', rows: ROWS })
+    const created = await request('POST', '/api/workbench/amazon/datasets', { kindCode: 'search_term', title: 't', rows: ROWS })
     const id = created.body.dataset.id
     const path = `/api/workbench/amazon/datasets/${id}`
     assert.equal(created.body.dataset.aiSummary, null, '刚导入时 aiSummary 必须是 null')
@@ -219,7 +224,7 @@ test('read 工具返回按词聚合视图：词级行数与合计来自真实行
   await withServer(async ({ db, request }) => {
     const cups = GOLDEN.cases.find((item) => item.name === '重复词合并').input
     const torch = GOLDEN.cases.find((item) => item.name === '无单词合并').input
-    const created = await request('POST', '/api/workbench/amazon/datasets', { title: 'T7 聚合', rows: [...cups, ...torch] })
+    const created = await request('POST', '/api/workbench/amazon/datasets', { kindCode: 'search_term', title: 'T7 聚合', rows: [...cups, ...torch] })
     assert.equal(created.status, 201)
     const datasetId = created.body.dataset.id
 
@@ -244,7 +249,7 @@ test('read 工具返回按词聚合视图：词级行数与合计来自真实行
 
 test('summary 工具：写回 ai_summary（整份替换、金额收到分、dataset_id 回显与校验）', async () => {
   await withServer(async ({ db, request }) => {
-    const created = await request('POST', '/api/workbench/amazon/datasets', { title: 'T7 结论', rows: ROWS })
+    const created = await request('POST', '/api/workbench/amazon/datasets', { kindCode: 'search_term', title: 'T7 结论', rows: ROWS })
     const datasetId = created.body.dataset.id
     const path = `/api/workbench/amazon/datasets/${datasetId}`
     const tool = saveSearchTermSummaryTool(db)
@@ -319,6 +324,8 @@ test('parse-file：xlsx → TSV；旧版 xls 返回可操作提示', async () =>
     })
     assert.equal(ok.status, 200)
     assert.equal(ok.body.format, 'xlsx')
+    assert.equal(ok.body.sheetCount, 1, 'sheetCount 必须留在响应里：付款对账靠它判断“只导入了第一张”')
+    assert.equal(ok.body.sheetName, 'Search Terms')
     assert.match(ok.body.tsv, /用户搜索词\t曝光\t点击/)
     assert.match(ok.body.tsv, /tig torch cup\t1200\t18\t2\t9\.5\t45/)
 
@@ -353,6 +360,24 @@ test('parse-file：xlsx → TSV；旧版 xls 返回可操作提示', async () =>
   })
 })
 
+test('parse-file：多 sheet 时保留 sheetCount，前端据此提示“只导入了第一张”', async () => {
+  await withServer(async ({ request }) => {
+    const multi = buildXlsxMulti([
+      { name: '日期范围报告', rows: [['订单号', '金额'], ['111-222', '29.99']] },
+      { name: '结算报告', rows: [['结算单号', '金额'], ['S-1', '-12.40']] },
+    ])
+    const res = await request('POST', '/api/workbench/amazon/datasets/parse-file', {
+      filename: '付款报表.xlsx',
+      base64: multi.toString('base64'),
+    })
+    assert.equal(res.status, 200)
+    assert.equal(res.body.sheetCount, 2, '多 sheet 的数量必须如实回传，不能被“只取第一张”顺手优化掉')
+    assert.equal(res.body.sheetName, '日期范围报告')
+    assert.match(res.body.tsv, /订单号\t金额/)
+    assert.doesNotMatch(res.body.tsv, /结算单号/, '当前口径只返回第一张 sheet，前端负责提示用户')
+  })
+})
+
 /**
  * 回归（2026-10-22）：请求体上限必须按端点区分。
  *
@@ -383,7 +408,7 @@ test('大报表不再被 256KB 默认上限误杀；超限明确回 413', async 
       spend: 0.5,
       sales: 0,
     }))
-    const created = await request('POST', '/api/workbench/amazon/datasets', { title: '大报表', rows })
+    const created = await request('POST', '/api/workbench/amazon/datasets', { kindCode: 'search_term', title: '大报表', rows })
     assert.equal(created.status, 201, '几百 KB 的 rows 应能导入')
     assert.equal(created.body.dataset.rows.length, 4000)
 
@@ -393,5 +418,65 @@ test('大报表不再被 256KB 默认上限误杀；超限明确回 413', async 
     })
     assert.equal(tooLarge.status, 413, '超限应是 413，不是 400 invalid JSON body')
     assert.equal(tooLarge.body.code, 'too-large')
+  })
+})
+
+test('parse-file 的超限预判按“源文件约 7.5MB”口径，不提示 12MB', async () => {
+  await withServer(async ({ request }) => {
+    /**
+     * 构造 > 10MB base64 的请求体。旧实现用 12MB 的读体上限做预判，
+     * 这个体量会因为"上限 12MB"文案被拒 —— 用户看到的数字与 7.5MB 的真实门槛对不上。
+     */
+    const hugeBase64 = 'A'.repeat(10 * 1024 * 1024 + 128 * 1024)
+    const res = await request('POST', '/api/workbench/amazon/datasets/parse-file', {
+      filename: 'huge.xlsx',
+      base64: hugeBase64,
+    })
+    assert.equal(res.status, 413)
+    assert.equal(res.body.code, 'too-large')
+    assert.match(res.body.error, /7\.5MB/, '文案必须说源文件约 7.5MB')
+    assert.doesNotMatch(res.body.error, /12MB/, '不得再出现 12MB 这类读体上限口径')
+  })
+})
+
+test('kind 守卫：缺 kind 拒绝写入；非搜索词报表不能被当搜索词读或写', async () => {
+  await withServer(async ({ db, request }) => {
+    // 1) 缺 kind：新老两个入口都 400 missing-kind，且不落库
+    const missingLegacy = await request('POST', '/api/workbench/amazon/datasets', { title: '无类型', rows: ROWS })
+    assert.equal(missingLegacy.status, 400)
+    assert.equal(missingLegacy.body.code, 'missing-kind')
+    const missingImport = await request('POST', '/api/workbench/amazon/import', { title: '无类型', rows: ROWS })
+    assert.equal(missingImport.status, 400)
+    assert.equal(missingImport.body.code, 'missing-kind')
+    assert.equal((await request('GET', '/api/workbench/amazon/datasets')).body.datasets.length, 0, '被拒的写入不得落库')
+
+    // 2) 建一份 campaign 数据集（核心六列即可，无额外必填列）
+    const campaign = await request('POST', '/api/workbench/amazon/import', {
+      kind_code: 'campaign',
+      title: '活动报表',
+      rows: ROWS,
+    })
+    assert.equal(campaign.status, 201)
+    const id = campaign.body.dataset.id
+
+    // 3) 读工具按 id 不得把 campaign 当搜索词分析
+    const read = await readSearchTermsTool(db).execute({ dataset_id: id }, {})
+    assert.match(read, /invalid_input/)
+    assert.match(read, /campaign/)
+
+    // 4) reviews / summary 写入必须拒绝，且不留半份数据
+    const review = await request('PATCH', `/api/workbench/amazon/datasets/${id}`, {
+      reviews: [{ keyword: 'tig torch cup', action: 'negative_exact' }],
+    })
+    assert.equal(review.status, 400)
+    assert.match(review.body.error, /kind_mismatch/)
+
+    const summary = await request('PATCH', `/api/workbench/amazon/datasets/${id}`, { summary: SUMMARY })
+    assert.equal(summary.status, 400)
+    assert.match(summary.body.error, /kind_mismatch/)
+
+    const after = await request('GET', `/api/workbench/amazon/datasets/${id}`)
+    assert.deepEqual(after.body.dataset.annotations, [], '被拒的 reviews 不得写入')
+    assert.equal(after.body.dataset.aiSummary, null, '被拒的 summary 不得写入')
   })
 })

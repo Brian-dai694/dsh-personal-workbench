@@ -27,7 +27,7 @@ export function IdeasListView({ model, dictOf, busy, startAISession }: IdeasList
                 <button className={`wb-seg ${model.tab === 'unfiled' ? 'on' : ''}`} onClick={() => model.setTab('unfiled')}>未归类（{model.unfiledIdeas.length}）</button>
                 <button className={`wb-seg ${model.tab === 'clusters' ? 'on' : ''}`} onClick={() => model.setTab('clusters')}>文件夹（{model.clusters.length}）</button>
               </div>
-              <input style={{ flex: 1, minWidth: 120, background: 'var(--dsw-alias-bg-base,#17171a)', border: '1px solid var(--wb-line, rgba(127,127,127,.26))', color: 'inherit', borderRadius: 8, padding: '7px 10px' }} placeholder="搜索点子或文件夹" value={model.query} onChange={(e) => model.setQuery(e.target.value)} />
+              <input style={{ flex: 1, minWidth: 120, background: 'var(--wb-bg-base)', border: '1px solid var(--wb-line)', color: 'inherit', borderRadius: 8, padding: '7px 10px' }} placeholder="搜索点子或文件夹" value={model.query} onChange={(e) => model.setQuery(e.target.value)} />
               {model.ideas.length >= 2 && <button className="wb-btn primary" disabled={busy} onClick={() => { const ids = model.pickedIds.size >= 2 ? [...model.pickedIds] : model.ideas.map((idea) => idea.id); void startAISession('idea_association', null, ids.sort().join(',')) }}><Icon name="sparkles" />{model.pickedIds.size >= 2 ? `AI 关联（已选 ${model.pickedIds.size}）` : 'AI 自动关联'}</button>}
               <button className="wb-btn" onClick={() => model.setFolderForm({ mode: 'create', id: null, title: '', summaryMd: '' })}><Icon name="folder" />新建文件夹</button>
               <button className="wb-btn" onClick={() => { model.actions.startCreate() }}><Icon name="plus" />记个点子</button>

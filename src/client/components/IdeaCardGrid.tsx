@@ -32,6 +32,8 @@ import type { ContentItem } from '../listPresentation.js'
 import { placePopover, type PopoverPlacement } from '../popoverPlacement.js'
 import { fmtTime } from '../format.js'
 import type { Dict } from '../viewTypes.js'
+// 字典缺色时的兜底色也来自唯一色板（2026-10-28 统一色系：客户端不再自带色号）
+import { PALETTE } from '../../shared/palette.js'
 
 export interface IdeaCardItem extends ContentItem {
   /** 该点子所属的文件夹 id（一个点子可属于多个）；空数组 = 未归类。 */
@@ -141,7 +143,7 @@ export function IdeaCardGrid({ ideas, dicts, selectedId, pickedIds, clusters, on
       <div className="wb-idea-cards" data-idea-cards>
         {ideas.map((idea) => {
           const dict = dicts.find((d) => d.code === idea.kindCode)
-          const color = String(dict?.config.color ?? '#8a9aa8')
+          const color = String(dict?.config.color ?? PALETTE.neutralDeep)
           const picked = pickedIds.has(idea.id)
           const classes = ['wb-idea-card2']
           if (selectedId === idea.id) classes.push('sel')
