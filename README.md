@@ -20,9 +20,13 @@
 - 🎭 **专家人格（角色库）**：三级来源（用户库 > 外部目录 > 内置 15 篇）；会话前选定，正文按需加载、不进提示词
 - ✅ **「AI 申请完成 → 用户验收」闭环**；进度是显式值，AI 不能靠进度把任务标完成（ADR 0003/0004）
 - 🗓️ **每日计划 + 容量账本**：AI 排序提案 → 确认才生效；「今日投入结束」≠ 任务完成（ADR 0007）
+- 📦 **亚马逊操作区（一个父项下 8 个页签）**：测算 / 关键词库 / 选品 / 报表分析（含流量分析）/ 库存 / 产品库 / 付款对账 / 运营日志；广告与搜索词 CSV 在本地解析，缺数据标 `needs_data` 而不是编数
+- 🧮 **测算与装箱**：按真实成本口径算有效毛利、盈亏平衡 ACOS/CPC、建议 CPC 与广告后利润，支持多方案对比；飞机盒 / 外箱装箱纯 CSS 3D 预览（零依赖、无 WebGL）
+- 🗂️ **产品库与选品分工**：产品库存产品事实（站点 / ASIN / 标题 / 价格 / 店铺 / 类目），支持手动录入与单条增改删；选品只存判断（结论 / 评分 / VOC / 下一步），两张表互不写入
 - 🎯 **会话前选 Skill / 模型 / 角色**，提示词自动注入「加载这些技能」
 - ⏰ **到期提醒**：页内横幅 + 系统通知；可选微信通道（需 `@xmanrui/dsh-im`）
 - 🌐 **界面语言**：自动 / 中文 / English（设置 → 语言）；顶栏、设置、角色库/专家、快速录入、任务表单、知识库与选择器已支持英文，深层说明文案增量迁移
+- 🎨 **统一视觉系统**：字号 / 圆角 / 间距 / 颜色 / 动效全部走令牌，颜色一律派生自宿主 DSH 主题（ADR 0011），深浅两套主题与宿主一致、不另造一套色
 - 🔒 **数据只在本机** `~/.dsh/workbench`，不上传任何服务器
 
 ## 安装
@@ -46,6 +50,7 @@ dsh plugin --profile web add git+https://github.com/Brian-dai694/dsh-personal-wo
 2. 「快速录入」说一句话 → AI 澄清 → 确认建任务；
 3. 任务详情点「AI 执行」→ 在会话里干活 → 完成后回面板**验收**；
 4. 「今日」看待办与容量，需要时点「AI 智能排序」排今天的顺序；「日历」按天回看与排期。
+5. 「亚马逊」父项下有测算、关键词库、选品、报表分析、库存、产品库、付款对账与运营日志。
 
 ## 兼容性
 
@@ -81,12 +86,14 @@ pnpm build && pnpm dev:install   # 装盘到本机 profile（装完重启 dsh we
 | [`scripts/release-preflight.mjs`](scripts/release-preflight.mjs) | **发布门禁一键跑**：typecheck → 单测 → 全探针（每步 build）→ PII 两面 → 版本/文档；`--phase post` 做 tarball 与 sha1 对账、用户视角安装、Release 复核 |
 | [`scripts/dev-verify.mjs`](scripts/dev-verify.mjs) | 研发版本验收链：构建 → 装盘 → 隔离实例重启 → 浏览器套件 → 证据包 |
 | [`docs/issues/`](docs/issues/) | 滚动维护的已知问题与待办 |
-| [`docs/adr/`](docs/adr/) | 已冻结的口径决策（容量、进度、角色、验收链、每日投入） |
+| [`docs/adr/`](docs/adr/) | 已冻结的口径决策（容量、进度、角色、验收链、每日投入、色系跟随 DSH） |
+| [`docs/design/dsh-visual-system.md`](docs/design/dsh-visual-system.md) | 视觉系统令牌口径（字号 / 间距 / 圆角 / 颜色 / 动效），改界面前先读 |
 
 ## 版本历史
 
 | 版本 | 要点 |
 |---|---|
+| **1.18.0** | **装箱 3D + 产品库手动录入 + 包装尺寸 + 两处「点了没反应」**：飞机盒 / 外箱装箱改**纯 CSS 3D 预览**（零依赖、无 WebGL；外箱按单一朝向枚举 6 种摆法取最大）；产品库新增**手动录入**并切到独立 `products` 表（migration 39，与选品库 `asin_products` 互不写入），行内「编辑 / 删除」常显、空库时给出预填 ASIN / 站点的录入 CTA；测算页重排信息层级（4 条结论 + 「核对明细」、单位贴数字、计算口径收进 `<details>`）；新增**包装尺寸**记录（migration 40）；修掉知识库「新建知识」与点子「记个点子」「新建 / 重命名文件夹」点了没反应。⚠️ schema 40。详见 [v1.18.0 Release](https://github.com/Brian-dai694/dsh-personal-workbench/releases/tag/v1.18.0) |
 | **1.17.0** | **角色库/专家 UI 可用性 + 英文界面（i18n）+ 宿主浮层挂载**：修掉专家草稿预览一字一行/横向溢出、设置页「继续修改」后弹窗不关、「查看草稿」被设置弹窗遮挡、界面露出 `**` 与角色来源标签重复；设置新增**语言**（自动/中文/English），顶栏、设置、角色库/专家、快速录入、任务表单与知识库等顶层界面支持英文，语言保存后重启仍保留；浮层改为优先挂宿主 `[data-shell-overlay]` 层并补 `pointer-events`，修复桌面端设置弹窗与模型列表被面板盖住（[issue #14](https://github.com/Dely0/dsh-personal-workbench/issues/14)）。英文界面见 [issue #12](https://github.com/Dely0/dsh-personal-workbench/issues/12)。详见 [`docs/releases/v1.17.0.md`](docs/releases/v1.17.0.md) |
 | **1.16.5** | **合入外部贡献：工作台样式节点丢失后的自愈**（[issue #9](https://github.com/Dely0/dsh-personal-workbench/issues/9) / [PR #10](https://github.com/Dely0/dsh-personal-workbench/pull/10)，[@SnowNight777](https://github.com/SnowNight777)）—— 插件活动期间 `style[data-dsh-personal-workbench-style]` 被删掉后约 **600ms** 内自动重建，关闭态面板不再"无样式弹出并覆盖界面"；观察者挂在**插件实例**上（不是模块级），`cleanup()` 先 `disposed = true` 再 `disconnect()`。同版修掉 **main 连续 33 次红的 CI**：`test/db.test.mjs` 那条"同链计划项"断言的**场景**从 2026-10-01 起就写错了、且 `finally` 里的清理异常会顶替断言失败（正是它被长期读成"Windows EPERM 假失败"的原因），CI run **#84** 双绿。详见 [`docs/releases/v1.16.5.md`](docs/releases/v1.16.5.md) |
 | **1.16.4** | **「排入今日」的父子口径定案**：计划项必须是**可执行叶子**，在**父任务**上点一次 = 按树序**展开它下面所有未完成叶子**（各自带自己的投入），父任务自己不是计划项、在「计划」页签作**分组行**（「已排 N / 共 M 个子任务 · 合计 X 分钟」）；候选池只收叶子、AI 侧口径同步「只排可执行叶子」（含父任务的提案整份被拒）。同版修掉「**清除今日计划不刷新**」与两处验收链套件假红。口径见 [`docs/adr/0010-plan-items-are-executable-leaves.md`](docs/adr/0010-plan-items-are-executable-leaves.md)，详见 [`docs/releases/v1.16.4.md`](docs/releases/v1.16.4.md) |
@@ -104,9 +111,11 @@ pnpm build && pnpm dev:install   # 装盘到本机 profile（装完重启 dsh we
 | 1.14.57 | 架构重构：面板可见性唯一权威源、删除 DOM 降级腿、能力门槛「明确不启动」 |
 | 更早 | 完整发行说明见 [`docs/releases/`](docs/releases/) |
 
+> `main` 上还有一批**尚未发版**的改动：界面视觉系统统一（字号 / 圆角 / 间距 / 颜色 / 动效令牌化，
+> 见 [`docs/design/dsh-visual-system.md`](docs/design/dsh-visual-system.md)）与公开文档的路径清理。
+
 ## 路线图
 
-- [ ] 客户端 `WorkbenchApp` 拆分（施工图待重写）
 - [ ] 任务拖拽排序、数据导入导出
 - [ ] 定时自动化、多端同步（各自单独立项）
 
@@ -154,9 +163,13 @@ turn DSH into a calendar + hierarchical task list + AI assistant workbench. All 
 - 🎭 **Personas**: three-tier library (user > external dir > 15 built-ins), picked per session, loaded on demand (never inlined into the prompt)
 - ✅ "AI requests completion → you accept" loop; progress is an explicit value the AI cannot use to complete a task
 - 🗓️ Daily plan + capacity ledger: AI proposes an order, only your confirmation applies it; "done for today" ≠ task completed
+- 📦 **Amazon operations area** (8 tabs under one entry): calculator, keyword library, product scouting, report analysis (incl. traffic), inventory, product library, payment reconciliation, ops log — ad and search-term CSVs are parsed locally, gaps are marked `needs_data` instead of invented
+- 🧮 Calculator & packing: effective margin, break-even ACOS/CPC, suggested CPC and post-ad profit with scenario comparison; pure-CSS 3D box / carton previews (no WebGL, no extra deps)
+- 🗂️ Product library vs scouting: product facts live in their own table (manual entry, inline edit/delete); judgment stays in the scouting table — the two never write to each other
 - 🎯 Pick Skill / model / persona before each AI session; prompt gets a "load these skills" instruction
 - ⏰ Due reminders (in-panel banner + system notification), optional WeChat channel via `@xmanrui/dsh-im`
 - 🌐 **UI language**: auto / 中文 / English (Settings → Language); top-level chrome, settings, personas/experts, quick capture, task forms, knowledge view and pickers are translated, with deeper copy migrated incrementally
+- 🎨 **Unified visual system**: type, radius, spacing, colour and motion tokens, with colours derived from the host DSH theme (ADR 0011)
 - 🔒 Local-only storage at `~/.dsh/workbench`
 
 ## Install
