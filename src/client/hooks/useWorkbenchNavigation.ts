@@ -22,7 +22,9 @@
  *   （否则接口宣称了一种不存在的能力）。
  */
 import { useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { WorkbenchView } from '../app/contracts.js'
+import { withViewTransition } from '../viewTransition.js'
 
 export interface UseWorkbenchNavigationActions {
   /** 切到某张视图（入口唯一的 6 个调用点全部是直接赋值）。 */
@@ -38,6 +40,14 @@ export interface UseWorkbenchNavigationResult {
 export function useWorkbenchNavigation(): UseWorkbenchNavigationResult {
   // 初值逐字保留（`'today'`）：`test/taskDetailWiring.test.mjs` 与
   // `scripts/lib/d17-p3b-exit-check.py` 的正向断言锚的就是这一行原文，只是 owner 换成了本文件。
-  const [view, setView] = useState<WorkbenchView>('today')
+  const [view, setViewState] = useState<WorkbenchView>('today')
+  /**
+   * 切视图包一层过渡（2026-11-01）：域页签点下去时，旧内容淡出、新内容淡入，
+   * 底部指示条同时滑到新位置。`flushSync` 是必须的 —— 过渡回调要等 DOM 已经改完
+   * 才能拍到"新快照"，否则 React 在回调返回后才提交，浏览器拍到的新旧是同一帧。
+   */
+  const setView = (next: WorkbenchView): void => {
+    withViewTransition(() => flushSync(() => setViewState(next)))
+  }
   return { view, actions: { setView } }
 }

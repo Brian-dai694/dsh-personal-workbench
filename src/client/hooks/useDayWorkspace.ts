@@ -89,7 +89,7 @@ export type UseDayWorkspaceActions = {
   setReportSubTab: (tab: ReportSubTab) => void
   setPicked: (date: Date) => void
   setCursor: (date: Date) => void
-  setCalMode: (mode: 'week' | 'month') => void
+  setCalMode: (mode: 'day' | 'week' | 'month') => void
   setDayTab: (tab: DayTab) => void
   /** 让日历选中日的计划重新拉取（草稿落盘后的跨域刷新用）。 */
   bumpPlanRefresh: () => void
@@ -114,7 +114,7 @@ export type UseDayWorkspaceResult = {
   pickedAnchor: string
   addingPlanTaskId: string | null
   cursor: Date
-  calMode: 'week' | 'month'
+  calMode: 'day' | 'week' | 'month'
   dayTab: DayTab
   weekDays: Date[]
   monthGrid: Date[]
@@ -406,7 +406,7 @@ export function useDayWorkspace(input: UseDayWorkspaceInput): UseDayWorkspaceRes
 
   // 周/月日历
   const [cursor, setCursor] = useState<Date>(() => startOfWeek(now))
-  const [calMode, setCalMode] = useState<'week' | 'month'>('week')
+  const [calMode, setCalMode] = useState<'day' | 'week' | 'month'>('week')
   const [dayTab, setDayTab] = useState<DayTab>('plan')
   /**
    * 报告锚点跟着**当前面板选中的那一天**走（批次2 D15）：

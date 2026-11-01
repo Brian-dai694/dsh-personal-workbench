@@ -290,7 +290,17 @@ export function WorkbenchBody(props: WorkbenchAssembly): JSX.Element {
               dayPanelProps={dayPanelProps}
               onMoveWeek={moveWeek}
               onMoveMonth={moveMonth}
-              onToday={() => (calMode === 'week' ? setCursor(startOfWeek(now)) : setCursor(new Date(now.getFullYear(), now.getMonth(), 1)))}
+              /**
+               * 「今天」的落点跟着模式走：日=今天、周=本周、月=本月。
+               * 日模式直接改选中日（不碰 cursor），因为日视图没有"周起点"这回事。
+               */
+              onToday={() => (calMode === 'day'
+                ? setPicked(new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+                : calMode === 'week'
+                  ? setCursor(startOfWeek(now))
+                  : setCursor(new Date(now.getFullYear(), now.getMonth(), 1)))}
+              /** 日模式的上一/下一天：按日历日加减，不用 86400000 毫秒（夏令时会错一天）。 */
+              onMoveDay={(delta) => setPicked(new Date(picked.getFullYear(), picked.getMonth(), picked.getDate() + delta))}
               onPick={setPicked}
               onCalModeChange={setCalMode}
               onStartPlanAISession={(d) => void startAISession('plan', null, d)}

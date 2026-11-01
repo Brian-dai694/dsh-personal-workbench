@@ -22,8 +22,8 @@ import type { UsePackagingDimensionsResult } from '../hooks/usePackagingDimensio
 import type { UseUniverCsvTableResult } from '../hooks/useUniverCsvTable.js'
 import type { PackagingDimensionRecord } from '../../shared/packagingDimensions.js'
 import { CALCULATOR_DEFAULTS, REFERRAL_FEE_RATE, withFixedReferralFee } from '../../shared/calculatorScenario.js'
-import { calculatePackage, type PackageCalculatorInput, type PackageSizeUnit, type PackageWeightUnit } from '../../shared/packageCalculator.js'
-import { packCarton, type CartonSize } from '../../shared/cartonPacking.js'
+import { calculatePackage, fromKg, switchWeightUnit, toKg, type PackageCalculatorInput, type PackageSizeUnit, type PackageWeightUnit } from '../../shared/packageCalculator.js'
+import { AMAZON_CARTON_WEIGHT_LIMIT_KG, checkCartonWeight, packCarton, type CartonSize } from '../../shared/cartonPacking.js'
 import { PackageBoxThree } from '../components/PackageBoxThree.js'
 import { CartonBox3D } from '../components/CartonBox3D.js'
 
@@ -34,6 +34,14 @@ type CalculatorMode = 'profit' | 'bid' | 'package' | 'carton'
 /** 外箱默认值：24×18×12 in 是北美常见规格。 */
 const CARTON_STORAGE_KEY = 'dsh-workbench-carton-outer-v1'
 const CARTON_DEFAULT: CartonSize = { length: 24, width: 18, height: 12 }
+/**
+ * 箱材 + 填充物重量：**状态里存 kg 规范值**，界面上按包裹页的重量单位显示/录入。
+ *
+ * 为什么不直接存显示值：切一次 lb↔kg 就会把"0.5 kg 箱材"悄悄变成"0.5 lb"，
+ * 而尺寸记录与 23 kg 判定都按 kg 存 —— 显示口径与物理量必须分开。
+ */
+const CARTON_TARE_STORAGE_KEY = 'dsh-workbench-carton-tare-v1'
+const CARTON_TARE_DEFAULT_KG = 0.5
 const PACKAGE_DEFAULT: PackageCalculatorInput = { length: 15, width: 12, height: 8, weight: 2, quantity: 1, sizeUnit: 'in', weightUnit: 'lb' }
 
 function loadPackageInput(): PackageCalculatorInput {
@@ -55,6 +63,17 @@ function loadCartonOuter(): CartonSize {
   return CARTON_DEFAULT
 }
 
+function loadCartonTare(): number {
+  try {
+    const raw = localStorage.getItem(CARTON_TARE_STORAGE_KEY)
+    if (raw !== null) {
+      const value = Number(JSON.parse(raw))
+      if (Number.isFinite(value) && value >= 0) return value
+    }
+  } catch { /* Invalid or unavailable local storage falls back to defaults. */ }
+  return CARTON_TARE_DEFAULT_KG
+}
+
 /**
  * 默认参数来自共享模块（`shared/calculatorScenario.ts`）：对比表补齐老方案时用的
  * 必须是**同一份**默认值，否则会出现「面板显示 $39.99、对比表里另一个数」。
@@ -71,7 +90,7 @@ const COST_FIELDS: Array<{ key: keyof AmazonCalculatorInput; label: string; hint
   { key: 'unitCost', label: '采购成本', hint: 'USD / 件' },
   { key: 'freight', label: '头程运费', hint: 'USD / 件' },
   { key: 'fbaFee', label: 'FBA 配送费', hint: 'USD / 件' },
-  { key: 'referralFee', label: '销售佣金', hint: `固定 ${REFERRAL_FEE_RATE * 100}% · 随售价自动计算`, readonly: true },
+  { key: 'referralFee', label: '销售佣金', hint: `固定 ${REFERRAL_FEE_RATE * 100}%`, readonly: true },
   { key: 'storageFee', label: '仓储费摊销', hint: 'USD / 件' },
   { key: 'removalFee', label: '移除 / 弃置摊销', hint: 'USD / 件' },
   { key: 'promotionCost', label: '促销成本摊销', hint: 'USD / 件' },
@@ -100,8 +119,10 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
   const [packageInput, setPackageInput] = useState<PackageCalculatorInput>(loadPackageInput)
   /** 内盒直接取包裹尺寸；两者各存一份会造成装箱结果不一致。 */
   const [cartonOuter, setCartonOuter] = useState<CartonSize>(loadCartonOuter)
+  /** 箱材 + 填充物重量（kg）：单箱毛重 = 单件重量 × 每箱件数 + 它。 */
+  const [cartonTare, setCartonTare] = useState<number>(loadCartonTare)
   const [hasSaved, setHasSaved] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) !== null || localStorage.getItem(PACKAGE_STORAGE_KEY) !== null || localStorage.getItem(CARTON_STORAGE_KEY) !== null } catch { return false }
+    try { return localStorage.getItem(STORAGE_KEY) !== null || localStorage.getItem(PACKAGE_STORAGE_KEY) !== null || localStorage.getItem(CARTON_STORAGE_KEY) !== null || localStorage.getItem(CARTON_TARE_STORAGE_KEY) !== null } catch { return false }
   })
   const [saveMessage, setSaveMessage] = useState('')
   const [scenarioName, setScenarioName] = useState('')
@@ -129,8 +150,17 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
   }, [compareIds, scenarioList])
 
   function updatePackage(key: keyof PackageCalculatorInput, raw: string): void {
-    if (key === 'sizeUnit' || key === 'weightUnit') {
-      setPackageInput((current) => ({ ...current, [key]: raw }))
+    if (key === 'sizeUnit') {
+      setPackageInput((current) => ({ ...current, sizeUnit: raw as PackageSizeUnit }))
+      setSaveMessage('')
+      return
+    }
+    /**
+     * 切重量单位**换算数值**（2 lb → 0.91 kg），物理重量不变 ——
+     * 与「外箱装箱」里的箱材输入走同一个 `switchWeightUnit`，两处不许各有一套口径。
+     */
+    if (key === 'weightUnit') {
+      setPackageInput((current) => switchWeightUnit(current, raw as PackageWeightUnit))
       setSaveMessage('')
       return
     }
@@ -140,6 +170,12 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
 
   function updateCartonOuter(key: keyof CartonSize, raw: string): void {
     setCartonOuter((current) => ({ ...current, [key]: raw === '' ? 0 : Number(raw) }))
+    setSaveMessage('')
+  }
+
+  function updateCartonTare(raw: string): void {
+    /** 输入单位跟随包裹页：这里先折算成 kg 再存，切单位不会改掉物理重量。 */
+    setCartonTare(toKg(raw === '' ? 0 : Number(raw), packageInput.weightUnit ?? 'lb'))
     setSaveMessage('')
   }
 
@@ -153,6 +189,7 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
       localStorage.setItem(STORAGE_KEY, JSON.stringify(calcInput))
       localStorage.setItem(PACKAGE_STORAGE_KEY, JSON.stringify(packageInput))
       localStorage.setItem(CARTON_STORAGE_KEY, JSON.stringify(cartonOuter))
+      localStorage.setItem(CARTON_TARE_STORAGE_KEY, JSON.stringify(cartonTare))
       setHasSaved(true)
       setSaveMessage('参数已保存到本机浏览器')
     } catch {
@@ -247,7 +284,7 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
                 const suffix = readonly === true ? null : isPercent ? '%' : null
                 return (
                   <label className={`wb-amazon-field${readonly === true ? ' wb-amazon-field-fixed' : ''}`} key={key}>
-                    <span>{label}{hint && <small>{hint}</small>}</span>
+                    <span>{label}{hint && <small title={hint}>{hint}</small>}</span>
                     <span className={`wb-amazon-input-wrap${suffix === null ? '' : ' has-suffix'}`}>
                       <input aria-label={label} type="number" min="0" max={isPercent ? 100 : undefined} step={isPercent ? 0.1 : 0.01}
                         readOnly={readonly === true}
@@ -335,7 +372,11 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
           inner={{ length: packageInput.length, width: packageInput.width, height: packageInput.height }}
           outer={cartonOuter}
           unit={packageInput.sizeUnit ?? 'in'}
+          unitWeight={packageInput.weight}
+          weightUnit={packageInput.weightUnit ?? 'lb'}
+          tare={cartonTare}
           onOuter={updateCartonOuter}
+          onTare={updateCartonTare}
         />
       )}
 
@@ -346,7 +387,7 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
       {(mode === 'package' || mode === 'carton') && packaging !== undefined && (
         <PackagingRecordsPanel
           packaging={packaging}
-          current={{ packageInput, cartonOuter }}
+          current={{ packageInput, cartonOuter, cartonTare }}
           onLoad={(record) => {
             const data = record.data
             setPackageInput({
@@ -354,6 +395,8 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
               weight: data.packageWeight, quantity: data.quantity, sizeUnit: data.sizeUnit, weightUnit: data.weightUnit,
             })
             setCartonOuter({ length: data.cartonLength, width: data.cartonWidth, height: data.cartonHeight })
+            /** 老记录没有箱材重量：按 0 还原，而不是把当前值留在面板上装作是记录里的。 */
+            setCartonTare(typeof data.cartonWeightKg === 'number' && Number.isFinite(data.cartonWeightKg) ? data.cartonWeightKg : 0)
             setSaveMessage(`已载入尺寸记录「${record.name}」`)
           }}
           onOpenTable={() => {
@@ -362,9 +405,10 @@ export function AmazonToolsView({ onSendToAI, scenarios: model, packaging, table
               record.data.packageLength, record.data.packageWidth, record.data.packageHeight, record.data.packageWeight,
               record.data.quantity, record.data.sizeUnit, record.data.weightUnit,
               record.data.cartonLength, record.data.cartonWidth, record.data.cartonHeight,
+              typeof record.data.cartonWeightKg === 'number' ? record.data.cartonWeightKg : 0,
             ])
             void table?.actions.openTable(
-              ['名称', 'SKU', '包裹长', '包裹宽', '包裹高', '包裹重量', '单箱件数', '尺寸单位', '重量单位', '外箱长', '外箱宽', '外箱高'],
+              ['名称', 'SKU', '包裹长', '包裹宽', '包裹高', '包裹重量', '单箱件数', '尺寸单位', '重量单位', '外箱长', '外箱宽', '外箱高', '箱材/填充 kg'],
               rows,
               '包装与外箱尺寸记录',
             )
@@ -507,6 +551,7 @@ function PackageCalculatorPanel({ input, result, update }: { input: PackageCalcu
           <Field label="重量" hint={input.weightUnit === 'kg' ? 'kg' : 'lb'} value={input.weight} onChange={(v) => update('weight', v)} />
           <label className="wb-amazon-field"><span>重量单位</span><select value={input.weightUnit} onChange={(e) => update('weightUnit', e.target.value as PackageWeightUnit)}><option value="lb">磅</option><option value="kg">千克</option></select></label>
         </div>
+        <p className="wb-amazon-footnote">切换重量单位会把数值换算成等重（2 lb → 0.91 kg），不会把 2 lb 当成 2 kg；「外箱装箱」的箱材重量跟随这里。</p>
       </div>
       <div className="wb-package-input-group">
         <h4>计费参数</h4>
@@ -542,16 +587,29 @@ function PackageCalculatorPanel({ input, result, update }: { input: PackageCalcu
  * 外箱装箱面板。
  *
  * 内盒**直接取包裹尺寸**，不另存一份 —— 否则「预览装 4 件、面板算 6 件」这种
- * 两张表两个结论的事故迟早会发生。单位也跟随包裹页。
+ * 两张表两个结论的事故迟早会发生。单位也跟随包裹页；**重量例外**：箱材/填充与
+ * 23 kg 上限统一用 kg（亚马逊那条线就是 kg 口径，跟着磅走只会多一处换算）。
  */
-function CartonPanel({ inner, outer, unit, onOuter }: {
+function CartonPanel({ inner, outer, unit, unitWeight, weightUnit, tare, onOuter, onTare }: {
   inner: CartonSize
   outer: CartonSize
   unit: PackageSizeUnit
+  unitWeight: number
+  weightUnit: PackageWeightUnit
+  tare: number
   onOuter: (key: keyof CartonSize, value: string) => void
+  onTare: (value: string) => void
 }): JSX.Element {
   const pack = packCarton(outer, inner)
   const u = unit === 'cm' ? 'cm' : 'in'
+  /**
+   * 单箱毛重与 23 kg 上限：判定只有 `checkCartonWeight` 一个入口，
+   * 3D 预览、结论句、尺寸记录都读它，避免三处各算一遍。
+   */
+  const weight = checkCartonWeight({ unitWeight, unit: weightUnit, count: pack.count, packagingWeightKg: tare })
+  const weightKnown = unitWeight > 0 && pack.count > 0
+  /** 输入框回显：kg 规范值 → 当前单位，保留两位小数（0.01 lb≈5 g、0.01 kg=10 g，够用）。 */
+  const tareDisplay = Math.round(fromKg(tare, weightUnit) * 100) / 100
   return <div className="wb-package-layout">
     <section className="wb-package-inputs" aria-labelledby="carton-input-title">
       <div className="wb-package-section-head">
@@ -572,6 +630,23 @@ function CartonPanel({ inner, outer, unit, onOuter }: {
           取自「包裹运费」页：{inner.length} × {inner.width} × {inner.height} {u}。改包裹尺寸，装箱结果会同步变。
         </p>
       </div>
+      <div className="wb-package-input-group">
+        <h4>重量</h4>
+        <div className="wb-package-dimension-grid">
+          {/* 单位跟随包裹页：lb 时输入框就是 lb，切到 kg 数值跟着换算、物理重量不变 */}
+          <Field label="箱材 + 填充" hint={weightUnit === 'kg' ? 'kg' : 'lb'} value={tareDisplay} onChange={onTare} />
+        </div>
+        <p className="wb-amazon-footnote">
+          单位跟随「包裹运费」页（当前 {weightUnit === 'kg' ? 'kg' : 'lb'}）：单件重量 {unitWeight} {weightUnit === 'kg' ? 'kg' : 'lb'}，
+          箱材/填充 {tareDisplay} {weightUnit === 'kg' ? 'kg' : 'lb'}。单箱毛重 = 单件重量 × 每箱件数 + 箱材/填充；
+          判定前统一折算成 kg，所以<b>切换单位只换显示口径，不改实际重量</b>。
+        </p>
+        <p className="wb-amazon-footnote">
+          亚马逊入仓要求：<b>单箱毛重 ≤ {AMAZON_CARTON_WEIGHT_LIMIT_KG} kg</b>（官方同时写作 50 lb，
+          本面板按 {AMAZON_CARTON_WEIGHT_LIMIT_KG} kg 精确判定）；超过 {AMAZON_CARTON_WEIGHT_LIMIT_KG} kg 必须拆箱，
+          或贴 Team Lift（多人搬运）标签并按超重流程处理。
+        </p>
+      </div>
       <p className="wb-amazon-footnote">数量按 <b>单一朝向</b>枚举 6 种摆放取最大；同一箱里混排两种朝向不做 —— 那类结果没法向人解释清楚。</p>
     </section>
 
@@ -587,13 +662,24 @@ function CartonPanel({ inner, outer, unit, onOuter }: {
         <div><span>每箱可装</span><strong>{pack.count} 件</strong></div>
         <div><span>装载率</span><strong>{Math.round(pack.fillRate * 100)}%</strong></div>
       </div>
+      {/* 超重是硬提醒：入仓收货端的实际门槛，不能只写在脚注里 */}
+      <div className="wb-package-alerts">
+        {!weightKnown
+          ? null
+          : weight.overweight
+            ? <div className="wb-amazon-warning" role="alert">{weight.message}</div>
+            : <div className="wb-amazon-footnote" role="status">✓ {weight.message}</div>}
+      </div>
       <div className="wb-package-metrics">
         <Metric label="单件占位" value={pack.count > 0 ? `${pack.fitLength} × ${pack.fitWidth} × ${pack.fitHeight}` : '—'} />
+        <Metric label="单箱毛重" value={weightKnown ? `${weight.totalKg} kg · ${weight.totalLb} lb` : '—'} />
+        <Metric label="单箱上限" value={`≤ ${AMAZON_CARTON_WEIGHT_LIMIT_KG} kg`} />
+        <Metric label="按重量每箱上限" value={weightKnown ? (weight.maxUnitsUnderLimit > 0 ? `${weight.maxUnitsUnderLimit} 件` : '单件即超重') : '—'} />
         <Metric label="长向余量" value={`${pack.restLength.toFixed(1)} ${u}`} />
         <Metric label="宽向余量" value={`${pack.restWidth.toFixed(1)} ${u}`} />
         <Metric label="高向余量" value={`${pack.restHeight.toFixed(1)} ${u}`} />
       </div>
-      <p className="wb-amazon-footnote">装载率 = 内盒体积 × 件数 ÷ 外箱体积，剩下的就是填充物与空隙。余量是三个方向分别剩的净空。</p>
+      <p className="wb-amazon-footnote">装载率 = 内盒体积 × 件数 ÷ 外箱体积，剩下的就是填充物与空隙。余量是三个方向分别剩的净空。「按重量每箱上限」= 只按 23 kg 反推的件数，实际还要服从尺寸枚举出的件数。</p>
     </section>
   </div>
 }
@@ -605,7 +691,7 @@ function CartonPanel({ inner, outer, unit, onOuter }: {
 function Field({ label, value, onChange, hint, percent: isPercent }: { label: string; value: number | string; onChange: (value: string) => void; hint?: string; percent?: boolean }): JSX.Element {
   return (
     <label className="wb-amazon-field">
-      <span>{label}{hint && <small>{hint}</small>}</span>
+      <span>{label}{hint && <small title={hint}>{hint}</small>}</span>
       <span className={`wb-amazon-input-wrap${isPercent === true ? ' has-suffix' : ''}`}>
         <input aria-label={label} type="number" min="0" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} />
         {isPercent === true && <b>%</b>}
@@ -626,7 +712,7 @@ function Metric({ label, value }: { label: string; value: string }): JSX.Element
  */
 function PackagingRecordsPanel({ packaging, current, onLoad, onOpenTable, tableAvailable }: {
   packaging: UsePackagingDimensionsResult
-  current: { packageInput: PackageCalculatorInput; cartonOuter: CartonSize }
+  current: { packageInput: PackageCalculatorInput; cartonOuter: CartonSize; cartonTare: number }
   onLoad: (record: PackagingDimensionRecord) => void
   onOpenTable: () => void
   tableAvailable: boolean
@@ -649,6 +735,7 @@ function PackagingRecordsPanel({ packaging, current, onLoad, onOpenTable, tableA
       packageWeight: p.weight, quantity: p.quantity ?? 1,
       sizeUnit: p.sizeUnit ?? 'in', weightUnit: p.weightUnit ?? 'lb',
       cartonLength: c.length, cartonWidth: c.width, cartonHeight: c.height,
+      cartonWeightKg: current.cartonTare,
     } as const
   }
 
@@ -725,6 +812,7 @@ function PackagingRecordsPanel({ packaging, current, onLoad, onOpenTable, tableA
                     {record.sku === '' ? '无 SKU' : record.sku}
                     {` · 包裹 ${record.data.packageLength}×${record.data.packageWidth}×${record.data.packageHeight} ${record.data.sizeUnit}`}
                     {` · 外箱 ${record.data.cartonLength}×${record.data.cartonWidth}×${record.data.cartonHeight} ${record.data.sizeUnit}`}
+                    {` · 箱材 ${typeof record.data.cartonWeightKg === 'number' ? record.data.cartonWeightKg : 0} kg`}
                   </small>
                 </div>
                 <div className="wb-calc-scenario-actions">

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { calculatePackage, calculateWorkbookShippingFee, calculateWorkbookReturnFee } from '../lib/shared/packageCalculator.js'
+import { calculatePackage, calculateWorkbookShippingFee, calculateWorkbookReturnFee, fromKg, switchWeightUnit, toKg } from '../lib/shared/packageCalculator.js'
 
 test('classifies small standard package and calculates monthly storage without inventing shipping rates', () => {
   const result = calculatePackage({ length: 5, width: 5, height: 0.5, weight: 0.1 })
@@ -70,4 +70,29 @@ test('matches apparel and dangerous-goods cached worksheet row 3 values', () => 
   assert.ok(Math.abs(dangerous.monthlyStorageFee - 0.146202720226963) < 1e-10)
   assert.ok(Math.abs(dangerous.disposalFee - 2.2) < 1e-8)
   assert.ok(Math.abs(dangerous.returnFee - 4.63) < 1e-8)
+})
+
+/**
+ * 2026-11-01：切重量单位必须换算数值，而不是只换标签。
+ *
+ * 反例（本次修掉的旧行为）：2 lb 切到 kg 仍写 2 —— 物理重量从 0.91 kg 变成 2 kg，
+ * 配送费、23 kg 超重判定跟着一起错。
+ */
+test('switchWeightUnit：切单位换算数值、物理重量不变，同单位是空操作', () => {
+  const lb = { weight: 2, weightUnit: 'lb' }
+  const kg = switchWeightUnit(lb, 'kg')
+  assert.equal(kg.weightUnit, 'kg')
+  assert.equal(kg.weight, 0.91)
+  /** 切回去只允许 0.01 级别抖动，绝不能变成 2 kg。 */
+  const back = switchWeightUnit(kg, 'lb')
+  assert.equal(back.weight, 2.01)
+  /** 同单位返回原对象：避免浮点往返把数值抖花。 */
+  assert.equal(switchWeightUnit(lb, 'lb'), lb)
+  assert.equal(switchWeightUnit({ weight: 1, weightUnit: 'kg' }, 'lb').weight, 2.2)
+  /** 缺省单位按 lb 读，与 PackageCalculatorInput 的默认一致。 */
+  assert.equal(switchWeightUnit({ weight: 2 }, 'kg').weight, 0.91)
+  /** toKg / fromKg 是同一把尺子（外箱箱材复用它们）。 */
+  assert.equal(toKg(1, 'lb'), 0.45359237)
+  assert.equal(fromKg(0.45359237, 'lb'), 1)
+  assert.equal(toKg(Number.NaN, 'lb'), 0)
 })

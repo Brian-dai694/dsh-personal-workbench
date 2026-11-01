@@ -16,6 +16,11 @@ export interface PackagingDimensionData {
   cartonLength: number
   cartonWidth: number
   cartonHeight: number
+  /**
+   * 箱材 + 填充物重量（**kg**）。可选：1.18.0 之前存下来的记录没有这个字段，
+   * 读出来按 0 处理即可，不需要迁移。
+   */
+  cartonWeightKg?: number
 }
 
 export interface PackagingDimensionRecord {

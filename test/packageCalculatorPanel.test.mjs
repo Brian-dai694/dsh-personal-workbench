@@ -65,3 +65,14 @@ test('窄容器 560px 内单列，面板和指标保持可收缩', () => {
   assert.match(packageCss, /\.wb-package-fee-head\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/)
   assert.match(packageCss, /\.wb-package-fee-head strong\s*\{[^}]*overflow-wrap:\s*anywhere/s)
 })
+
+/**
+ * 2026-11-01：包裹页切重量单位要**换算数值**。
+ * 只换标签等于把 2 lb 当成 2 kg，配送费与 23 kg 超重判定会一起错，所以钉住这条接线。
+ */
+test('包裹页切重量单位走共享换算，而不是只换标签', () => {
+  const updatePkg = view.slice(view.indexOf('function updatePackage('), view.indexOf('\n  function updateCartonOuter('))
+  assert.match(updatePkg, /switchWeightUnit\(current, raw as PackageWeightUnit\)/)
+  assert.doesNotMatch(updatePkg, /\{ \.\.\.current, \[key\]: raw \}/, '不得把单位字段当成"只换标签"处理')
+  assert.match(view, /切换重量单位会把数值换算成等重/)
+})

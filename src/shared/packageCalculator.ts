@@ -77,6 +77,34 @@ export function calculateWorkbookReturnFee(cls: PackageClass, t: number, i: numb
   if (cls === 'oversize') { if (j > 0 && j <= 50) return 26.33 + 0.38 * (j - 1); if (j > 50 && j <= 70) return 40.12 + 0.75 * (j - 51); if (j > 70 && j <= 150) return 52.45 + 0.75 * (j - 71); if (j > 150) return 157.35 + 0.19 * (j - 151) }
   return 0
 }
+/**
+ * 重量单位换算的**唯一实现**（`shared/cartonPacking.ts` 直接复用这三条，不再各写一份常数）。
+ *
+ * 为什么单独抽出来：面板上有两个重量输入（单件重量、外箱箱材），
+ * 一旦某处按「数字不动、只换标签」处理，切一次 lb↔kg 就会把 2 lb 悄悄变成 2 kg。
+ */
+export function toKg(value: number, unit: PackageWeightUnit): number {
+  if (!Number.isFinite(value)) return 0
+  return unit === 'kg' ? value : value * KG_PER_LB
+}
+
+export function fromKg(kg: number, unit: PackageWeightUnit): number {
+  if (!Number.isFinite(kg)) return 0
+  return unit === 'kg' ? kg : kg / KG_PER_LB
+}
+
+/**
+ * 切换重量单位：**数值跟着换算，物理重量不变**（2 lb → 0.91 kg，而不是把 2 lb 当成 2 kg）。
+ *
+ * 单位没变时返回**原对象**：避免每次重渲染/重存都因浮点往返把 0.91 抖成 0.9099999 再四舍五入。
+ */
+export function switchWeightUnit<T extends { weight: number; weightUnit?: PackageWeightUnit }>(input: T, next: PackageWeightUnit): T {
+  const current = input.weightUnit ?? 'lb'
+  if (current === next) return input
+  const kg = toKg(input.weight, current)
+  return { ...input, weightUnit: next, weight: Math.round(fromKg(kg, next) * 100) / 100 }
+}
+
 export function calculatePackage(input: PackageCalculatorInput): PackageCalculatorResult {
   const errors: string[] = []; const warnings: string[] = []
   const category = input.category ?? 'non_apparel'; const supported = category === 'non_apparel' || category === 'apparel' || category === 'dangerous_goods'

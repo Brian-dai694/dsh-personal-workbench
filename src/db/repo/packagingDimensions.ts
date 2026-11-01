@@ -38,6 +38,12 @@ function validate(input: PackagingDimensionInput): void {
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) throw new Error('尺寸和重量必须是非负有效数字')
   }
   if (!['in', 'cm'].includes(input.data.sizeUnit) || !['lb', 'kg'].includes(input.data.weightUnit)) throw new Error('尺寸或重量单位无效')
+  /**
+   * `cartonWeightKg` 是可选的（老记录没有这个字段）：给了就必须是非负有效数字，
+   * 否则"看起来存进去了、单箱毛重却读出 NaN"。
+   */
+  const tare = (input.data as unknown as Record<string, unknown>).cartonWeightKg
+  if (tare !== undefined && (typeof tare !== 'number' || !Number.isFinite(tare) || tare < 0)) throw new Error('箱材/填充重量必须是非负有效数字')
 }
 
 export function listPackagingDimensions(db: DatabaseSync): PackagingDimensionRecord[] {

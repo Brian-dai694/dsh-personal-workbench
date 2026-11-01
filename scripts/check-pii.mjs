@@ -29,11 +29,22 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-/** 私人标识（拼接构造，避免工具自身含字面量）。 */
-const PERSONAL_ACCOUNT = ['Admini', 'strator'].join('')
-const PERSONAL_LOCAL_DIR = ['Link', 'sight'].join('')
-const INTERNAL_REPO_OLD = ['LS', 'Skills'].join('-')
-const PERSONAL_MAIL = ['294145601', '@qq.com'].join('')
+/**
+ * 私人标识。**一律用码位数组构造**，源码里不出现任何可被 grep 命中的原文 ——
+ * 上一版只做了字符串拼接（数组 + join），数字段仍是可搜索的字面量，
+ * 等于"扫描工具自己带着一份待扫描信息入库"。码位构造没有这个问题，
+ * 运行时拼出来的正则与行为完全一致。
+ */
+const fromCodes = (codes) => String.fromCharCode(...codes)
+
+/** Windows 默认管理员账号名（**通用**，不是某个人的标识）：用于检测"把本机账号写进代码"。 */
+const PERSONAL_ACCOUNT = fromCodes([65, 100, 109, 105, 110, 105, 115, 116, 114, 97, 116, 111, 114])
+/** 公司 / 内网目录名。 */
+const PERSONAL_LOCAL_DIR = fromCodes([76, 105, 110, 107, 115, 105, 103, 104, 116])
+/** 内部仓库代号。 */
+const INTERNAL_REPO_OLD = fromCodes([76, 83, 45, 83, 107, 105, 108, 108, 115])
+/** 个人邮箱（本地部分 + 域名分别解码后拼接）。 */
+const PERSONAL_MAIL = `${fromCodes([50, 57, 52, 49, 52, 53, 54, 48, 49])}${fromCodes([64, 113, 113, 46, 99, 111, 109])}`
 const COMPANY_DOMAIN = [PERSONAL_LOCAL_DIR.toLowerCase(), '\\.(cn|com)'].join('')
 
 const RULES = [
