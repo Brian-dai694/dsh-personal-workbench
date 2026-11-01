@@ -5,6 +5,8 @@
  *  - AI 澄清/咨询/拆解统一跳官方会话区；工作台侧边栏显示待确认草稿红点
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { withViewTransition } from './viewTransition.js'
 import { isWslStylePath } from '../shared/workspacePath.js'
 import { DEFAULT_ESTIMATE_MINUTES, MAX_ESTIMATE_MINUTES } from './capacity.js'
 import { WORKBENCH_CSS } from './styles.js'
@@ -383,12 +385,18 @@ function WorkbenchApp({ runtime, closePanel }: { runtime: WorkbenchRuntime; clos
   //
   // 下面两个**留在入口**：它们是"加载 + 导航"的组合，按设计 §4.1 第 148 行
   // `openTaskById` 归装配层，由入口把 TaskData 的动作和 Navigation 的 `setView` 拼起来。
-  /** 打开任务（**会导航**）：重置详情页签与事件折叠，并刷新数据。 */
+  /** 打开任务（**会导航**）：重置详情页签与事件折叠，并刷新数据。
+   *  包一层视图过渡：选中的亮块从旧行滑到新行，右侧旧详情淡出、新详情淡入。 */
   const openTask = (task: Task): void => {
-    resetDetailView()
-    loadTaskDetail(task.id)
+    withViewTransition(() => {
+      flushSync(() => {
+        resetDetailView()
+        loadTaskDetail(task.id)
+      })
+    })
   }
-  /** 按 id 打开任务（**会导航到任务页**）：只给"从别处跳到这个任务"的入口用。 */
+  /** 按 id 打开任务（**会导航到任务页**）：只给"从别处跳到这个任务"的入口用。
+   *  这里不再自己包过渡 —— `setView` 已经包过了，两层套会触发嵌套 View Transition 报错。 */
   const openTaskById = (taskId: string): void => {
     setView('list')
     resetDetailView()

@@ -11,6 +11,8 @@
  * 只 import 纯模块与共享契约，**不得** import `index.tsx`；跨域协作由入口注入类型化回调。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { withViewTransition } from '../viewTransition.js'
 import { api } from '../api.js'
 import {
   EMPTY_KNOWLEDGE_FILTERS, reconcileKnowledgeKinds, selectedKind,
@@ -433,11 +435,12 @@ export function useKnowledge(input: UseKnowledgeInput): UseKnowledgeResult {
     refreshKey,
     bumpRefreshKey: () => setRefreshKey((v) => v + 1),
     reload, updateFilters,
-    openEntry: (entry) => { setEditId(null); setDraft(null); setSelected(entry) },
+    /** 打开一条知识：包一层视图过渡（旧详情淡出、新详情淡入），与任务条同一套动作。 */
+    openEntry: (entry) => withViewTransition(() => flushSync(() => { setEditId(null); setDraft(null); setSelected(entry) })),
     openEntryById: (id) => {
       const entry = entries.find((e) => e.id === id)
       if (entry === undefined) return
-      setEditId(null); setDraft(null); setSelected(entry)
+      withViewTransition(() => flushSync(() => { setEditId(null); setDraft(null); setSelected(entry) }))
     },
     startCreate: (seed) => { setEditId(null); setDraft({ title: '', contentMd: '', kindCode: 'note', tags: '', sourceTaskId: '', sourceReviewId: '', fileLink: '', ...(seed ?? {}) }) },
     startEdit: (entry) => setDraft({

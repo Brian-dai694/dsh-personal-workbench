@@ -78,8 +78,12 @@ test('顶栏：控件等高 + 动作簇整簇换行', () => {
 
 test('弹窗关键布局规则引用的令牌，在 portal 场景下也有值', () => {
   // 抽查三条：内边距、圆角、投影阶梯。它们都只用 --wb-*，令牌缺失时会被整条丢弃
-  assert.match(WORKBENCH_CSS, /\.wb-dialog-body\s*\{[^}]*padding:\s*var\(--wb-sp-6\)/)
-  assert.match(WORKBENCH_CSS, /\.wb-dialog\s*\{[^}]*border-radius:\s*var\(--wb-r-4\)/)
+  assert.match(WORKBENCH_CSS, /\.wb-dialog-body\s*\{[^}]*padding:\s*var\(--wb-space-y\)\s*var\(--wb-space-x\)/)
+  /**
+   * 2026-11-01：圆角改为「短边 × 18%」后，对话框归到 sheet 档（--wb-r-sheet，封顶 28px），
+   * 不再是原来的 r-4。这条依旧盯"引用的令牌在 portal 根节点上必须有值"。
+   */
+  assert.match(WORKBENCH_CSS, /\.wb-dialog\s*\{[^}]*border-radius:\s*var\(--wb-r-sheet\)/)
   assert.match(WORKBENCH_CSS, /\.wb-dialog\s*\{[^}]*box-shadow:\s*var\(--wb-sh-5\)/)
 })
 

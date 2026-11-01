@@ -9,6 +9,8 @@
  *   `useCallback(..., [ideaQuery, ideaKind])`），既不删旧状态、也不新增同步 effect。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { withViewTransition } from '../viewTransition.js'
 import { api } from '../api.js'
 import { toContentItem } from '../listPresentation.js'
 import type { IdeaCardItem } from '../components/IdeaCardGrid.js'
@@ -160,14 +162,14 @@ export function useIdeas({ activeView, setError, setNotice }: UseIdeasInput): Us
   const openIdeaById = useCallback((id: string): void => {
     const idea = ideas.find((item) => item.id === id)
     if (idea === undefined) return
-    setSelectedCluster(null); setSelectedIdea(idea)
+    withViewTransition(() => flushSync(() => { setSelectedCluster(null); setSelectedIdea(idea) }))
   }, [ideas])
   /** 文件夹成员行点开（原写法直接用手上的对象；成员可能不在当前筛选出的 `ideas` 里）。 */
   const openIdea = useCallback((idea: Idea): void => {
-    setSelectedCluster(null); setSelectedIdea(idea)
+    withViewTransition(() => flushSync(() => { setSelectedCluster(null); setSelectedIdea(idea) }))
   }, [])
   const openCluster = useCallback((cluster: IdeaClusterView): void => {
-    setSelectedIdea(null); setSelectedCluster(cluster)
+    withViewTransition(() => flushSync(() => { setSelectedIdea(null); setSelectedCluster(cluster) }))
   }, [])
 
   /** 保存点子（新建 POST / 编辑 PATCH）。标题非空与标签切分由调用方（视图）判定，保持拆分前的行为。 */

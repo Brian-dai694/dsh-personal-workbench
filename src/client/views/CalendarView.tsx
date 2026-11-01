@@ -11,6 +11,7 @@
  * - 周的起点口径来自共享实现（`format.ts#startOfWeek`，**周一**为首日），本视图不自己算。
  * - `calMode` / `cursor` / `picked` 都是**日期域 state**（`useDayWorkspace`），这里只读写注入的动作。
  */
+import type { CSSProperties } from 'react'
 import { DayPanel, type DayPanelProps } from '../components/DayPanel.js'
 import { Icon } from '../components/Icon.js'
 import { sameDay, startOfDay } from '../format.js'
@@ -21,7 +22,7 @@ import type { Task } from '../viewTypes.js'
 export type CalendarViewProps = {
   oplogDates?: string[]
   onOpenOplogDate?: (day: string) => void
-  calMode: 'week' | 'month'
+  calMode: 'day' | 'week' | 'month'
   cursor: Date
   /** 渲染期的"现在"（今日高亮与"今天"按钮用）。 */
   now: Date
@@ -34,10 +35,12 @@ export type CalendarViewProps = {
   dayPanelProps: Omit<DayPanelProps, 'emptyPlanAction'>
   onMoveWeek: (delta: number) => void
   onMoveMonth: (delta: number) => void
-  /** 「今天」按钮：周视图回到本周、月视图回到本月。 */
+  /** 日模式的上一天 / 下一天（日视图没有"周起点"这回事，所以单独一个动作）。 */
+  onMoveDay: (delta: number) => void
+  /** 「今天」按钮：日视图回到今天、周视图回到本周、月视图回到本月。 */
   onToday: () => void
   onPick: (date: Date) => void
-  onCalModeChange: (mode: 'week' | 'month') => void
+  onCalModeChange: (mode: 'day' | 'week' | 'month') => void
   /** 空态里的「AI 智能排序」（发起会话属会话域，走注入回调）。 */
   onStartPlanAISession: (day: string) => void
   /** 该日是否过去日期（过去日期给不出空态动作）。 */
@@ -52,10 +55,17 @@ function dayKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+/** 日历的三段视图（2026-11-01 加「日」）：索引直接进样式，选中块靠 transform 滑过去。 */
+const CAL_MODES: ReadonlyArray<{ key: 'day' | 'week' | 'month'; label: string }> = [
+  { key: 'day', label: '日' },
+  { key: 'week', label: '周' },
+  { key: 'month', label: '月' },
+]
+
 export function CalendarView(props: CalendarViewProps): JSX.Element {
   const {
     calMode, cursor, now, picked, weekDays, monthGrid, tasks, dayPanelProps,
-    onMoveWeek, onMoveMonth, onToday, onPick, onCalModeChange, onStartPlanAISession, readOnly, day,
+    onMoveWeek, onMoveMonth, onMoveDay, onToday, onPick, onCalModeChange, onStartPlanAISession, readOnly, day,
     oplogDates = [], onOpenOplogDate,
   } = props
   /** 每天有几条运营日志：格子上的第二枚点。数据来自注入（视图不发 HTTP）。 */
@@ -65,17 +75,56 @@ export function CalendarView(props: CalendarViewProps): JSX.Element {
   return (
     <>
       <div className="wb-cal-nav">
-        <button className="wb-btn" onClick={() => (calMode === 'week' ? onMoveWeek(-1) : onMoveMonth(-1))}>◀</button>
+        <button className="wb-btn" onClick={() => (calMode === 'month' ? onMoveMonth(-1) : calMode === 'week' ? onMoveWeek(-1) : onMoveDay(-1))}>◀</button>
         <button className="wb-btn" onClick={onToday}>今天</button>
-        <button className="wb-btn" onClick={() => (calMode === 'week' ? onMoveWeek(1) : onMoveMonth(1))}>▶</button>
+        <button className="wb-btn" onClick={() => (calMode === 'month' ? onMoveMonth(1) : calMode === 'week' ? onMoveWeek(1) : onMoveDay(1))}>▶</button>
         <div style={{ flex: 1, textAlign: 'center', fontWeight: 600 }}>
-          {calMode === 'week' ? `${cursor.getFullYear()}/${cursor.getMonth() + 1}/${cursor.getDate()} 周` : `${cursor.getFullYear()}年${cursor.getMonth() + 1}月`}
+          {calMode === 'month'
+            ? `${cursor.getFullYear()}年${cursor.getMonth() + 1}月`
+            : calMode === 'week'
+              ? `${cursor.getFullYear()}/${cursor.getMonth() + 1}/${cursor.getDate()} 周`
+              : `${picked.getFullYear()}/${picked.getMonth() + 1}/${picked.getDate()} 日`}
         </div>
-        <div className="wb-segmented wb-sub-segmented">
-          <button className={`wb-seg ${calMode === 'week' ? 'on' : ''}`} onClick={() => onCalModeChange('week')}>周</button>
-          <button className={`wb-seg ${calMode === 'month' ? 'on' : ''}`} onClick={() => onCalModeChange('month')}>月</button>
+        {/* 选中块（::before）按 --wb-cal-i 平移，文字颜色随 .on 变 —— 三段共用同一套机制 */}
+        <div
+          className="wb-segmented wb-sub-segmented wb-cal-tabs"
+          data-cal-tabs
+          role="tablist"
+          aria-label="日历视图"
+          style={{ '--wb-cal-i': Math.max(0, CAL_MODES.findIndex((mode) => mode.key === calMode)) } as CSSProperties}
+        >
+          {CAL_MODES.map((mode) => (
+            <button
+              key={mode.key}
+              type="button"
+              role="tab"
+              aria-selected={calMode === mode.key}
+              className={`wb-seg ${calMode === mode.key ? 'on' : ''}`}
+              onClick={() => onCalModeChange(mode.key)}
+            >{mode.label}</button>
+          ))}
         </div>
       </div>
+
+      {calMode === 'day' && (
+        <div className="wb-week wb-day-solo">
+          {(() => {
+            const n = tasks.filter((t) => isTaskDueOnDay(t, picked)).length
+            const logs = oplogCountByDate.get(dayKey(picked)) ?? 0
+            return (
+              <div className={`wb-day ${sameDay(picked, now) ? 'today' : ''} selected`} onClick={() => onPick(startOfDay(picked))} {...interactiveProps(() => onPick(startOfDay(picked)), { pressed: true })}>
+                <div className="wb-day-date" style={{ fontSize: 12, color: 'var(--wb-ink-2)' }}>{picked.getMonth() + 1}/{picked.getDate()}</div>
+                {n > 0 && <div className="wb-chip" style={{ background: 'var(--wb-accent)', marginTop: 4 }}>{n} 个任务</div>}
+                {logs > 0 && (
+                  <button type="button" className="wb-day-log" onClick={(e) => { e.stopPropagation(); onOpenOplogDate?.(dayKey(picked)) }} title={`${logs} 条运营日志`}>
+                    <Icon name="file" size={11} />{logs} 条日志
+                  </button>
+                )}
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
       {calMode === 'week' && (
         <div className="wb-week">

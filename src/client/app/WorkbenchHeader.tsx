@@ -11,6 +11,20 @@
 import type { WorkbenchAssembly } from './assembly.js'
 import { Icon } from '../components/Icon.js'
 import { useI18n } from '../i18n.js'
+import { useTabIndicator } from '../hooks/useTabIndicator.js'
+import type { WorkbenchView } from './contracts.js'
+
+/**
+ * 五个固定主域（2026-11-01）：它们共用一条**滑动指示条**，所以必须等宽、且只放固定项。
+ * 亚马逊父项不进来 —— 它的文案随子项变长（「亚马逊 · 关键词库」），塞进等宽格会挤成两行。
+ */
+const PRIMARY_TABS: ReadonlyArray<{ key: WorkbenchView; label: string; icon: string }> = [
+  { key: 'today', label: '今日', icon: 'today' },
+  { key: 'calendar', label: '日历', icon: 'calendar' },
+  { key: 'list', label: '任务', icon: 'list' },
+  { key: 'knowledge', label: '知识库', icon: 'book' },
+  { key: 'ideas', label: '点子', icon: 'idea' },
+]
 
 /**
  * 亚马逊组（原「广告组」，2026-10-24 用户要求改名）：测算 / 关键词 / 流量分析 从 8 个一级页签收成 1 个父项。
@@ -77,18 +91,30 @@ export function WorkbenchHeader(props: WorkbenchAssembly): JSX.Element {
   const inAds = adView !== undefined
   const lastAd = inAds ? adView.key : readLastAdView()
   const lastAdLabel = AD_VIEWS.find((entry) => entry.key === lastAd)?.label ?? '测算'
+  /** 六项宽度不等，实心块要按当前项实测位置/宽度滑过去（测量在 hook 里，不存 state）。 */
+  const { containerRef: tabsRef, sliderRef: tabsSliderRef } = useTabIndicator(view)
   return (
     <>
     <div className="wb-h">
         <div className="wb-title"><Icon name="calendar" size={19} />{t('个人工作台')}</div>
-        <div className="wb-segmented" data-primary-tabs>
-          <button className={`wb-seg ${view === 'today' ? 'on' : ''}`} onClick={() => setView('today')}><Icon name="today" />{t('今日')}</button>
-          <button className={`wb-seg ${view === 'calendar' ? 'on' : ''}`} onClick={() => setView('calendar')}><Icon name="calendar" />{t('日历')}</button>
-          <button className={`wb-seg ${view === 'list' ? 'on' : ''}`} onClick={() => setView('list')}><Icon name="list" />{t('任务')}</button>
-          <button className={`wb-seg ${view === 'knowledge' ? 'on' : ''}`} onClick={() => setView('knowledge')}><Icon name="book" />{t('知识库')}</button>
-          <button className={`wb-seg ${view === 'ideas' ? 'on' : ''}`} onClick={() => setView('ideas')}><Icon name="idea" />{t('点子')}</button>
-          {/* 父项：常驻显示当前子项名；点它就是回到上次进的子项 */}
+        {/* 六个域页签共用一套 pill 选中态（2026-11-01 用户要求：统一成亚马逊的交互风格）：
+            五域来自 PRIMARY_TABS，亚马逊父项在同一容器里、文案随子项变化。 */}
+        <div className="wb-tabs-primary" data-primary-tabs role="tablist" aria-label={t('主要视图')} ref={tabsRef}>
+          <span className="wb-tabs-indicator" ref={tabsSliderRef} aria-hidden="true" />
+          {PRIMARY_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={view === tab.key}
+              className={`wb-seg ${view === tab.key ? 'on' : ''}`}
+              onClick={() => setView(tab.key)}
+            ><Icon name={tab.icon} />{t(tab.label)}</button>
+          ))}
           <button
+            type="button"
+            role="tab"
+            aria-selected={inAds}
             className={`wb-seg ${inAds ? 'on' : ''}`}
             data-ad-parent
             title={t('亚马逊：测算 / 关键词库 / 选品 / 报表分析 / 库存 / 产品库 / 付款对账 / 运营日志')}

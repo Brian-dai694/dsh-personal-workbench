@@ -153,7 +153,24 @@ const TOKENS: Record<string, string> = {
   'link': 'light-dark(#4176e6, #7aaaff)',
 }
 
-const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", sans-serif'
+/**
+ * 字体栈（2026-11-01 定案）：**Inter 管拉丁与数字，思源黑体管中文**。
+ *
+ * 为什么要写成一条栈而不是两套样式：一段中文里夹着英文单词、型号、数字时，
+ * 浏览器只按**字符**挑字体，不会按语言切样式。所以顺序就是分工：
+ *   1. `Inter` —— 拉丁字母、数字、标点（x-height 大、数字等宽，型号和金额最整齐）；
+ *   2. `Source Han Sans SC` / `Noto Sans SC` —— 中文字形（前者是思源黑体的正式名，
+ *      后者是它上 Google Fonts 之后的家族名，同一套字形）；
+ *   3. 系统中文兜底（PingFang / 微软雅黑）—— 没装思源时不能让中文掉到宋体；
+ *   4. `system-ui` + 通用 `sans-serif` —— 最后兜底。
+ *
+ * 字重分档见 `styles.ts` 的 `--wb-fw-*`：Inter 与思源黑体都建议用**可变字体**
+ * （wght 100–900），否则中文的 600 会落到 Bold 700，看起来比英文标题重一档。
+ */
+const FONT_FAMILY = '"Inter", "Inter var", "Source Han Sans SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif'
+
+/** 等宽（会话 id、关键词代码、CSV 片段）：与正文分开一条栈，别用 Inter 顶替。 */
+const FONT_MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace'
 
 /** 生成 `--wb-*` 令牌层 CSS（由 styles.ts 放在样式表最前面）。 */
 export function tokenLayerCss(): string {
@@ -162,6 +179,7 @@ export function tokenLayerCss(): string {
     ':root { color-scheme: light dark; }',
     '.wb-scope, :root {',
     `  --wb-font: var(--dsw-font-family, ${FONT_FAMILY});`,
+    `  --wb-font-mono: ${FONT_MONO};`,
   ]
   for (const [name, fallback] of Object.entries(TOKENS)) {
     lines.push(`  --wb-${name}: var(--dsw-alias-${name}, ${fallback});`)
